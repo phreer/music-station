@@ -22,9 +22,11 @@ cargo run -- --library /path/to/music/folder
 MUSIC_LIBRARY_PATH=/path/to/music cargo run
 
 # Run the CLI client (connects to server on localhost:3000 by default)
-cargo run --bin music-client
-cargo run --bin music-client -- --server http://localhost:3000 list
-cargo run --bin music-client -- info <track-id>
+cargo run --bin music-client                    # List all tracks
+cargo run --bin music-client -- list            # List all tracks
+cargo run --bin music-client -- info <track-id> # Show track details
+cargo run --bin music-client -- play <track-id> # Play a specific track
+cargo run --bin music-client -- play-all        # Play all tracks
 
 # Development
 cargo check      # Quick compile check
@@ -69,6 +71,7 @@ music-station/
 1. `music-client` sends HTTP request to server
 2. Parses JSON response into local `Track` struct
 3. Displays formatted output to terminal
+4. For playback: downloads audio stream and plays using Rodio
 
 ## Critical Implementation Patterns
 
@@ -107,22 +110,30 @@ pub struct AppState {
 - HTTP handlers return `Result<T, StatusCode>` for proper error responses
 - Tracing for logging errors during library scan
 
-### Streaming Audio Files
+### Streaming Audio Files (Server)
 - Files loaded into memory with `tokio::fs::read_to_end`
 - Returned with `Content-Type: audio/flac` header
 - `Content-Disposition: inline` for browser playback
+
+### Audio Playback (Client)
+- Uses Rodio library for cross-platform audio output
+- Downloads full audio stream via reqwest
+- Decodes FLAC using Rodio's Decoder
+- Creates OutputStream and Sink for playback
+- `sink.sleep_until_end()` blocks until playback completes
 
 ## Dependencies & Their Roles
 - **axum**: Web framework for REST API
 - **tokio**: Async runtime (required for axum)
 - **tower-http**: CORS middleware
-- **symphonia**: Audio decoding (FLAC support enabled)
+- **symphonia**: Audio decoding (FLAC metadata extraction on server)
+- **rodio**: Audio playback (FLAC playback in client)
 - **serde**: JSON serialization for Track struct
-- **clap**: CLI argument parsing (derive feature)
+- **clap**: CLI argument parsing (derive + env features)
 - **anyhow**: Ergonomic error handling
 - **tracing**: Structured logging
 - **md5**: Generate track IDs from file paths
-- **reqwest**: HTTP client for music-client
+- **reqwest**: HTTP client for music-client (with streaming support)
 
 ## Testing Approach
 - Unit tests: Test metadata parsing with sample FLAC files

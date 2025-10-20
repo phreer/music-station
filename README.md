@@ -9,6 +9,7 @@ A Rust-based HTTP server for managing and streaming FLAC music files with a CLI 
 - 🌐 REST API for music library access
 - 🎧 Stream FLAC files over HTTP
 - 💻 CLI client for browsing library
+- ▶️ Audio playback directly from CLI client
 
 ## Quick Start
 
@@ -42,6 +43,12 @@ cargo run --bin music-client -- --server http://localhost:3000 list
 
 # Get detailed information about a specific track
 cargo run --bin music-client -- info <track-id>
+
+# Play a specific track
+cargo run --bin music-client -- play <track-id>
+
+# Play all tracks in the library
+cargo run --bin music-client -- play-all
 ```
 
 ## API Endpoints
@@ -96,6 +103,7 @@ The client:
 1. Connects to the server via HTTP
 2. Fetches and displays track information
 3. Provides formatted output for easy browsing
+4. Streams and plays audio using Rodio audio library
 
 ## Current Limitations
 
@@ -108,7 +116,8 @@ The client:
 
 - **axum** - Web framework
 - **tokio** - Async runtime
-- **symphonia** - Audio decoding
+- **symphonia** - Audio decoding (server)
+- **rodio** - Audio playback (client)
 - **serde** - JSON serialization
 - **clap** - CLI argument parsing
 - **reqwest** - HTTP client (for CLI)
