@@ -74,21 +74,21 @@ async fn list_tracks(server: &str) -> Result<()> {
 
     println!("Music Library ({} tracks):", tracks.len());
     println!("{:-<80}", "");
-    
+
     for (idx, track) in tracks.iter().enumerate() {
         let title = track.title.as_deref().unwrap_or("Unknown Title");
         let artist = track.artist.as_deref().unwrap_or("Unknown Artist");
         let album = track.album.as_deref().unwrap_or("Unknown Album");
-        
+
         println!("{}. {} - {}", idx + 1, artist, title);
         println!("   Album: {}", album);
-        
+
         if let Some(duration) = track.duration_secs {
             let minutes = duration / 60;
             let seconds = duration % 60;
             println!("   Duration: {:02}:{:02}", minutes, seconds);
         }
-        
+
         println!("   File: {}", track.path.display());
         println!("   ID: {}", track.id);
         println!("   Stream: {}/stream/{}", server, track.id);
@@ -119,13 +119,13 @@ async fn show_track_info(server: &str, id: &str) -> Result<()> {
     println!("Title:    {}", track.title.as_deref().unwrap_or("Unknown"));
     println!("Artist:   {}", track.artist.as_deref().unwrap_or("Unknown"));
     println!("Album:    {}", track.album.as_deref().unwrap_or("Unknown"));
-    
+
     if let Some(duration) = track.duration_secs {
         let minutes = duration / 60;
         let seconds = duration % 60;
         println!("Duration: {:02}:{:02}", minutes, seconds);
     }
-    
+
     println!("File:     {}", track.path.display());
     println!("Size:     {} bytes", track.file_size);
     println!("ID:       {}", track.id);
@@ -167,7 +167,7 @@ async fn play_track(server: &str, id: &str) -> Result<()> {
     // Stream and play the audio
     let stream_url = format!("{}/stream/{}", server, id);
     println!("Streaming from: {}", stream_url);
-    
+
     let response = reqwest::get(&stream_url)
         .await
         .context("Failed to stream audio")?;
@@ -182,21 +182,19 @@ async fn play_track(server: &str, id: &str) -> Result<()> {
         .context("Failed to download audio data")?;
 
     // Create audio output stream
-    let (_stream, stream_handle) = OutputStream::try_default()
-        .context("Failed to initialize audio output")?;
-    
-    let sink = Sink::try_new(&stream_handle)
-        .context("Failed to create audio sink")?;
+    let (_stream, stream_handle) =
+        OutputStream::try_default().context("Failed to initialize audio output")?;
+
+    let sink = Sink::try_new(&stream_handle).context("Failed to create audio sink")?;
 
     // Decode and play
     let cursor = Cursor::new(audio_data.to_vec());
-    let source = Decoder::new(cursor)
-        .context("Failed to decode audio")?;
-    
+    let source = Decoder::new(cursor).context("Failed to decode audio")?;
+
     sink.append(source);
 
     println!("▶️  Playing... (Press Ctrl+C to stop)");
-    
+
     // Wait for playback to finish
     sink.sleep_until_end();
 
@@ -228,11 +226,10 @@ async fn play_all_tracks(server: &str) -> Result<()> {
     println!();
 
     // Create audio output stream once for all tracks
-    let (_stream, stream_handle) = OutputStream::try_default()
-        .context("Failed to initialize audio output")?;
-    
-    let sink = Sink::try_new(&stream_handle)
-        .context("Failed to create audio sink")?;
+    let (_stream, stream_handle) =
+        OutputStream::try_default().context("Failed to initialize audio output")?;
+
+    let sink = Sink::try_new(&stream_handle).context("Failed to create audio sink")?;
 
     // Play each track
     for (idx, track) in tracks.iter().enumerate() {
@@ -240,10 +237,10 @@ async fn play_all_tracks(server: &str) -> Result<()> {
         println!("  Title:  {}", track.title.as_deref().unwrap_or("Unknown"));
         println!("  Artist: {}", track.artist.as_deref().unwrap_or("Unknown"));
         println!("  Album:  {}", track.album.as_deref().unwrap_or("Unknown"));
-        
+
         // Stream the audio
         let stream_url = format!("{}/stream/{}", server, track.id);
-        
+
         match reqwest::get(&stream_url).await {
             Ok(response) => {
                 if let Ok(audio_data) = response.bytes().await {
@@ -262,14 +259,14 @@ async fn play_all_tracks(server: &str) -> Result<()> {
                 println!("  ⚠️  Failed to stream: {}", e);
             }
         }
-        
+
         // Wait a bit for the track to start before queuing next
         tokio::time::sleep(Duration::from_millis(100)).await;
         println!();
     }
 
     println!("All tracks queued. Playing... (Press Ctrl+C to stop)");
-    
+
     // Wait for all playback to finish
     sink.sleep_until_end();
 

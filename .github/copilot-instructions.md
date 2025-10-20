@@ -6,7 +6,7 @@ Music Station is a Rust-based HTTP server that scans a music library folder, ext
 **Architecture**: Client-server with REST API + Web UI
 - Server: `music-station` binary scans library and serves HTTP API
 - CLI Client: `music-client` CLI tool for browsing and playing music
-- Web Client: Single-page web app for browsing and editing metadata
+- Web Client: Single-page web app with tabbed interface for browsing tracks, albums, artists, and statistics
 
 ## Development Environment
 - **Language**: Rust (Edition 2024)
@@ -47,9 +47,9 @@ music-station/
 │   └── bin/
 │       └── client.rs     # CLI client for browsing library
 ├── static/
-│   ├── index.html        # Web client UI
-│   ├── styles.css        # Web client styles  
-│   └── app.js            # Web client JavaScript
+│   ├── index.html        # Web client UI with tabbed navigation
+│   ├── styles.css        # Web client styles with album/artist views
+│   └── app.js            # Web client JavaScript with tab switching
 ├── Cargo.toml            # Two binaries: music-station, music-client
 └── .github/
     └── copilot-instructions.md
@@ -63,18 +63,42 @@ music-station/
 3. Calls `library.scan()` to recursively scan folder for `.flac` files
 4. Each FLAC file is parsed with Symphonia to extract metadata
 5. Tracks stored in `Arc<RwLock<Vec<Track>>>` for concurrent access
-6. Axum router created with shared library state
-7. HTTP server starts on `0.0.0.0:3000` (or specified port)
+6. On-demand grouping by album/artist using HashMap aggregation
+7. Axum router created with shared library state
+8. HTTP server starts on `0.0.0.0:3000` (or specified port)
 
 ### API Endpoints
+
+**Track Management:**
 - `GET /` - API version info
 - `GET /tracks` - List all tracks (returns JSON array)
 - `GET /tracks/:id` - Get single track details
 - `PUT /tracks/:id` - Update track metadata (body: {title?, artist?, album?})
 - `GET /stream/:id` - Stream FLAC file with proper headers
-- `GET /web/*` - Static web client files
 
-### Client Flow
+**Album & Artist Browsing:**
+- `GET /albums` - List all albums with track counts and durations
+- `GET /albums/:name` - Get specific album with all its tracks
+- `GET /artists` - List all artists with album/track counts
+- `GET /artists/:name` - Get specific artist with all albums
+
+**Library Statistics:**
+- `GET /stats` - Get library statistics (total tracks, albums, artists, duration, size)
+
+**Web Client:**
+- `GET /web/*` - Static web client files (HTML, CSS, JS)
+
+### Web Client Flow
+1. User navigates to `http://localhost:3000/web/index.html`
+2. Client loads with 4 tabs: Tracks, Albums, Artists, Stats
+3. **Tracks Tab**: Lists all tracks with edit functionality
+4. **Albums Tab**: Shows albums grouped by name, expandable to view tracks
+5. **Artists Tab**: Displays artists with nested album/track information
+6. **Stats Tab**: Shows library statistics with visual cards
+7. Click album/artist cards to expand and view details
+8. Edit track metadata via modal dialog (updates FLAC file)
+
+### Client Flow (CLI)
 1. `music-client` sends HTTP request to server
 2. Parses JSON response into local `Track` struct
 3. Displays formatted output to terminal

@@ -46,14 +46,14 @@ async fn main() -> Result<()> {
 
     // Initialize music library
     let library = MusicLibrary::new(cli.library);
-    
+
     // Scan the library
     library.scan().await.context("Failed to scan library")?;
 
     // Create and start the server
     let app = server::create_router(library);
     let addr = format!("0.0.0.0:{}", cli.port);
-    
+
     tracing::info!("Server listening on http://{}", addr);
     tracing::info!("API endpoints:");
     tracing::info!("  GET  /              - API info");
@@ -68,9 +68,7 @@ async fn main() -> Result<()> {
         .await
         .context("Failed to bind to address")?;
 
-    axum::serve(listener, app)
-        .await
-        .context("Server error")?;
+    axum::serve(listener, app).await.context("Server error")?;
 
     Ok(())
 }

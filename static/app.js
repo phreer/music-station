@@ -3,6 +3,7 @@ const API_BASE = window.location.origin;
 
 let tracks = [];
 let currentEditTrackId = null;
+let currentView = 'tracks';
 
 // Load tracks on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,6 +14,47 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     document.getElementById('refreshBtn').addEventListener('click', loadTracks);
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+    
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.dataset.tab;
+            switchTab(tabName);
+        });
+    });
+}
+
+function switchTab(tabName) {
+    currentView = tabName;
+    
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`${tabName}-view`).classList.add('active');
+    
+    // Load content for the selected tab
+    switch(tabName) {
+        case 'tracks':
+            if (tracks.length === 0) {
+                loadTracks();
+            }
+            break;
+        case 'albums':
+            loadAlbums();
+            break;
+        case 'artists':
+            loadArtists();
+            break;
+        case 'stats':
+            loadStats();
+            break;
+    }
 }
 
 async function loadTracks() {
@@ -194,6 +236,177 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Load albums
+async function loadAlbums() {
+    try {
+        const response = await fetch(`${API_BASE}/albums`);
+        const albums = await response.json();
+        displayAlbums(albums);
+    } catch (error) {
+        console.error('Error loading albums:', error);
+        document.getElementById('album-list').innerHTML = 
+            '<p style="text-align: center; color: #ff6b6b;">Failed to load albums</p>';
+    }
+}
+
+function displayAlbums(albums) {
+    const albumList = document.getElementById('album-list');
+    
+    if (albums.length === 0) {
+        albumList.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No albums found</p>';
+        return;
+    }
+    
+    albumList.innerHTML = albums.map(album => `
+        <div class="album-card" onclick="toggleAlbum(this)">
+            <div class="album-header">
+                <div style="display: flex; align-items: center; flex: 1;">
+                    <div class="album-icon">💿</div>
+                    <div class="album-info">
+                        <h3>${escapeHtml(album.name)}</h3>
+                        <div class="artist-name">🎤 ${escapeHtml(album.artist)}</div>
+                    </div>
+                </div>
+                <div class="expand-indicator">▼</div>
+            </div>
+            <div class="album-meta">
+                <span>📀 ${album.track_count} track${album.track_count !== 1 ? 's' : ''}</span>
+                <span>⏱️ ${formatDuration(album.total_duration_secs)}</span>
+            </div>
+            <div class="album-tracks">
+                ${album.tracks.map(track => `
+                    <div class="album-track-item">
+                        <span class="track-title-mini">${escapeHtml(track.title)}</span>
+                        <span class="track-duration-mini">${formatDuration(track.duration_secs)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleAlbum(element) {
+    element.classList.toggle('expanded');
+}
+
+// Load artists
+async function loadArtists() {
+    try {
+        const response = await fetch(`${API_BASE}/artists`);
+        const artists = await response.json();
+        displayArtists(artists);
+    } catch (error) {
+        console.error('Error loading artists:', error);
+        document.getElementById('artist-list').innerHTML = 
+            '<p style="text-align: center; color: #ff6b6b;">Failed to load artists</p>';
+    }
+}
+
+function displayArtists(artists) {
+    const artistList = document.getElementById('artist-list');
+    
+    if (artists.length === 0) {
+        artistList.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No artists found</p>';
+        return;
+    }
+    
+    artistList.innerHTML = artists.map(artist => `
+        <div class="artist-card" onclick="toggleArtist(this)">
+            <div class="artist-header">
+                <div class="artist-icon">🎤</div>
+                <div style="flex: 1;">
+                    <div class="artist-info">
+                        <h3>${escapeHtml(artist.name)}</h3>
+                        <div class="artist-meta">
+                            <span>💿 ${artist.album_count} album${artist.album_count !== 1 ? 's' : ''}</span>
+                            <span>📀 ${artist.track_count} track${artist.track_count !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="expand-indicator">▼</div>
+            </div>
+            <div class="artist-albums">
+                ${artist.albums.map(album => `
+                    <div class="artist-album-item">
+                        <h4>💿 ${escapeHtml(album.name)}</h4>
+                        <div class="artist-album-meta">
+                            📀 ${album.track_count} tracks · ⏱️ ${formatDuration(album.total_duration_secs)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+function toggleArtist(element) {
+    element.classList.toggle('expanded');
+}
+
+// Load stats
+async function loadStats() {
+    try {
+        const response = await fetch(`${API_BASE}/stats`);
+        const stats = await response.json();
+        displayStats(stats);
+    } catch (error) {
+        console.error('Error loading stats:', error);
+        document.getElementById('stats-display').innerHTML = 
+            '<p style="text-align: center; color: #ff6b6b;">Failed to load statistics</p>';
+    }
+}
+
+function displayStats(stats) {
+    const statsDisplay = document.getElementById('stats-display');
+    
+    const totalDuration = formatDuration(stats.total_duration_secs);
+    const totalSize = formatFileSizeBytes(stats.total_size_bytes);
+    const avgTrackSize = formatFileSizeBytes(stats.total_size_bytes / stats.total_tracks);
+    
+    statsDisplay.innerHTML = `
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📀</div>
+                <div class="stat-value">${stats.total_tracks}</div>
+                <div class="stat-label">Tracks</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💿</div>
+                <div class="stat-value">${stats.total_albums}</div>
+                <div class="stat-label">Albums</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎤</div>
+                <div class="stat-value">${stats.total_artists}</div>
+                <div class="stat-label">Artists</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-value">${totalDuration}</div>
+                <div class="stat-label">Total Duration</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💾</div>
+                <div class="stat-value">${totalSize}</div>
+                <div class="stat-label">Total Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-value">${avgTrackSize}</div>
+                <div class="stat-label">Avg Track Size</div>
+            </div>
+        </div>
+    `;
+}
+
+function formatFileSizeBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // Close modal when clicking outside
