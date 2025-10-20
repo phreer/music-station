@@ -21,8 +21,14 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
-    tracing_subscriber::fmt::init();
+    // Initialize tracing with debug level
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(true)
+        .with_thread_ids(true)
+        .with_file(true)
+        .with_line_number(true)
+        .init();
 
     let cli = Cli::parse();
 
@@ -53,7 +59,10 @@ async fn main() -> Result<()> {
     tracing::info!("  GET  /              - API info");
     tracing::info!("  GET  /tracks        - List all tracks");
     tracing::info!("  GET  /tracks/:id    - Get track details");
+    tracing::info!("  PUT  /tracks/:id    - Update track metadata");
     tracing::info!("  GET  /stream/:id    - Stream track audio");
+    tracing::info!("Web Client:");
+    tracing::info!("  http://localhost:{}/web/index.html", cli.port);
 
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

@@ -18,6 +18,13 @@ pub struct Track {
     pub file_size: u64,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TrackMetadataUpdate {
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+}
+
 #[derive(Clone)]
 pub struct MusicLibrary {
     library_path: PathBuf,
@@ -142,7 +149,67 @@ impl MusicLibrary {
     }
 
     /// Get the library path
+    #[allow(dead_code)]
     pub fn library_path(&self) -> &Path {
         &self.library_path
+    }
+
+    /// Update metadata for a track
+    pub async fn update_track_metadata(&self, id: &str, update: TrackMetadataUpdate) -> Result<Track> {
+        // Find the track
+        let track = {
+            let tracks = self.tracks.read().await;
+            tracks
+                .iter()
+                .find(|t| t.id == id)
+                .cloned()
+                .ok_or_else(|| anyhow::anyhow!("Track not found"))?
+        };
+
+        // Update the FLAC file metadata
+        self.write_flac_metadata(&track.path, &update)
+            .context("Failed to write metadata to file")?;
+
+        // Re-parse the file to get updated metadata
+        let updated_track = self.parse_flac_file(&track.path)
+            .await
+            .context("Failed to re-parse file after update")?;
+
+        // Update in-memory track list
+        {
+            let mut tracks = self.tracks.write().await;
+            if let Some(pos) = tracks.iter().position(|t| t.id == id) {
+                tracks[pos] = updated_track.clone();
+            }
+        }
+
+        tracing::info!(
+            "Updated metadata for track: {} ({})",
+            updated_track.title.as_deref().unwrap_or("Unknown"),
+            id
+        );
+
+        Ok(updated_track)
+    }
+
+    /// Write metadata to a FLAC file
+    fn write_flac_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
+        let mut tag = metaflac::Tag::read_from_path(path)
+            .context("Failed to read FLAC tags")?;
+
+        // Update vorbis comments
+        if let Some(title) = &update.title {
+            tag.set_vorbis("TITLE", vec![title.clone()]);
+        }
+        if let Some(artist) = &update.artist {
+            tag.set_vorbis("ARTIST", vec![artist.clone()]);
+        }
+        if let Some(album) = &update.album {
+            tag.set_vorbis("ALBUM", vec![album.clone()]);
+        }
+
+        tag.save().context("Failed to save FLAC tags")?;
+        
+        Ok(())
     }
 }

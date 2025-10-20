@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Station - Web Client</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 Music Station</h1>
+            <p class="subtitle">Manage your FLAC music library</p>
+        </header>
+
+        <div class="controls">
+            <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Library</button>
+            <span id="trackCount" class="track-count"></span>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading tracks...</p>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="trackList" class="track-list"></div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Track Metadata</h2>
+                <button class="close-btn" onclick="closeEditModal()">&times;</button>
+            </div>
+            <form id="editForm">
+                <input type="hidden" id="editTrackId">
+                
+                <div class="form-group">
+                    <label for="editTitle">Title</label>
+                    <input type="text" id="editTitle" class="form-control" placeholder="Track title">
+                </div>
+
+                <div class="form-group">
+                    <label for="editArtist">Artist</label>
+                    <input type="text" id="editArtist" class="form-control" placeholder="Artist name">
+                </div>
+
+                <div class="form-group">
+                    <label for="editAlbum">Album</label>
+                    <input type="text" id="editAlbum" class="form-control" placeholder="Album name">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

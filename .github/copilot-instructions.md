@@ -3,16 +3,17 @@
 ## Project Overview
 Music Station is a Rust-based HTTP server that scans a music library folder, extracts metadata from FLAC files, and provides a REST API for browsing and streaming music. Currently supports FLAC format only.
 
-**Architecture**: Client-server with REST API
+**Architecture**: Client-server with REST API + Web UI
 - Server: `music-station` binary scans library and serves HTTP API
-- Client: `music-client` CLI tool for browsing the library
+- CLI Client: `music-client` CLI tool for browsing and playing music
+- Web Client: Single-page web app for browsing and editing metadata
 
 ## Development Environment
 - **Language**: Rust (Edition 2024)
 - **Build Tool**: Cargo
 - **Runtime**: Tokio async runtime
 - **Web Framework**: Axum with tower-http middleware
-- **Audio**: Symphonia for FLAC parsing
+- **Audio**: Symphonia for FLAC parsing, metaflac for writing
 
 ## Key Commands
 ```bash
@@ -45,6 +46,10 @@ music-station/
 │   ├── server.rs         # Axum HTTP routes and handlers
 │   └── bin/
 │       └── client.rs     # CLI client for browsing library
+├── static/
+│   ├── index.html        # Web client UI
+│   ├── styles.css        # Web client styles  
+│   └── app.js            # Web client JavaScript
 ├── Cargo.toml            # Two binaries: music-station, music-client
 └── .github/
     └── copilot-instructions.md
@@ -65,7 +70,9 @@ music-station/
 - `GET /` - API version info
 - `GET /tracks` - List all tracks (returns JSON array)
 - `GET /tracks/:id` - Get single track details
+- `PUT /tracks/:id` - Update track metadata (body: {title?, artist?, album?})
 - `GET /stream/:id` - Stream FLAC file with proper headers
+- `GET /web/*` - Static web client files
 
 ### Client Flow
 1. `music-client` sends HTTP request to server
@@ -93,6 +100,17 @@ let probed = symphonia::default::get_probe()
 - Metadata tags: `TITLE`, `ARTIST`, `ALBUM` (case-sensitive)
 - Duration calculated from time base and frame count
 - Track ID generated using MD5 hash of file path
+
+### FLAC Metadata Writing (library.rs)
+```rust
+// metaflac pattern: read tags → modify → save
+let mut tag = metaflac::Tag::read_from_path(path)?;
+tag.set_vorbis("TITLE", vec![title.clone()]);
+tag.save()?;
+```
+- Uses metaflac crate for writing (Symphonia is read-only)
+- Updates Vorbis comments in FLAC files
+- Re-parses file after write to update in-memory state
 
 ### Axum State Pattern (server.rs)
 ```rust
@@ -125,8 +143,9 @@ pub struct AppState {
 ## Dependencies & Their Roles
 - **axum**: Web framework for REST API
 - **tokio**: Async runtime (required for axum)
-- **tower-http**: CORS middleware
+- **tower-http**: CORS middleware and static file serving
 - **symphonia**: Audio decoding (FLAC metadata extraction on server)
+- **metaflac**: FLAC metadata writing (for editing track info)
 - **rodio**: Audio playback (FLAC playback in client)
 - **serde**: JSON serialization for Track struct
 - **clap**: CLI argument parsing (derive + env features)

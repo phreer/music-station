@@ -10,6 +10,8 @@ A Rust-based HTTP server for managing and streaming FLAC music files with a CLI 
 - 🎧 Stream FLAC files over HTTP
 - 💻 CLI client for browsing library
 - ▶️ Audio playback directly from CLI client
+- 🌐 Web client for browsing and managing tracks
+- ✏️ Edit track metadata (title, artist, album)
 
 ## Quick Start
 
@@ -51,12 +53,22 @@ cargo run --bin music-client -- play <track-id>
 cargo run --bin music-client -- play-all
 ```
 
+### Using the Web Client
+
+1. Start the server (see above)
+2. Open your browser to `http://localhost:3000/web/index.html`
+3. Browse your music library with a clean web interface
+4. Click "Edit" on any track to update its metadata (title, artist, album)
+5. Changes are saved directly to the FLAC files
+
 ## API Endpoints
 
 - `GET /` - API version information
 - `GET /tracks` - List all tracks (JSON array)
 - `GET /tracks/:id` - Get track details by ID
+- `PUT /tracks/:id` - Update track metadata (JSON: {title?, artist?, album?})
 - `GET /stream/:id` - Stream FLAC audio file
+- `GET /web/*` - Static web client files
 
 ## Project Structure
 
@@ -68,6 +80,10 @@ music-station/
 │   ├── server.rs         # HTTP API handlers
 │   └── bin/
 │       └── client.rs     # CLI client
+├── static/
+│   ├── index.html        # Web client UI
+│   ├── styles.css        # Web client styles
+│   └── app.js            # Web client JavaScript
 ├── Cargo.toml
 └── README.md
 ```
@@ -89,7 +105,23 @@ cargo fmt
 
 # Lint code
 cargo clippy
+
+# Run with debug logging (default)
+cargo run -- --library /path/to/music
+
+# Run with less verbose logging
+RUST_LOG=info cargo run -- --library /path/to/music
 ```
+
+### Debug Logging
+
+The server includes comprehensive debug logging:
+- All HTTP requests and responses
+- File operations and metadata updates
+- Performance metrics (request duration)
+- Error diagnostics
+
+See [DEBUG_LOGGING.md](DEBUG_LOGGING.md) for detailed logging configuration and troubleshooting guide.
 
 ## Architecture
 
@@ -117,6 +149,7 @@ The client:
 - **axum** - Web framework
 - **tokio** - Async runtime
 - **symphonia** - Audio decoding (server)
+- **metaflac** - FLAC metadata writing
 - **rodio** - Audio playback (client)
 - **serde** - JSON serialization
 - **clap** - CLI argument parsing
