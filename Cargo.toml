@@ -1,0 +1,36 @@
+[package]
+name = "music-station"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# HTTP Server & Async Runtime
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "cors"] }
+
+# Audio Processing
+symphonia = { version = "0.5", features = ["flac"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CLI and Configuration
+clap = { version = "4.5", features = ["derive", "env"] }
+
+# Utilities
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+md5 = "0.7"
+reqwest = { version = "0.12", features = ["json"] }
+
+[[bin]]
+name = "music-station"
+path = "src/main.rs"
+
+[[bin]]
+name = "music-client"
+path = "src/bin/client.rs"
