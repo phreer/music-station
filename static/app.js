@@ -5,10 +5,16 @@ let tracks = [];
 let currentEditTrackId = null;
 let currentView = 'tracks';
 
+// Music player state
+let currentTrackIndex = -1;
+let playlist = [];
+let isPlaying = false;
+
 // Load tracks on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadTracks();
     setupEventListeners();
+    setupMusicPlayer();
 });
 
 function setupEventListeners() {
@@ -22,6 +28,162 @@ function setupEventListeners() {
             switchTab(tabName);
         });
     });
+}
+
+function setupMusicPlayer() {
+    const audio = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const progressBar = document.getElementById('progressBar');
+    const volumeControl = document.getElementById('volumeControl');
+    
+    // Play/Pause
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    
+    // Previous track
+    prevBtn.addEventListener('click', playPrevious);
+    
+    // Next track
+    nextBtn.addEventListener('click', playNext);
+    
+    // Stop
+    stopBtn.addEventListener('click', stopPlayback);
+    
+    // Progress bar
+    progressBar.addEventListener('input', (e) => {
+        const time = (audio.duration * e.target.value) / 100;
+        audio.currentTime = time;
+    });
+    
+    // Volume control
+    volumeControl.addEventListener('input', (e) => {
+        audio.volume = e.target.value / 100;
+    });
+    
+    // Audio events
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', playNext);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('play', () => {
+        isPlaying = true;
+        updatePlayPauseIcon();
+    });
+    audio.addEventListener('pause', () => {
+        isPlaying = false;
+        updatePlayPauseIcon();
+    });
+}
+
+function playTrack(trackId) {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    
+    // Update playlist if not set
+    if (playlist.length === 0) {
+        playlist = tracks.map(t => t.id);
+    }
+    
+    currentTrackIndex = playlist.indexOf(trackId);
+    if (currentTrackIndex === -1) return;
+    
+    const audio = document.getElementById('audioPlayer');
+    const streamUrl = `${API_BASE}/stream/${trackId}`;
+    
+    audio.src = streamUrl;
+    audio.load();
+    audio.play();
+    
+    // Update UI
+    document.getElementById('playerTitle').textContent = track.title || 'Unknown Title';
+    document.getElementById('playerArtist').textContent = track.artist || 'Unknown Artist';
+    document.getElementById('musicPlayer').style.display = 'block';
+    
+    // Add visual feedback to current track
+    highlightCurrentTrack(trackId);
+}
+
+function togglePlayPause() {
+    const audio = document.getElementById('audioPlayer');
+    
+    if (audio.src) {
+        if (isPlaying) {
+            audio.pause();
+        } else {
+            audio.play();
+        }
+    } else if (tracks.length > 0) {
+        // Start playing first track if none loaded
+        playTrack(tracks[0].id);
+    }
+}
+
+function playNext() {
+    if (playlist.length === 0) return;
+    
+    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+    playTrack(playlist[currentTrackIndex]);
+}
+
+function playPrevious() {
+    if (playlist.length === 0) return;
+    
+    currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+    playTrack(playlist[currentTrackIndex]);
+}
+
+function stopPlayback() {
+    const audio = document.getElementById('audioPlayer');
+    audio.pause();
+    audio.currentTime = 0;
+    document.getElementById('musicPlayer').style.display = 'none';
+    isPlaying = false;
+    updatePlayPauseIcon();
+    highlightCurrentTrack(null);
+}
+
+function updateProgress() {
+    const audio = document.getElementById('audioPlayer');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const currentTime = document.getElementById('currentTime');
+    
+    if (audio.duration) {
+        const progress = (audio.currentTime / audio.duration) * 100;
+        progressBar.value = progress;
+        progressFill.style.width = progress + '%';
+        currentTime.textContent = formatDuration(Math.floor(audio.currentTime));
+    }
+}
+
+function updateDuration() {
+    const audio = document.getElementById('audioPlayer');
+    const totalTime = document.getElementById('totalTime');
+    
+    if (audio.duration) {
+        totalTime.textContent = formatDuration(Math.floor(audio.duration));
+    }
+}
+
+function updatePlayPauseIcon() {
+    const icon = document.getElementById('playPauseIcon');
+    icon.textContent = isPlaying ? '⏸️' : '▶️';
+}
+
+function highlightCurrentTrack(trackId) {
+    // Remove previous highlight
+    document.querySelectorAll('.track-row').forEach(row => {
+        row.classList.remove('playing');
+    });
+    
+    // Add highlight to current track
+    if (trackId) {
+        const row = document.querySelector(`tr[data-track-id="${trackId}"]`);
+        if (row) {
+            row.classList.add('playing');
+        }
+    }
 }
 
 function switchTab(tabName) {
@@ -92,38 +254,60 @@ function renderTracks() {
         return;
     }
 
-    trackList.innerHTML = tracks.map(track => createTrackCard(track)).join('');
+    // Update playlist
+    playlist = tracks.map(t => t.id);
+
+    trackList.innerHTML = `
+        <div class="track-table-container">
+            <table class="track-table">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"></th>
+                        <th>Title</th>
+                        <th>Artist</th>
+                        <th>Album</th>
+                        <th>Duration</th>
+                        <th>Size</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${tracks.map(track => createTrackRow(track)).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
 }
 
-function createTrackCard(track) {
+function createTrackRow(track) {
     const title = track.title || 'Unknown Title';
     const artist = track.artist || 'Unknown Artist';
     const album = track.album || 'Unknown Album';
-    const duration = track.duration_secs ? formatDuration(track.duration_secs) : 'Unknown';
+    const duration = track.duration_secs ? formatDuration(track.duration_secs) : '--:--';
     const fileSize = formatFileSize(track.file_size);
     const streamUrl = `${API_BASE}/stream/${track.id}`;
 
     return `
-        <div class="track-card" data-track-id="${track.id}">
-            <div class="track-info">
-                <div class="track-title">${escapeHtml(title)}</div>
-                <div class="track-artist">🎤 ${escapeHtml(artist)}</div>
-                <div class="track-album">💿 ${escapeHtml(album)}</div>
-                <div class="track-meta">
-                    <span>⏱️ ${duration}</span>
-                    <span>📦 ${fileSize}</span>
-                    <span style="font-family: monospace; font-size: 0.8em;">ID: ${track.id.substring(0, 8)}...</span>
-                </div>
-            </div>
-            <div class="track-actions">
-                <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')">
-                    ✏️ Edit
+        <tr class="track-row" data-track-id="${track.id}">
+            <td class="track-play-cell">
+                <button class="play-track-btn" onclick="playTrack('${track.id}')" title="Play this track">
+                    ▶️
                 </button>
-                <a href="${streamUrl}" target="_blank" class="btn btn-secondary btn-small" style="text-decoration: none; text-align: center;">
-                    ▶️ Play
+            </td>
+            <td class="track-title-cell">${escapeHtml(title)}</td>
+            <td class="track-artist-cell">${escapeHtml(artist)}</td>
+            <td class="track-album-cell">${escapeHtml(album)}</td>
+            <td class="track-duration-cell">${duration}</td>
+            <td class="track-size-cell">${fileSize}</td>
+            <td class="track-actions-cell">
+                <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
+                    ✏️
+                </button>
+                <a href="${streamUrl}" target="_blank" class="btn btn-secondary btn-small" style="text-decoration: none;" title="Download track" download>
+                    💾
                 </a>
-            </div>
-        </div>
+            </td>
+        </tr>
     `;
 }
 

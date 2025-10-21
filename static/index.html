@@ -54,6 +54,43 @@
         </div>
     </div>
 
+    <!-- Music Player -->
+    <div id="musicPlayer" class="music-player" style="display: none;">
+        <div class="player-content">
+            <div class="player-track-info">
+                <div class="player-track-title" id="playerTitle">No track loaded</div>
+                <div class="player-track-artist" id="playerArtist">-</div>
+            </div>
+            <div class="player-controls">
+                <button id="prevBtn" class="player-btn" title="Previous">
+                    <span>⏮️</span>
+                </button>
+                <button id="playPauseBtn" class="player-btn player-btn-main" title="Play/Pause">
+                    <span id="playPauseIcon">▶️</span>
+                </button>
+                <button id="nextBtn" class="player-btn" title="Next">
+                    <span>⏭️</span>
+                </button>
+                <button id="stopBtn" class="player-btn" title="Stop">
+                    <span>⏹️</span>
+                </button>
+            </div>
+            <div class="player-progress">
+                <span class="player-time" id="currentTime">0:00</span>
+                <div class="player-progress-bar">
+                    <div class="player-progress-fill" id="progressFill"></div>
+                    <input type="range" id="progressBar" class="player-progress-input" min="0" max="100" value="0">
+                </div>
+                <span class="player-time" id="totalTime">0:00</span>
+            </div>
+            <div class="player-volume">
+                <span class="volume-icon">🔊</span>
+                <input type="range" id="volumeControl" class="volume-slider" min="0" max="100" value="100">
+            </div>
+        </div>
+        <audio id="audioPlayer" preload="metadata"></audio>
+    </div>
+
     <!-- Edit Modal -->
     <div id="editModal" class="modal" style="display: none;">
         <div class="modal-content">
