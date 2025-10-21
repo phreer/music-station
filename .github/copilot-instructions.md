@@ -74,7 +74,7 @@ music-station/
 - `GET /tracks` - List all tracks (returns JSON array)
 - `GET /tracks/:id` - Get single track details
 - `PUT /tracks/:id` - Update track metadata (body: {title?, artist?, album?})
-- `GET /stream/:id` - Stream FLAC file with proper headers
+- `GET /stream/:id` - Stream FLAC file with HTTP Range support for partial content delivery
 
 **Album & Artist Browsing:**
 - `GET /albums` - List all albums with track counts and durations
@@ -153,7 +153,13 @@ pub struct AppState {
 - Tracing for logging errors during library scan
 
 ### Streaming Audio Files (Server)
-- Files loaded into memory with `tokio::fs::read_to_end`
+- Supports HTTP Range requests (RFC 7233) for partial content delivery
+- Parses `Range: bytes=start-end` header to stream file segments
+- Returns 206 Partial Content with `Content-Range` header for range requests
+- Returns 200 OK with full file for non-range requests
+- Includes `Accept-Ranges: bytes` header to advertise range support
+- Uses `tokio::fs::File::seek()` for efficient range reads
+- Enables audio seeking in web player without downloading entire file
 - Returned with `Content-Type: audio/flac` header
 - `Content-Disposition: inline` for browser playback
 

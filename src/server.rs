@@ -1,11 +1,11 @@
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{StatusCode, header},
+    http::{StatusCode, header, HeaderMap},
     response::{IntoResponse, Response},
     routing::get,
 };
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -74,10 +74,11 @@ async fn get_track(
     result
 }
 
-/// Stream a track by ID
+/// Stream a track by ID with HTTP Range support
 async fn stream_track(
     State(state): State<AppState>,
     Path(id): Path<String>,
+    headers: HeaderMap,
 ) -> Result<Response, StatusCode> {
     tracing::debug!("Streaming track with id: {}", id);
     let track = state
@@ -88,7 +89,25 @@ async fn stream_track(
 
     tracing::debug!("Streaming file: {}", track.path.display());
 
-    // Read the file
+    // Get file metadata
+    let file_metadata = tokio::fs::metadata(&track.path)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let file_size = file_metadata.len();
+
+    // Parse Range header
+    let range_header = headers.get(header::RANGE);
+    
+    if let Some(range_value) = range_header {
+        // Parse range: "bytes=start-end"
+        if let Ok(range_str) = range_value.to_str() {
+            if let Some(range) = parse_range(range_str, file_size) {
+                return stream_range(&track.path, range.0, range.1, file_size).await;
+            }
+        }
+    }
+
+    // No range or invalid range - stream entire file
     let mut file = tokio::fs::File::open(&track.path)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -105,12 +124,110 @@ async fn stream_track(
         StatusCode::OK,
         [
             (header::CONTENT_TYPE, "audio/flac"),
+            (header::CONTENT_LENGTH, file_size.to_string().as_str()),
+            (header::ACCEPT_RANGES, "bytes"),
             (
                 header::CONTENT_DISPOSITION,
                 &format!(
                     "inline; filename=\"{}\"",
                     track.path.file_name().unwrap().to_string_lossy()
                 ),
+            ),
+        ],
+        buffer,
+    )
+        .into_response())
+}
+
+/// Parse Range header value
+/// Returns (start, end) tuple if valid
+fn parse_range(range_str: &str, file_size: u64) -> Option<(u64, u64)> {
+    // Expected format: "bytes=start-end" or "bytes=start-" or "bytes=-end"
+    if !range_str.starts_with("bytes=") {
+        return None;
+    }
+
+    let range_part = &range_str[6..]; // Skip "bytes="
+    let parts: Vec<&str> = range_part.split('-').collect();
+
+    if parts.len() != 2 {
+        return None;
+    }
+
+    let start_str = parts[0].trim();
+    let end_str = parts[1].trim();
+
+    match (start_str.is_empty(), end_str.is_empty()) {
+        (false, false) => {
+            // "bytes=start-end"
+            let start = start_str.parse::<u64>().ok()?;
+            let end = end_str.parse::<u64>().ok()?;
+            if start > end || start >= file_size {
+                return None;
+            }
+            Some((start, end.min(file_size - 1)))
+        }
+        (false, true) => {
+            // "bytes=start-" (from start to end of file)
+            let start = start_str.parse::<u64>().ok()?;
+            if start >= file_size {
+                return None;
+            }
+            Some((start, file_size - 1))
+        }
+        (true, false) => {
+            // "bytes=-end" (last N bytes)
+            let suffix_length = end_str.parse::<u64>().ok()?;
+            if suffix_length == 0 || suffix_length > file_size {
+                return None;
+            }
+            Some((file_size - suffix_length, file_size - 1))
+        }
+        (true, true) => None,
+    }
+}
+
+/// Stream a range of bytes from a file
+async fn stream_range(
+    path: &std::path::Path,
+    start: u64,
+    end: u64,
+    total_size: u64,
+) -> Result<Response, StatusCode> {
+    let mut file = tokio::fs::File::open(path)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Seek to start position
+    file.seek(std::io::SeekFrom::Start(start))
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // Read the requested range
+    let range_length = (end - start + 1) as usize;
+    let mut buffer = vec![0u8; range_length];
+    file.read_exact(&mut buffer)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    tracing::debug!(
+        "Streaming range {}-{}/{} ({} bytes)",
+        start,
+        end,
+        total_size,
+        range_length
+    );
+
+    // Return 206 Partial Content
+    Ok((
+        StatusCode::PARTIAL_CONTENT,
+        [
+            (header::CONTENT_TYPE, "audio/flac".to_string()),
+            (header::CONTENT_LENGTH, range_length.to_string()),
+            (header::ACCEPT_RANGES, "bytes".to_string()),
+            (
+                header::CONTENT_RANGE,
+                format!("bytes {}-{}/{}", start, end, total_size),
             ),
         ],
         buffer,
