@@ -47,9 +47,9 @@ music-station/
 │   └── bin/
 │       └── client.rs     # CLI client for browsing library
 ├── static/
-│   ├── index.html        # Web client UI with tabbed navigation
-│   ├── styles.css        # Web client styles with album/artist views
-│   └── app.js            # Web client JavaScript with tab switching
+│   ├── index.html        # Web client UI with tabbed navigation (5 tabs)
+│   ├── styles.css        # Web client styles with playlist support
+│   └── app.js            # Web client JavaScript with playlist management
 ├── Cargo.toml            # Two binaries: music-station, music-client
 └── .github/
     └── copilot-instructions.md
@@ -90,13 +90,16 @@ music-station/
 
 ### Web Client Flow
 1. User navigates to `http://localhost:3000/web/index.html`
-2. Client loads with 4 tabs: Tracks, Albums, Artists, Stats
-3. **Tracks Tab**: Lists all tracks with edit functionality
+2. Client loads with 5 tabs: Tracks, Albums, Artists, Playlists, Stats
+3. **Tracks Tab**: Lists all tracks with edit and add-to-playlist functionality
 4. **Albums Tab**: Shows albums grouped by name, expandable to view tracks
 5. **Artists Tab**: Displays artists with nested album/track information
-6. **Stats Tab**: Shows library statistics with visual cards
-7. Click album/artist cards to expand and view details
-8. Edit track metadata via modal dialog (updates FLAC file)
+6. **Playlists Tab**: Manage custom playlists - create, view, play, and delete
+7. **Stats Tab**: Shows library statistics with visual cards
+8. Click album/artist cards to expand and view details
+9. Edit track metadata via modal dialog (updates FLAC file)
+10. Create playlists and add tracks from any view
+11. Play entire playlists or individual tracks from playlists
 
 ### Client Flow (CLI)
 1. `music-client` sends HTTP request to server
@@ -212,8 +215,16 @@ pub struct AppState {
 ## Performance Notes
 - Library scanning is synchronous on startup (blocking)
 - Consider incremental scanning for large libraries (>10k files)
-- File streaming loads entire file into memory - add chunked streaming for large files
+- File streaming supports HTTP Range requests for efficient partial content delivery
 - RwLock allows concurrent reads, single writer for library updates
+- Playlists stored in browser localStorage (client-side only, not synced to server)
+
+## Playlist System
+- **Storage**: Client-side only, using browser localStorage
+- **Features**: Create, rename, delete playlists; add/remove tracks; play playlists
+- **Data Structure**: JSON array with playlist objects containing id, name, description, tracks[], createdAt
+- **Integration**: Add-to-playlist button on all track rows; play entire playlist or individual tracks
+- **Limitations**: Not synced across devices/browsers; data persists per browser only
 
 ## VS Code Integration
 - Custom workspace theme (brown/orange titlebar)

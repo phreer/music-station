@@ -10,11 +10,18 @@ let currentTrackIndex = -1;
 let playlist = [];
 let isPlaying = false;
 
+// Playlist management
+let playlists = [];
+let currentPlaylistId = null;
+let trackToAdd = null;
+
 // Load tracks on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadTracks();
+    loadPlaylists();
     setupEventListeners();
     setupMusicPlayer();
+    setupPlaylistEventListeners();
 });
 
 function setupEventListeners() {
@@ -28,6 +35,11 @@ function setupEventListeners() {
             switchTab(tabName);
         });
     });
+}
+
+function setupPlaylistEventListeners() {
+    document.getElementById('createPlaylistBtn').addEventListener('click', openCreatePlaylistModal);
+    document.getElementById('createPlaylistForm').addEventListener('submit', handleCreatePlaylist);
 }
 
 function setupMusicPlayer() {
@@ -213,6 +225,9 @@ function switchTab(tabName) {
         case 'artists':
             loadArtists();
             break;
+        case 'playlists':
+            displayPlaylists();
+            break;
         case 'stats':
             loadStats();
             break;
@@ -302,6 +317,9 @@ function createTrackRow(track) {
             <td class="track-actions-cell">
                 <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
                     ✏️
+                </button>
+                <button class="btn-add-to-playlist" onclick="openAddToPlaylistModal('${track.id}')" title="Add to playlist">
+                    ➕
                 </button>
                 <a href="${streamUrl}" target="_blank" class="btn btn-secondary btn-small" style="text-decoration: none;" title="Download track" download>
                     💾
@@ -605,5 +623,271 @@ window.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         closeEditModal();
+        closeCreatePlaylistModal();
+        closeAddToPlaylistModal();
     }
 });
+
+// ========== PLAYLIST MANAGEMENT ==========
+
+// Load playlists from localStorage
+function loadPlaylists() {
+    const saved = localStorage.getItem('music_station_playlists');
+    if (saved) {
+        try {
+            playlists = JSON.parse(saved);
+        } catch (e) {
+            console.error('Failed to parse playlists:', e);
+            playlists = [];
+        }
+    } else {
+        playlists = [];
+    }
+}
+
+// Save playlists to localStorage
+function savePlaylists() {
+    localStorage.setItem('music_station_playlists', JSON.stringify(playlists));
+}
+
+// Display all playlists
+function displayPlaylists() {
+    const playlistList = document.getElementById('playlist-list');
+    
+    if (playlists.length === 0) {
+        playlistList.innerHTML = `
+            <div class="empty-playlist">
+                <div class="empty-playlist-icon">🎵</div>
+                <p>No playlists yet. Create your first playlist!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    playlistList.innerHTML = playlists.map(pl => {
+        const trackCount = pl.tracks.length;
+        const totalDuration = pl.tracks.reduce((sum, trackId) => {
+            const track = tracks.find(t => t.id === trackId);
+            return sum + (track ? track.duration_secs : 0);
+        }, 0);
+        
+        return `
+            <div class="playlist-card" data-playlist-id="${pl.id}">
+                <div class="playlist-card-header">
+                    <div class="playlist-icon">🎼</div>
+                    <div class="playlist-info">
+                        <h3 class="playlist-name">${escapeHtml(pl.name)}</h3>
+                        ${pl.description ? `<p class="playlist-description">${escapeHtml(pl.description)}</p>` : ''}
+                    </div>
+                </div>
+                <div class="playlist-meta">
+                    <span>📀 ${trackCount} track${trackCount !== 1 ? 's' : ''}</span>
+                    <span>⏱️ ${formatDuration(totalDuration)}</span>
+                </div>
+                <div class="playlist-actions">
+                    <button class="btn btn-primary btn-small" onclick="playPlaylist('${pl.id}')" ${trackCount === 0 ? 'disabled' : ''}>
+                        ▶️ Play
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="togglePlaylistTracks('${pl.id}')">
+                        👁️ View
+                    </button>
+                    <button class="btn btn-secondary btn-small" onclick="deletePlaylist('${pl.id}')">
+                        🗑️ Delete
+                    </button>
+                </div>
+                <div class="playlist-tracks">
+                    ${trackCount === 0 ? '<p style="text-align: center; color: #b8b8b8; padding: 12px;">No tracks in this playlist</p>' : pl.tracks.map(trackId => {
+                        const track = tracks.find(t => t.id === trackId);
+                        if (!track) return '';
+                        return `
+                            <div class="playlist-track-item">
+                                <div class="playlist-track-info">
+                                    <div class="playlist-track-title">${escapeHtml(track.title || 'Unknown Title')}</div>
+                                    <div class="playlist-track-artist">${escapeHtml(track.artist || 'Unknown Artist')}</div>
+                                </div>
+                                <div class="playlist-track-actions">
+                                    <button onclick="playTrackFromPlaylist('${pl.id}', '${trackId}')" title="Play">▶️</button>
+                                    <button onclick="removeFromPlaylist('${pl.id}', '${trackId}')" title="Remove">❌</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Toggle playlist tracks visibility
+function togglePlaylistTracks(playlistId) {
+    const card = document.querySelector(`[data-playlist-id="${playlistId}"]`);
+    if (card) {
+        card.classList.toggle('expanded');
+    }
+}
+
+// Play entire playlist
+function playPlaylist(playlistId) {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl || pl.tracks.length === 0) return;
+    
+    // Set current playlist
+    currentPlaylistId = playlistId;
+    playlist = pl.tracks.slice(); // Copy array
+    currentTrackIndex = 0;
+    
+    // Play first track
+    playTrack(playlist[0]);
+}
+
+// Play track from playlist
+function playTrackFromPlaylist(playlistId, trackId) {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    
+    currentPlaylistId = playlistId;
+    playlist = pl.tracks.slice();
+    currentTrackIndex = playlist.indexOf(trackId);
+    
+    playTrack(trackId);
+}
+
+// Open create playlist modal
+function openCreatePlaylistModal() {
+    document.getElementById('createPlaylistModal').style.display = 'flex';
+    document.getElementById('playlistName').value = '';
+    document.getElementById('playlistDescription').value = '';
+    document.getElementById('playlistName').focus();
+}
+
+// Close create playlist modal
+function closeCreatePlaylistModal() {
+    document.getElementById('createPlaylistModal').style.display = 'none';
+}
+
+// Handle create playlist form submission
+function handleCreatePlaylist(event) {
+    event.preventDefault();
+    
+    const name = document.getElementById('playlistName').value.trim();
+    const description = document.getElementById('playlistDescription').value.trim();
+    
+    if (!name) {
+        alert('Please enter a playlist name');
+        return;
+    }
+    
+    // Create new playlist
+    const newPlaylist = {
+        id: generateId(),
+        name: name,
+        description: description,
+        tracks: [],
+        createdAt: new Date().toISOString()
+    };
+    
+    playlists.push(newPlaylist);
+    savePlaylists();
+    
+    // Close modal and refresh display
+    closeCreatePlaylistModal();
+    displayPlaylists();
+    
+    // Show success message
+    console.log('Playlist created:', newPlaylist);
+}
+
+// Open add to playlist modal
+function openAddToPlaylistModal(trackId) {
+    trackToAdd = trackId;
+    
+    const modal = document.getElementById('addToPlaylistModal');
+    const listContainer = document.getElementById('playlistSelectionList');
+    
+    if (playlists.length === 0) {
+        listContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No playlists available. Create one first!</p>';
+    } else {
+        listContainer.innerHTML = playlists.map(pl => `
+            <div class="playlist-selection-item" onclick="addTrackToPlaylist('${pl.id}')">
+                <span class="playlist-icon">🎼</span>
+                <span class="playlist-name">${escapeHtml(pl.name)}</span>
+                <span class="playlist-track-count">${pl.tracks.length} tracks</span>
+            </div>
+        `).join('');
+    }
+    
+    modal.style.display = 'flex';
+}
+
+// Close add to playlist modal
+function closeAddToPlaylistModal() {
+    document.getElementById('addToPlaylistModal').style.display = 'none';
+    trackToAdd = null;
+}
+
+// Add track to playlist
+function addTrackToPlaylist(playlistId) {
+    if (!trackToAdd) return;
+    
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    
+    // Check if track already in playlist
+    if (pl.tracks.includes(trackToAdd)) {
+        alert('Track is already in this playlist');
+        return;
+    }
+    
+    // Add track
+    pl.tracks.push(trackToAdd);
+    savePlaylists();
+    
+    // Close modal and refresh if on playlists view
+    closeAddToPlaylistModal();
+    if (currentView === 'playlists') {
+        displayPlaylists();
+    }
+    
+    // Show success message
+    const track = tracks.find(t => t.id === trackToAdd);
+    console.log(`Added "${track?.title}" to playlist "${pl.name}"`);
+}
+
+// Remove track from playlist
+function removeFromPlaylist(playlistId, trackId) {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    
+    const index = pl.tracks.indexOf(trackId);
+    if (index > -1) {
+        pl.tracks.splice(index, 1);
+        savePlaylists();
+        displayPlaylists();
+    }
+}
+
+// Delete playlist
+function deletePlaylist(playlistId) {
+    const pl = playlists.find(p => p.id === playlistId);
+    if (!pl) return;
+    
+    if (confirm(`Are you sure you want to delete the playlist "${pl.name}"?`)) {
+        const index = playlists.findIndex(p => p.id === playlistId);
+        if (index > -1) {
+            playlists.splice(index, 1);
+            savePlaylists();
+            displayPlaylists();
+        }
+    }
+}
+
+// Open create playlist from add modal
+function openCreatePlaylistFromAdd() {
+    closeAddToPlaylistModal();
+    openCreatePlaylistModal();
+}
+
+// Generate unique ID
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}

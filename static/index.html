@@ -18,6 +18,7 @@
             <button class="tab-btn active" data-tab="tracks">📀 Tracks</button>
             <button class="tab-btn" data-tab="albums">💿 Albums</button>
             <button class="tab-btn" data-tab="artists">🎤 Artists</button>
+            <button class="tab-btn" data-tab="playlists">🎼 Playlists</button>
             <button class="tab-btn" data-tab="stats">📊 Stats</button>
         </nav>
 
@@ -46,6 +47,15 @@
         <!-- Artists View -->
         <div id="artists-view" class="tab-content">
             <div id="artist-list" class="artist-list"></div>
+        </div>
+
+        <!-- Playlists View -->
+        <div id="playlists-view" class="tab-content">
+            <div class="playlists-header">
+                <h2>My Playlists</h2>
+                <button id="createPlaylistBtn" class="btn btn-primary">➕ Create Playlist</button>
+            </div>
+            <div id="playlist-list" class="playlist-list"></div>
         </div>
 
         <!-- Stats View -->
@@ -89,6 +99,45 @@
             </div>
         </div>
         <audio id="audioPlayer" preload="metadata"></audio>
+    </div>
+
+    <!-- Create Playlist Modal -->
+    <div id="createPlaylistModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Playlist</h2>
+                <button class="close-btn" onclick="closeCreatePlaylistModal()">&times;</button>
+            </div>
+            <form id="createPlaylistForm">
+                <div class="form-group">
+                    <label for="playlistName">Playlist Name</label>
+                    <input type="text" id="playlistName" class="form-control" placeholder="My Awesome Playlist" required>
+                </div>
+                <div class="form-group">
+                    <label for="playlistDescription">Description (optional)</label>
+                    <textarea id="playlistDescription" class="form-control" placeholder="Description of your playlist" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreatePlaylistModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">✨ Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add to Playlist Modal -->
+    <div id="addToPlaylistModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add to Playlist</h2>
+                <button class="close-btn" onclick="closeAddToPlaylistModal()">&times;</button>
+            </div>
+            <div class="playlist-selection">
+                <p class="modal-subtitle">Select a playlist:</p>
+                <div id="playlistSelectionList" class="playlist-selection-list"></div>
+                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()">➕ Create New Playlist</button>
+            </div>
+        </div>
     </div>
 
     <!-- Edit Modal -->
