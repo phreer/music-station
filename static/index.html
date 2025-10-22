@@ -65,43 +65,59 @@
     </div>
 
     <!-- Music Player -->
-    <div id="musicPlayer" class="music-player" style="display: none;">
-        <div class="player-content">
-            <div class="player-track-info">
-                <div class="player-track-title" id="playerTitle">No track loaded</div>
-                <div class="player-track-artist" id="playerArtist">-</div>
-            </div>
-            <div class="player-controls">
-                <button id="prevBtn" class="player-btn" title="Previous">
-                    <span>⏮️</span>
+    <div id="musicPlayer" class="music-player">
+        <div class="player-main">
+            <!-- Left: Track Info -->
+            <div class="player-info">
+                <button id="lyricsToggleBtn" class="lyrics-toggle-btn-inline" onclick="togglePlayerLyrics()" title="Toggle lyrics" style="display: none;">
+                    📝
                 </button>
-                <button id="playPauseBtn" class="player-btn player-btn-main" title="Play/Pause">
-                    <span id="playPauseIcon">▶️</span>
-                </button>
-                <button id="nextBtn" class="player-btn" title="Next">
-                    <span>⏭️</span>
-                </button>
-                <button id="stopBtn" class="player-btn" title="Stop">
-                    <span>⏹️</span>
-                </button>
-            </div>
-            <div class="player-progress">
-                <span class="player-time" id="currentTime">0:00</span>
-                <div class="player-progress-bar">
-                    <div class="player-progress-fill" id="progressFill"></div>
-                    <input type="range" id="progressBar" class="player-progress-input" min="0" max="100" value="0">
+                <div class="player-cover">🎵</div>
+                <div class="player-track-info">
+                    <div id="playerTitle" class="player-title">No track selected</div>
+                    <div id="playerArtist" class="player-artist">—</div>
                 </div>
-                <span class="player-time" id="totalTime">0:00</span>
             </div>
+            
+            <!-- Center: Controls & Progress -->
+            <div class="player-center">
+                <div class="player-controls">
+                    <button id="prevBtn" class="control-btn">⏮️</button>
+                    <button id="playPauseBtn" class="control-btn play-pause">
+                        <span id="playPauseIcon">▶️</span>
+                    </button>
+                    <button id="nextBtn" class="control-btn">⏭️</button>
+                    <button id="stopBtn" class="control-btn">⏹️</button>
+                </div>
+                
+                <div class="player-progress">
+                    <span id="currentTime" class="time-display">0:00</span>
+                    <div class="progress-container">
+                        <input type="range" id="progressBar" class="progress-bar" min="0" max="100" value="0">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <span id="totalTime" class="time-display">0:00</span>
+                </div>
+            </div>
+            
+            <!-- Right: Volume -->
             <div class="player-volume">
-                <span class="volume-icon">🔊</span>
+                <span>🔊</span>
                 <input type="range" id="volumeControl" class="volume-slider" min="0" max="100" value="100">
             </div>
         </div>
-        <audio id="audioPlayer" preload="metadata"></audio>
-    </div>
 
-    <!-- Play Queue Panel -->
+        <!-- Integrated Lyrics Display -->
+        <div id="playerLyricsContainer" class="player-lyrics-container" style="display: none;">
+            <div class="player-lyrics-header">
+                <span class="player-lyrics-title">📝 Lyrics</span>
+                <button id="closeLyricsBtn" class="btn-close-lyrics" onclick="togglePlayerLyrics()">✖️</button>
+            </div>
+            <div id="playerLyricsContent" class="player-lyrics-content"></div>
+        </div>
+        
+        <audio id="audioPlayer" preload="metadata"></audio>
+    </div>    <!-- Play Queue Panel -->
     <div id="playQueuePanel" class="play-queue-panel" style="display: none;">
         <div class="play-queue-header">
             <h3>🎵 Play Queue</h3>
@@ -340,24 +356,6 @@
                         <button type="button" class="btn btn-primary" onclick="saveLyrics()">💾 Save Lyrics</button>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lyrics Display Panel (for player) -->
-    <button id="lyricsToggleBtn" class="lyrics-toggle-btn" onclick="toggleLyricsPanel()" title="Show/Hide Lyrics" style="display: none;">
-        📝 <span class="lyrics-badge" id="lyricsBadge">Lyrics</span>
-    </button>
-
-    <div id="lyricsPanel" class="lyrics-panel" style="display: none;">
-        <div class="lyrics-panel-header">
-            <h3>📝 Lyrics</h3>
-            <button class="btn-icon" onclick="toggleLyricsPanel()" title="Close lyrics">✖️</button>
-        </div>
-        <div id="lyricsPanelContent" class="lyrics-panel-content">
-            <div class="lyrics-empty">
-                <div class="lyrics-empty-icon">📄</div>
-                <p>No lyrics available</p>
             </div>
         </div>
     </div>

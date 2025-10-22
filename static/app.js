@@ -142,7 +142,7 @@ function playTrack(trackId, skipQueueUpdate = false) {
     if (track.has_lyrics) {
         loadLyricsForPlayer(trackId);
     } else {
-        hideLyricsPanel();
+        hidePlayerLyrics();
     }
 }
 
@@ -194,6 +194,9 @@ function stopPlayback() {
     isPlaying = false;
     updatePlayPauseIcon();
     highlightCurrentTrack(null);
+    hidePlayerLyrics();
+    hasLyricsAvailable = false;
+    document.getElementById('lyricsToggleBtn').style.display = 'none';
 }
 
 function updateProgress() {
@@ -1638,19 +1641,10 @@ async function deleteLyrics() {
     }
 }
 
-// ========== LYRICS PANEL (PLAYER) ==========
+// ========== PLAYER INTEGRATED LYRICS ==========
 
-// Toggle lyrics panel
-function toggleLyricsPanel() {
-    isLyricsPanelVisible = !isLyricsPanelVisible;
-    const panel = document.getElementById('lyricsPanel');
-    
-    if (isLyricsPanelVisible) {
-        panel.style.display = 'flex';
-    } else {
-        panel.style.display = 'none';
-    }
-}
+let hasLyricsAvailable = false;
+let lyricsVisible = true; // Default to showing lyrics when available
 
 // Load lyrics for currently playing track
 async function loadLyricsForPlayer(trackId) {
@@ -1660,19 +1654,36 @@ async function loadLyricsForPlayer(trackId) {
         if (response.ok) {
             const lyrics = await response.json();
             displayLyricsInPlayer(lyrics);
-            document.getElementById('lyricsToggleBtn').style.display = 'flex';
+            hasLyricsAvailable = true;
+            
+            // Show toggle button
+            const toggleBtn = document.getElementById('lyricsToggleBtn');
+            toggleBtn.style.display = 'flex';
+            
+            // Show lyrics if visibility preference is true
+            if (lyricsVisible) {
+                showPlayerLyrics();
+                toggleBtn.classList.add('active');
+            } else {
+                hidePlayerLyrics();
+                toggleBtn.classList.remove('active');
+            }
         } else {
-            hideLyricsPanel();
+            hasLyricsAvailable = false;
+            hidePlayerLyrics();
+            document.getElementById('lyricsToggleBtn').style.display = 'none';
         }
     } catch (error) {
         console.error('Error loading lyrics for player:', error);
-        hideLyricsPanel();
+        hasLyricsAvailable = false;
+        hidePlayerLyrics();
+        document.getElementById('lyricsToggleBtn').style.display = 'none';
     }
 }
 
-// Display lyrics in player panel
+// Display lyrics in player
 function displayLyricsInPlayer(lyrics) {
-    const content = document.getElementById('lyricsPanelContent');
+    const content = document.getElementById('playerLyricsContent');
     
     if (lyrics.format === 'lrc') {
         // Parse and display LRC format with sync capability
@@ -1705,11 +1716,32 @@ function displayLyricsInPlayer(lyrics) {
     }
 }
 
-// Hide lyrics panel
-function hideLyricsPanel() {
-    document.getElementById('lyricsToggleBtn').style.display = 'none';
-    document.getElementById('lyricsPanel').style.display = 'none';
-    isLyricsPanelVisible = false;
+// Show player lyrics container
+function showPlayerLyrics() {
+    document.getElementById('playerLyricsContainer').style.display = 'flex';
+}
+
+// Hide player lyrics container
+function hidePlayerLyrics() {
+    document.getElementById('playerLyricsContainer').style.display = 'none';
+    lyricsLines = [];
+    currentLyricsIndex = -1;
+}
+
+// Toggle player lyrics visibility
+function togglePlayerLyrics() {
+    if (!hasLyricsAvailable) return;
+    
+    lyricsVisible = !lyricsVisible;
+    const toggleBtn = document.getElementById('lyricsToggleBtn');
+    
+    if (lyricsVisible) {
+        showPlayerLyrics();
+        toggleBtn.classList.add('active');
+    } else {
+        document.getElementById('playerLyricsContainer').style.display = 'none';
+        toggleBtn.classList.remove('active');
+    }
 }
 
 // Enable lyrics synchronization with playback
