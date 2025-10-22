@@ -12,6 +12,8 @@ A Rust-based HTTP server for managing and streaming FLAC music files with a CLI 
 - ▶️ Audio playback directly from CLI client
 - 🌐 Web client for browsing and managing tracks
 - ✏️ Edit track metadata (title, artist, album)
+- 📝 Lyrics support with plain text and LRC (synchronized) formats
+- 💾 SQLite database for persistent lyrics storage
 
 ## Quick Start
 
@@ -63,12 +65,28 @@ cargo run --bin music-client -- play-all
 
 ## API Endpoints
 
+**Tracks:**
 - `GET /` - API version information
 - `GET /tracks` - List all tracks (JSON array)
 - `GET /tracks/:id` - Get track details by ID
 - `PUT /tracks/:id` - Update track metadata (JSON: {title?, artist?, album?})
 - `GET /stream/:id` - Stream FLAC audio file
+
+**Lyrics:**
+- `GET /lyrics/:id` - Get lyrics for a track
+- `PUT /lyrics/:id` - Upload/update lyrics (JSON: {content, format?, language?, source?})
+- `DELETE /lyrics/:id` - Delete lyrics for a track
+
+**Albums & Artists:**
+- `GET /albums` - List all albums
+- `GET /albums/:name` - Get album details
+- `GET /artists` - List all artists
+- `GET /artists/:name` - Get artist details
+
+**Web Client:**
 - `GET /web/*` - Static web client files
+
+For detailed lyrics API usage, see [LYRICS_GUIDE.md](LYRICS_GUIDE.md).
 
 ## Project Structure
 
@@ -77,6 +95,7 @@ music-station/
 ├── src/
 │   ├── main.rs           # Server entry point
 │   ├── library.rs        # Music library scanner & FLAC parser
+│   ├── lyrics.rs         # Lyrics database management
 │   ├── server.rs         # HTTP API handlers
 │   └── bin/
 │       └── client.rs     # CLI client
@@ -85,7 +104,8 @@ music-station/
 │   ├── styles.css        # Web client styles
 │   └── app.js            # Web client JavaScript
 ├── Cargo.toml
-└── README.md
+├── README.md
+└── LYRICS_GUIDE.md       # Lyrics feature documentation
 ```
 
 ## Development
@@ -154,6 +174,8 @@ The client:
 - **serde** - JSON serialization
 - **clap** - CLI argument parsing
 - **reqwest** - HTTP client (for CLI)
+- **sqlx** - Database driver for lyrics storage
+- **chrono** - Date and time handling
 
 ## License
 

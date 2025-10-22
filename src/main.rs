@@ -1,9 +1,11 @@
 mod library;
+mod lyrics;
 mod server;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use library::MusicLibrary;
+use lyrics::LyricDatabase;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -45,13 +47,28 @@ async fn main() -> Result<()> {
     tracing::info!("Library path: {}", cli.library.display());
 
     // Initialize music library
-    let library = MusicLibrary::new(cli.library);
+    let library = MusicLibrary::new(cli.library.clone());
 
     // Scan the library
     library.scan().await.context("Failed to scan library")?;
 
+    // Initialize lyrics database
+    let db_path = cli.library.join(".music-station").join("lyrics.db");
+    let lyrics_db = LyricDatabase::new(&db_path)
+        .await
+        .context("Failed to initialize lyrics database")?;
+    
+    tracing::info!("Lyrics database: {}", db_path.display());
+
+    // Update has_lyrics flags for all tracks
+    if let Ok(tracks_with_lyrics) = lyrics_db.get_tracks_with_lyrics().await {
+        for track_id in tracks_with_lyrics {
+            library.update_track_lyrics_status(&track_id, true).await;
+        }
+    }
+
     // Create and start the server
-    let app = server::create_router(library);
+    let app = server::create_router(library, lyrics_db);
     let addr = format!("0.0.0.0:{}", cli.port);
 
     tracing::info!("Server listening on http://{}", addr);
@@ -61,6 +78,9 @@ async fn main() -> Result<()> {
     tracing::info!("  GET  /tracks/:id    - Get track details");
     tracing::info!("  PUT  /tracks/:id    - Update track metadata");
     tracing::info!("  GET  /stream/:id    - Stream track audio");
+    tracing::info!("  GET  /lyrics/:id    - Get track lyrics");
+    tracing::info!("  PUT  /lyrics/:id    - Upload/update track lyrics");
+    tracing::info!("  DELETE /lyrics/:id  - Delete track lyrics");
     tracing::info!("Web Client:");
     tracing::info!("  http://localhost:{}/web/index.html", cli.port);
 

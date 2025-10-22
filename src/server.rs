@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, State, Multipart},
     http::{StatusCode, header, HeaderMap},
     response::{IntoResponse, Response},
-    routing::{get, post, delete},
+    routing::get,
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tower_http::cors::CorsLayer;
@@ -11,14 +11,16 @@ use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 use crate::library::{Album, Artist, LibraryStats, MusicLibrary, Track, TrackMetadataUpdate};
+use crate::lyrics::{Lyric, LyricDatabase, LyricFormat, LyricUpload};
 
 #[derive(Clone)]
 pub struct AppState {
     pub library: MusicLibrary,
+    pub lyrics_db: LyricDatabase,
 }
 
-pub fn create_router(library: MusicLibrary) -> Router {
-    let state = AppState { library };
+pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router {
+    let state = AppState { library, lyrics_db };
 
     // Serve static files from ./static directory
     let static_service = ServeDir::new("static");
@@ -29,6 +31,7 @@ pub fn create_router(library: MusicLibrary) -> Router {
         .route("/tracks/:id", get(get_track).put(update_track))
         .route("/stream/:id", get(stream_track))
         .route("/cover/:id", get(get_cover).post(upload_cover).delete(delete_cover))
+        .route("/lyrics/:id", get(get_lyrics).put(upload_lyrics).delete(delete_lyrics))
         .route("/albums", get(list_albums))
         .route("/albums/:name", get(get_album))
         .route("/artists", get(list_artists))
@@ -471,4 +474,118 @@ async fn delete_cover(
 
     tracing::debug!("Successfully deleted cover art for track: {}", id);
     Ok(Json(track))
+}
+
+// ========== LYRICS ENDPOINTS ==========
+
+/// Get lyrics for a track
+async fn get_lyrics(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Lyric>, StatusCode> {
+    tracing::debug!("Fetching lyrics for track: {}", id);
+    
+    // Check if track exists
+    state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Get lyrics from database
+    let lyric = state
+        .lyrics_db
+        .get_lyric(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error fetching lyrics for track {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::debug!("No lyrics found for track: {}", id);
+            StatusCode::NOT_FOUND
+        })?;
+    
+    tracing::debug!("Successfully fetched lyrics for track: {}", id);
+    Ok(Json(lyric))
+}
+
+/// Upload or update lyrics for a track
+async fn upload_lyrics(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(upload): Json<LyricUpload>,
+) -> Result<Json<Lyric>, StatusCode> {
+    tracing::debug!("Uploading lyrics for track: {}", id);
+    
+    // Check if track exists
+    state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Determine format
+    let format = if let Some(fmt) = upload.format {
+        LyricFormat::from_str(&fmt)
+    } else {
+        // Auto-detect format based on content
+        if upload.content.contains("[00:") || upload.content.contains("[01:") {
+            LyricFormat::Lrc
+        } else {
+            LyricFormat::Plain
+        }
+    };
+    
+    // Save lyrics
+    let lyric = state
+        .lyrics_db
+        .save_lyric(&id, upload.content, format, upload.language, upload.source)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error saving lyrics for track {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    // Update track's has_lyrics flag
+    state.library.update_track_lyrics_status(&id, true).await;
+    
+    tracing::debug!("Successfully uploaded lyrics for track: {}", id);
+    Ok(Json(lyric))
+}
+
+/// Delete lyrics for a track
+async fn delete_lyrics(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    tracing::debug!("Deleting lyrics for track: {}", id);
+    
+    // Check if track exists
+    state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    // Delete lyrics
+    let deleted = state
+        .lyrics_db
+        .delete_lyric(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error deleting lyrics for track {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    
+    if !deleted {
+        tracing::debug!("No lyrics found to delete for track: {}", id);
+        return Err(StatusCode::NOT_FOUND);
+    }
+    
+    // Update track's has_lyrics flag
+    state.library.update_track_lyrics_status(&id, false).await;
+    
+    tracing::debug!("Successfully deleted lyrics for track: {}", id);
+    Ok(StatusCode::NO_CONTENT)
 }

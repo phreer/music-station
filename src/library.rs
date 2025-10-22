@@ -25,6 +25,7 @@ pub struct Track {
     pub duration_secs: Option<u64>,
     pub file_size: u64,
     pub has_cover: bool,
+    pub has_lyrics: bool,
     pub custom_fields: HashMap<String, String>,
 }
 
@@ -218,6 +219,7 @@ impl MusicLibrary {
             duration_secs,
             file_size,
             has_cover,
+            has_lyrics: false, // Will be updated when lyrics database is queried
             custom_fields,
         })
     }
@@ -241,6 +243,14 @@ impl MusicLibrary {
     #[allow(dead_code)]
     pub fn library_path(&self) -> &Path {
         &self.library_path
+    }
+
+    /// Update the has_lyrics flag for a track
+    pub async fn update_track_lyrics_status(&self, track_id: &str, has_lyrics: bool) {
+        let mut tracks = self.tracks.write().await;
+        if let Some(track) = tracks.iter_mut().find(|t| t.id == track_id) {
+            track.has_lyrics = has_lyrics;
+        }
     }
 
     /// Get all albums in the library
