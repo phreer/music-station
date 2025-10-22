@@ -1151,3 +1151,185 @@ header h1 {
     transform: scale(1.05);
 }
 
+/* Extended Edit Modal */
+.modal-wide {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.form-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #702A03;
+    margin-bottom: 16px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Cover Art Section */
+.cover-art-section {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.current-cover {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #d0d0d0;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9f9f9;
+    overflow: hidden;
+    position: relative;
+}
+
+.current-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.current-cover.empty::before {
+    content: '📷';
+    font-size: 48px;
+    opacity: 0.3;
+}
+
+.cover-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+/* Custom Fields */
+.custom-fields-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.custom-field-item {
+    display: grid;
+    grid-template-columns: 1fr 2fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.custom-field-item input {
+    padding: 8px 12px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.custom-field-item button {
+    padding: 6px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s ease;
+}
+
+.custom-field-item button:hover {
+    background: #c82333;
+}
+
+/* Track table with cover thumbnails */
+.track-cover-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #d0d0d0;
+}
+
+.track-cover-cell {
+    padding: 8px;
+    text-align: center;
+}
+
+.track-cover-placeholder {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    opacity: 0.5;
+}
+
+/* Album cards with cover art */
+.album-card-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px 8px 0 0;
+}
+
+.album-card-no-cover {
+    width: 100%;
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, #d2691e 0%, #8b4513 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    border-radius: 8px 8px 0 0;
+}
+
+/* Metadata display enhancements */
+.metadata-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    font-size: 13px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.metadata-item {
+    display: flex;
+    gap: 6px;
+}
+
+.metadata-label {
+    font-weight: 600;
+    color: #702A03;
+}
+
+.metadata-value {
+    color: #555;
+}

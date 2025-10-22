@@ -142,7 +142,7 @@
 
     <!-- Edit Modal -->
     <div id="editModal" class="modal" style="display: none;">
-        <div class="modal-content">
+        <div class="modal-content modal-wide">
             <div class="modal-header">
                 <h2>Edit Track Metadata</h2>
                 <button class="close-btn" onclick="closeEditModal()">&times;</button>
@@ -150,19 +150,88 @@
             <form id="editForm">
                 <input type="hidden" id="editTrackId">
                 
-                <div class="form-group">
-                    <label for="editTitle">Title</label>
-                    <input type="text" id="editTitle" class="form-control" placeholder="Track title">
+                <div class="form-section">
+                    <h3>Basic Information</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editTitle">Title</label>
+                            <input type="text" id="editTitle" class="form-control" placeholder="Track title">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editArtist">Artist</label>
+                            <input type="text" id="editArtist" class="form-control" placeholder="Artist name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editAlbum">Album</label>
+                            <input type="text" id="editAlbum" class="form-control" placeholder="Album name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editAlbumArtist">Album Artist</label>
+                            <input type="text" id="editAlbumArtist" class="form-control" placeholder="Album artist">
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="editArtist">Artist</label>
-                    <input type="text" id="editArtist" class="form-control" placeholder="Artist name">
+                <div class="form-section">
+                    <h3>Additional Details</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editGenre">Genre</label>
+                            <input type="text" id="editGenre" class="form-control" placeholder="e.g., Rock, Jazz">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editYear">Year</label>
+                            <input type="text" id="editYear" class="form-control" placeholder="e.g., 2024">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editTrackNumber">Track Number</label>
+                            <input type="text" id="editTrackNumber" class="form-control" placeholder="e.g., 1 or 1/12">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editDiscNumber">Disc Number</label>
+                            <input type="text" id="editDiscNumber" class="form-control" placeholder="e.g., 1 or 1/2">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editComposer">Composer</label>
+                            <input type="text" id="editComposer" class="form-control" placeholder="Composer name">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editComment">Comment</label>
+                            <textarea id="editComment" class="form-control" placeholder="Additional comments" rows="2"></textarea>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="editAlbum">Album</label>
-                    <input type="text" id="editAlbum" class="form-control" placeholder="Album name">
+                <div class="form-section">
+                    <h3>Cover Art</h3>
+                    <div class="cover-art-section">
+                        <div id="currentCover" class="current-cover"></div>
+                        <div class="cover-upload">
+                            <input type="file" id="coverImageInput" accept="image/*" style="display: none;">
+                            <button type="button" class="btn btn-secondary btn-small" onclick="selectCoverImage()">
+                                📷 Choose Image
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-small" id="removeCoverBtn" onclick="removeCover()" style="display: none;">
+                                🗑️ Remove Cover
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Custom Fields</h3>
+                    <div id="customFieldsList" class="custom-fields-list"></div>
+                    <button type="button" class="btn btn-secondary btn-small" onclick="addCustomField()">
+                        ➕ Add Custom Field
+                    </button>
                 </div>
 
                 <div class="form-actions">

@@ -277,6 +277,7 @@ function renderTracks() {
             <table class="track-table">
                 <thead>
                     <tr>
+                        <th style="width: 50px;">Cover</th>
                         <th style="width: 40px;"></th>
                         <th>Title</th>
                         <th>Artist</th>
@@ -301,9 +302,18 @@ function createTrackRow(track) {
     const duration = track.duration_secs ? formatDuration(track.duration_secs) : '--:--';
     const fileSize = formatFileSize(track.file_size);
     const streamUrl = `${API_BASE}/stream/${track.id}`;
+    const coverUrl = track.has_cover ? `${API_BASE}/cover/${track.id}` : null;
+
+    const coverCell = coverUrl 
+        ? `<img src="${coverUrl}" alt="Cover" class="track-cover-thumb" onerror="this.style.display='none'; this.parentElement.querySelector('.track-cover-placeholder').style.display='flex';">
+           <div class="track-cover-placeholder" style="display: none;">📀</div>`
+        : `<div class="track-cover-placeholder">📀</div>`;
 
     return `
         <tr class="track-row" data-track-id="${track.id}">
+            <td class="track-cover-cell">
+                ${coverCell}
+            </td>
             <td class="track-play-cell">
                 <button class="play-track-btn" onclick="playTrack('${track.id}')" title="Play this track">
                     ▶️
@@ -329,16 +339,53 @@ function createTrackRow(track) {
     `;
 }
 
+let selectedCoverFile = null;
+let customFieldCounter = 0;
+
 function openEditModal(trackId) {
     const track = tracks.find(t => t.id === trackId);
     if (!track) return;
 
     currentEditTrackId = trackId;
+    selectedCoverFile = null;
     
+    // Basic fields
     document.getElementById('editTrackId').value = trackId;
     document.getElementById('editTitle').value = track.title || '';
     document.getElementById('editArtist').value = track.artist || '';
     document.getElementById('editAlbum').value = track.album || '';
+    document.getElementById('editAlbumArtist').value = track.album_artist || '';
+    
+    // Additional fields
+    document.getElementById('editGenre').value = track.genre || '';
+    document.getElementById('editYear').value = track.year || '';
+    document.getElementById('editTrackNumber').value = track.track_number || '';
+    document.getElementById('editDiscNumber').value = track.disc_number || '';
+    document.getElementById('editComposer').value = track.composer || '';
+    document.getElementById('editComment').value = track.comment || '';
+    
+    // Cover art
+    const currentCover = document.getElementById('currentCover');
+    const removeCoverBtn = document.getElementById('removeCoverBtn');
+    if (track.has_cover) {
+        currentCover.innerHTML = `<img src="${API_BASE}/cover/${trackId}" alt="Cover">`;
+        currentCover.classList.remove('empty');
+        removeCoverBtn.style.display = 'inline-block';
+    } else {
+        currentCover.innerHTML = '';
+        currentCover.classList.add('empty');
+        removeCoverBtn.style.display = 'none';
+    }
+    
+    // Custom fields
+    const customFieldsList = document.getElementById('customFieldsList');
+    customFieldsList.innerHTML = '';
+    customFieldCounter = 0;
+    if (track.custom_fields && Object.keys(track.custom_fields).length > 0) {
+        for (const [key, value] of Object.entries(track.custom_fields)) {
+            addCustomFieldWithData(key, value);
+        }
+    }
     
     document.getElementById('editModal').style.display = 'flex';
 }
@@ -355,14 +402,42 @@ async function handleEditSubmit(event) {
     const title = document.getElementById('editTitle').value.trim();
     const artist = document.getElementById('editArtist').value.trim();
     const album = document.getElementById('editAlbum').value.trim();
+    const album_artist = document.getElementById('editAlbumArtist').value.trim();
+    const genre = document.getElementById('editGenre').value.trim();
+    const year = document.getElementById('editYear').value.trim();
+    const track_number = document.getElementById('editTrackNumber').value.trim();
+    const disc_number = document.getElementById('editDiscNumber').value.trim();
+    const composer = document.getElementById('editComposer').value.trim();
+    const comment = document.getElementById('editComment').value.trim();
 
     // Prepare update payload (only send fields that are not empty)
     const update = {};
     if (title) update.title = title;
     if (artist) update.artist = artist;
     if (album) update.album = album;
+    if (album_artist) update.album_artist = album_artist;
+    if (genre) update.genre = genre;
+    if (year) update.year = year;
+    if (track_number) update.track_number = track_number;
+    if (disc_number) update.disc_number = disc_number;
+    if (composer) update.composer = composer;
+    if (comment) update.comment = comment;
+
+    // Collect custom fields
+    const customFields = {};
+    document.querySelectorAll('.custom-field-item').forEach(item => {
+        const keyInput = item.querySelector('.custom-field-key');
+        const valueInput = item.querySelector('.custom-field-value');
+        if (keyInput && valueInput && keyInput.value.trim() && valueInput.value.trim()) {
+            customFields[keyInput.value.trim()] = valueInput.value.trim();
+        }
+    });
+    if (Object.keys(customFields).length > 0) {
+        update.custom_fields = customFields;
+    }
 
     try {
+        // Update metadata
         const response = await fetch(`${API_BASE}/tracks/${trackId}`, {
             method: 'PUT',
             headers: {
@@ -375,7 +450,24 @@ async function handleEditSubmit(event) {
             throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
 
-        const updatedTrack = await response.json();
+        let updatedTrack = await response.json();
+
+        // Upload cover art if selected
+        if (selectedCoverFile) {
+            const formData = new FormData();
+            formData.append('image', selectedCoverFile);
+
+            const coverResponse = await fetch(`${API_BASE}/cover/${trackId}`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!coverResponse.ok) {
+                throw new Error(`Failed to upload cover: ${coverResponse.status}`);
+            }
+
+            updatedTrack = await coverResponse.json();
+        }
         
         // Update local tracks array
         const index = tracks.findIndex(t => t.id === trackId);
@@ -395,6 +487,109 @@ async function handleEditSubmit(event) {
     } catch (error) {
         showError(`Failed to update track: ${error.message}`);
         console.error('Error updating track:', error);
+    }
+}
+
+// Cover art functions
+function selectCoverImage() {
+    document.getElementById('coverImageInput').click();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing code ...
+    
+    // Cover image input handler
+    document.getElementById('coverImageInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            selectedCoverFile = file;
+            
+            // Preview the image
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const currentCover = document.getElementById('currentCover');
+                currentCover.innerHTML = `<img src="${e.target.result}" alt="Cover preview">`;
+                currentCover.classList.remove('empty');
+                document.getElementById('removeCoverBtn').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+});
+
+async function removeCover() {
+    if (!currentEditTrackId) return;
+    
+    if (!confirm('Are you sure you want to remove the cover art?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/cover/${currentEditTrackId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to remove cover: ${response.status}`);
+        }
+
+        const updatedTrack = await response.json();
+        
+        // Update local track
+        const index = tracks.findIndex(t => t.id === currentEditTrackId);
+        if (index !== -1) {
+            tracks[index] = updatedTrack;
+        }
+
+        // Update UI
+        const currentCover = document.getElementById('currentCover');
+        currentCover.innerHTML = '';
+        currentCover.classList.add('empty');
+        document.getElementById('removeCoverBtn').style.display = 'none';
+        selectedCoverFile = null;
+
+        console.log('Cover removed successfully');
+    } catch (error) {
+        showError(`Failed to remove cover: ${error.message}`);
+        console.error('Error removing cover:', error);
+    }
+}
+
+// Custom field functions
+function addCustomField() {
+    const customFieldsList = document.getElementById('customFieldsList');
+    const fieldId = `custom-field-${customFieldCounter++}`;
+    
+    const fieldHtml = `
+        <div class="custom-field-item" id="${fieldId}">
+            <input type="text" class="custom-field-key" placeholder="Field name (e.g., LABEL)">
+            <input type="text" class="custom-field-value" placeholder="Field value">
+            <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
+        </div>
+    `;
+    
+    customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
+}
+
+function addCustomFieldWithData(key, value) {
+    const customFieldsList = document.getElementById('customFieldsList');
+    const fieldId = `custom-field-${customFieldCounter++}`;
+    
+    const fieldHtml = `
+        <div class="custom-field-item" id="${fieldId}">
+            <input type="text" class="custom-field-key" placeholder="Field name" value="${escapeHtml(key)}">
+            <input type="text" class="custom-field-value" placeholder="Field value" value="${escapeHtml(value)}">
+            <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
+        </div>
+    `;
+    
+    customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
+}
+
+function removeCustomField(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.remove();
     }
 }
 

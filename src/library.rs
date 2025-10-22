@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use symphonia::core::io::MediaSourceStream;
@@ -14,8 +15,17 @@ pub struct Track {
     pub title: Option<String>,
     pub artist: Option<String>,
     pub album: Option<String>,
+    pub album_artist: Option<String>,
+    pub genre: Option<String>,
+    pub year: Option<String>,
+    pub track_number: Option<String>,
+    pub disc_number: Option<String>,
+    pub composer: Option<String>,
+    pub comment: Option<String>,
     pub duration_secs: Option<u64>,
     pub file_size: u64,
+    pub has_cover: bool,
+    pub custom_fields: HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -23,6 +33,14 @@ pub struct TrackMetadataUpdate {
     pub title: Option<String>,
     pub artist: Option<String>,
     pub album: Option<String>,
+    pub album_artist: Option<String>,
+    pub genre: Option<String>,
+    pub year: Option<String>,
+    pub track_number: Option<String>,
+    pub disc_number: Option<String>,
+    pub composer: Option<String>,
+    pub comment: Option<String>,
+    pub custom_fields: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -126,16 +144,45 @@ impl MusicLibrary {
         let mut title = None;
         let mut artist = None;
         let mut album = None;
+        let mut album_artist = None;
+        let mut genre = None;
+        let mut year = None;
+        let mut track_number = None;
+        let mut disc_number = None;
+        let mut composer = None;
+        let mut comment = None;
         let mut duration_secs = None;
+        let mut custom_fields = HashMap::new();
+
+        // Standard FLAC/Vorbis comment tags to extract
+        let standard_tags = [
+            "TITLE", "ARTIST", "ALBUM", "ALBUMARTIST", "GENRE", "DATE", 
+            "TRACKNUMBER", "DISCNUMBER", "COMPOSER", "COMMENT", "DESCRIPTION"
+        ];
 
         // Get metadata from format or metadata revisions
         if let Some(metadata_rev) = format.metadata().current() {
             for tag in metadata_rev.tags() {
-                match tag.key.as_str() {
-                    "TITLE" => title = Some(tag.value.to_string()),
-                    "ARTIST" => artist = Some(tag.value.to_string()),
-                    "ALBUM" => album = Some(tag.value.to_string()),
-                    _ => {}
+                let key = tag.key.as_str();
+                let value = tag.value.to_string();
+
+                match key {
+                    "TITLE" => title = Some(value),
+                    "ARTIST" => artist = Some(value),
+                    "ALBUM" => album = Some(value),
+                    "ALBUMARTIST" => album_artist = Some(value),
+                    "GENRE" => genre = Some(value),
+                    "DATE" | "YEAR" => year = Some(value),
+                    "TRACKNUMBER" => track_number = Some(value),
+                    "DISCNUMBER" => disc_number = Some(value),
+                    "COMPOSER" => composer = Some(value),
+                    "COMMENT" | "DESCRIPTION" => comment = Some(value),
+                    // Store any other tags as custom fields
+                    _ => {
+                        if !standard_tags.contains(&key) {
+                            custom_fields.insert(key.to_string(), value);
+                        }
+                    }
                 }
             }
         }
@@ -149,6 +196,9 @@ impl MusicLibrary {
             }
         }
 
+        // Check for embedded cover art
+        let has_cover = self.has_embedded_cover(path);
+
         // Generate a unique ID from the file path
         let id = format!("{:x}", md5::compute(path.to_string_lossy().as_bytes()));
 
@@ -158,8 +208,17 @@ impl MusicLibrary {
             title,
             artist,
             album,
+            album_artist,
+            genre,
+            year,
+            track_number,
+            disc_number,
+            composer,
+            comment,
             duration_secs,
             file_size,
+            has_cover,
+            custom_fields,
         })
     }
 
@@ -347,7 +406,7 @@ impl MusicLibrary {
     fn write_flac_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
         let mut tag = metaflac::Tag::read_from_path(path).context("Failed to read FLAC tags")?;
 
-        // Update vorbis comments
+        // Update standard vorbis comments
         if let Some(title) = &update.title {
             tag.set_vorbis("TITLE", vec![title.clone()]);
         }
@@ -357,8 +416,150 @@ impl MusicLibrary {
         if let Some(album) = &update.album {
             tag.set_vorbis("ALBUM", vec![album.clone()]);
         }
+        if let Some(album_artist) = &update.album_artist {
+            tag.set_vorbis("ALBUMARTIST", vec![album_artist.clone()]);
+        }
+        if let Some(genre) = &update.genre {
+            tag.set_vorbis("GENRE", vec![genre.clone()]);
+        }
+        if let Some(year) = &update.year {
+            tag.set_vorbis("DATE", vec![year.clone()]);
+        }
+        if let Some(track_number) = &update.track_number {
+            tag.set_vorbis("TRACKNUMBER", vec![track_number.clone()]);
+        }
+        if let Some(disc_number) = &update.disc_number {
+            tag.set_vorbis("DISCNUMBER", vec![disc_number.clone()]);
+        }
+        if let Some(composer) = &update.composer {
+            tag.set_vorbis("COMPOSER", vec![composer.clone()]);
+        }
+        if let Some(comment) = &update.comment {
+            tag.set_vorbis("COMMENT", vec![comment.clone()]);
+        }
+
+        // Update custom fields
+        if let Some(custom_fields) = &update.custom_fields {
+            for (key, value) in custom_fields {
+                tag.set_vorbis(key, vec![value.clone()]);
+            }
+        }
 
         tag.save().context("Failed to save FLAC tags")?;
+
+        Ok(())
+    }
+
+    /// Check if a FLAC file has embedded cover art
+    fn has_embedded_cover(&self, path: &Path) -> bool {
+        if let Ok(tag) = metaflac::Tag::read_from_path(path) {
+            tag.pictures().count() > 0
+        } else {
+            false
+        }
+    }
+
+    /// Get cover art from a FLAC file
+    pub fn get_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
+        let tag = metaflac::Tag::read_from_path(path).context("Failed to read FLAC tags")?;
+
+        // Get the first picture (usually the front cover)
+        if let Some(picture) = tag.pictures().next() {
+            Ok(Some(picture.data.clone()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Set cover art for a FLAC file
+    pub async fn set_cover_art(&self, id: &str, image_data: Vec<u8>, mime_type: &str) -> Result<()> {
+        // Find the track
+        let track = {
+            let tracks = self.tracks.read().await;
+            tracks
+                .iter()
+                .find(|t| t.id == id)
+                .cloned()
+                .ok_or_else(|| anyhow::anyhow!("Track not found"))?
+        };
+
+        let mut tag = metaflac::Tag::read_from_path(&track.path)
+            .context("Failed to read FLAC tags")?;
+
+        // Remove existing pictures
+        tag.remove_picture_type(metaflac::block::PictureType::CoverFront);
+
+        // Create new picture block
+        let picture = metaflac::block::Picture {
+            picture_type: metaflac::block::PictureType::CoverFront,
+            mime_type: mime_type.to_string(),
+            description: String::new(),
+            width: 0,
+            height: 0,
+            depth: 0,
+            num_colors: 0,
+            data: image_data,
+        };
+
+        // Add picture to tag
+        tag.add_picture(
+            picture.mime_type,
+            picture.picture_type,
+            picture.data,
+        );
+        tag.save().context("Failed to save FLAC tags with cover art")?;
+
+        // Update in-memory track
+        let updated_track = self
+            .parse_flac_file(&track.path)
+            .await
+            .context("Failed to re-parse file after cover update")?;
+
+        {
+            let mut tracks = self.tracks.write().await;
+            if let Some(pos) = tracks.iter().position(|t| t.id == id) {
+                tracks[pos] = updated_track;
+            }
+        }
+
+        tracing::info!("Updated cover art for track: {}", id);
+
+        Ok(())
+    }
+
+    /// Remove cover art from a FLAC file
+    pub async fn remove_cover_art(&self, id: &str) -> Result<()> {
+        // Find the track
+        let track = {
+            let tracks = self.tracks.read().await;
+            tracks
+                .iter()
+                .find(|t| t.id == id)
+                .cloned()
+                .ok_or_else(|| anyhow::anyhow!("Track not found"))?
+        };
+
+        let mut tag = metaflac::Tag::read_from_path(&track.path)
+            .context("Failed to read FLAC tags")?;
+
+        // Remove all pictures
+        tag.remove_picture_type(metaflac::block::PictureType::CoverFront);
+        tag.save().context("Failed to save FLAC tags")?;
+
+        // Update in-memory track
+        let updated_track = self
+            .parse_flac_file(&track.path)
+            .await
+            .context("Failed to re-parse file after cover removal")?;
+
+        {
+            let mut tracks = self.tracks.write().await;
+            if let Some(pos) = tracks.iter().position(|t| t.id == id) {
+                tracks[pos] = updated_track;
+            }
+        }
+
+        tracing::info!("Removed cover art for track: {}", id);
 
         Ok(())
     }

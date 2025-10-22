@@ -1,9 +1,9 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, State, Multipart},
     http::{StatusCode, header, HeaderMap},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post, delete},
 };
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tower_http::cors::CorsLayer;
@@ -28,6 +28,7 @@ pub fn create_router(library: MusicLibrary) -> Router {
         .route("/tracks", get(list_tracks))
         .route("/tracks/:id", get(get_track).put(update_track))
         .route("/stream/:id", get(stream_track))
+        .route("/cover/:id", get(get_cover).post(upload_cover).delete(delete_cover))
         .route("/albums", get(list_albums))
         .route("/albums/:name", get(get_album))
         .route("/artists", get(list_artists))
@@ -337,4 +338,137 @@ async fn get_stats(State(state): State<AppState>) -> Json<LibraryStats> {
         stats.total_artists
     );
     Json(stats)
+}
+
+/// Get cover art for a track
+async fn get_cover(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Response, StatusCode> {
+    tracing::debug!("Fetching cover art for track: {}", id);
+
+    let track = state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    match state.library.get_cover_art(&track.path) {
+        Ok(Some(image_data)) => {
+            tracing::debug!("Found cover art for track: {} ({} bytes)", id, image_data.len());
+            
+            // Try to determine MIME type from image data
+            let mime_type = if image_data.starts_with(&[0xFF, 0xD8, 0xFF]) {
+                "image/jpeg"
+            } else if image_data.starts_with(&[0x89, 0x50, 0x4E, 0x47]) {
+                "image/png"
+            } else {
+                "image/jpeg" // Default to JPEG
+            };
+
+            Ok((
+                StatusCode::OK,
+                [
+                    (header::CONTENT_TYPE, mime_type),
+                    (header::CACHE_CONTROL, "public, max-age=3600"),
+                ],
+                image_data,
+            )
+                .into_response())
+        }
+        Ok(None) => {
+            tracing::debug!("No cover art found for track: {}", id);
+            Err(StatusCode::NOT_FOUND)
+        }
+        Err(e) => {
+            tracing::error!("Error reading cover art for track {}: {}", id, e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+/// Upload cover art for a track
+async fn upload_cover(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    mut multipart: Multipart,
+) -> Result<Json<Track>, StatusCode> {
+    tracing::debug!("Uploading cover art for track: {}", id);
+
+    let mut image_data: Option<Vec<u8>> = None;
+    let mut mime_type = "image/jpeg".to_string();
+
+    // Process multipart form data
+    while let Some(field) = multipart.next_field().await.map_err(|e| {
+        tracing::error!("Error reading multipart field: {}", e);
+        StatusCode::BAD_REQUEST
+    })? {
+        let name = field.name().unwrap_or("").to_string();
+
+        if name == "image" || name == "cover" {
+            if let Some(content_type) = field.content_type() {
+                mime_type = content_type.to_string();
+            }
+
+            let data = field.bytes().await.map_err(|e| {
+                tracing::error!("Error reading image data: {}", e);
+                StatusCode::BAD_REQUEST
+            })?;
+
+            image_data = Some(data.to_vec());
+            break;
+        }
+    }
+
+    let image_data = image_data.ok_or_else(|| {
+        tracing::warn!("No image data found in upload for track: {}", id);
+        StatusCode::BAD_REQUEST
+    })?;
+
+    // Set the cover art
+    state
+        .library
+        .set_cover_art(&id, image_data, &mime_type)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error setting cover art for track {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Return updated track
+    let track = state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    tracing::debug!("Successfully uploaded cover art for track: {}", id);
+    Ok(Json(track))
+}
+
+/// Delete cover art for a track
+async fn delete_cover(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Track>, StatusCode> {
+    tracing::debug!("Deleting cover art for track: {}", id);
+
+    state
+        .library
+        .remove_cover_art(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error removing cover art for track {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Return updated track
+    let track = state
+        .library
+        .get_track(&id)
+        .await
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    tracing::debug!("Successfully deleted cover art for track: {}", id);
+    Ok(Json(track))
 }
