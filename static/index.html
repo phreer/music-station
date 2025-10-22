@@ -101,6 +101,34 @@
         <audio id="audioPlayer" preload="metadata"></audio>
     </div>
 
+    <!-- Play Queue Panel -->
+    <div id="playQueuePanel" class="play-queue-panel" style="display: none;">
+        <div class="play-queue-header">
+            <h3>🎵 Play Queue</h3>
+            <div class="play-queue-actions">
+                <button class="btn-icon" onclick="clearQueue()" title="Clear queue">🗑️</button>
+                <button class="btn-icon" onclick="toggleQueue()" title="Close queue">✖️</button>
+            </div>
+        </div>
+        <div class="play-queue-info">
+            <span id="queueCount">0 tracks</span>
+            <span id="queueDuration">0:00</span>
+        </div>
+        <div id="queueList" class="queue-list">
+            <div class="queue-empty">
+                <div class="queue-empty-icon">🎵</div>
+                <p>Queue is empty</p>
+                <p class="queue-empty-hint">Add tracks to start playing</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Toggle Button (Fixed Position) -->
+    <button id="queueToggleBtn" class="queue-toggle-btn" onclick="toggleQueue()" title="Show/Hide Queue" style="display: none;">
+        <span class="queue-icon">📋</span>
+        <span id="queueBadge" class="queue-badge">0</span>
+    </button>
+
     <!-- Create Playlist Modal -->
     <div id="createPlaylistModal" class="modal" style="display: none;">
         <div class="modal-content">

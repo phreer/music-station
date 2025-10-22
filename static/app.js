@@ -10,6 +10,11 @@ let currentTrackIndex = -1;
 let playlist = [];
 let isPlaying = false;
 
+// Play queue management
+let playQueue = [];
+let queueIndex = -1;
+let isQueueVisible = false;
+
 // Playlist management
 let playlists = [];
 let currentPlaylistId = null;
@@ -22,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupMusicPlayer();
     setupPlaylistEventListeners();
+    updateQueueDisplay();
 });
 
 function setupEventListeners() {
@@ -88,17 +94,33 @@ function setupMusicPlayer() {
     });
 }
 
-function playTrack(trackId) {
+function playTrack(trackId, skipQueueUpdate = false) {
     const track = tracks.find(t => t.id === trackId);
     if (!track) return;
     
-    // Update playlist if not set
-    if (playlist.length === 0) {
-        playlist = tracks.map(t => t.id);
+    // Add track to queue if not already there and not skipping queue update
+    if (!skipQueueUpdate) {
+        const existingQueueIndex = playQueue.indexOf(trackId);
+        if (existingQueueIndex >= 0) {
+            // Track already in queue, just update the index
+            queueIndex = existingQueueIndex;
+        } else {
+            // Add track to queue
+            playQueue.push(trackId);
+            queueIndex = playQueue.length - 1;
+            // Show queue button
+            document.getElementById('queueToggleBtn').style.display = 'flex';
+        }
     }
     
-    currentTrackIndex = playlist.indexOf(trackId);
-    if (currentTrackIndex === -1) return;
+    // Update playlist to match queue if queue exists
+    if (playQueue.length > 0) {
+        playlist = playQueue.slice();
+        currentTrackIndex = queueIndex;
+    } else {
+        playlist = tracks.map(t => t.id);
+        currentTrackIndex = playlist.indexOf(trackId);
+    }
     
     const audio = document.getElementById('audioPlayer');
     const streamUrl = `${API_BASE}/stream/${trackId}`;
@@ -114,6 +136,7 @@ function playTrack(trackId) {
     
     // Add visual feedback to current track
     highlightCurrentTrack(trackId);
+    updateQueueDisplay();
 }
 
 function togglePlayPause() {
@@ -125,6 +148,9 @@ function togglePlayPause() {
         } else {
             audio.play();
         }
+    } else if (playQueue.length > 0) {
+        // Play first track in queue
+        playTrack(playQueue[0]);
     } else if (tracks.length > 0) {
         // Start playing first track if none loaded
         playTrack(tracks[0].id);
@@ -132,17 +158,25 @@ function togglePlayPause() {
 }
 
 function playNext() {
-    if (playlist.length === 0) return;
-    
-    currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
-    playTrack(playlist[currentTrackIndex]);
+    // Prioritize queue over playlist
+    if (playQueue.length > 0) {
+        queueIndex = (queueIndex + 1) % playQueue.length;
+        playTrack(playQueue[queueIndex]);
+    } else if (playlist.length > 0) {
+        currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+        playTrack(playlist[currentTrackIndex]);
+    }
 }
 
 function playPrevious() {
-    if (playlist.length === 0) return;
-    
-    currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
-    playTrack(playlist[currentTrackIndex]);
+    // Prioritize queue over playlist
+    if (playQueue.length > 0) {
+        queueIndex = (queueIndex - 1 + playQueue.length) % playQueue.length;
+        playTrack(playQueue[queueIndex]);
+    } else if (playlist.length > 0) {
+        currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+        playTrack(playlist[currentTrackIndex]);
+    }
 }
 
 function stopPlayback() {
@@ -327,6 +361,9 @@ function createTrackRow(track) {
             <td class="track-actions-cell">
                 <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
                     ✏️
+                </button>
+                <button class="btn-add-to-queue" onclick="addToQueue('${track.id}')" title="Add to queue">
+                    📋
                 </button>
                 <button class="btn-add-to-playlist" onclick="openAddToPlaylistModal('${track.id}')" title="Add to playlist">
                     ➕
@@ -656,7 +693,9 @@ function displayAlbums(albums) {
         return;
     }
     
-    albumList.innerHTML = albums.map(album => `
+    albumList.innerHTML = albums.map(album => {
+        const albumTrackIds = album.tracks.map(t => t.id);
+        return `
         <div class="album-card" onclick="toggleAlbum(this)">
             <div class="album-header">
                 <div style="display: flex; align-items: center; flex: 1;">
@@ -666,6 +705,12 @@ function displayAlbums(albums) {
                         <div class="artist-name">🎤 ${escapeHtml(album.artist)}</div>
                     </div>
                 </div>
+                <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(album.artist)}')" title="Play album" style="margin-right: 8px;">
+                    ▶️ Play
+                </button>
+                <button class="btn-add-to-queue" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add album to queue" style="margin-right: 8px;">
+                    📋 Add to Queue
+                </button>
                 <div class="expand-indicator">▼</div>
             </div>
             <div class="album-meta">
@@ -681,11 +726,42 @@ function displayAlbums(albums) {
                 `).join('')}
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function toggleAlbum(element) {
     element.classList.toggle('expanded');
+}
+
+// Play entire album
+function playAlbum(albumName, artistName) {
+    // Find all tracks for this album
+    const albumTracks = tracks.filter(t => 
+        t.album === albumName && t.artist === artistName
+    );
+    
+    if (albumTracks.length === 0) return;
+    
+    // Sort by track number if available
+    albumTracks.sort((a, b) => {
+        const aNum = parseInt(a.track_number) || 0;
+        const bNum = parseInt(b.track_number) || 0;
+        return aNum - bNum;
+    });
+    
+    const albumTrackIds = albumTracks.map(t => t.id);
+    
+    // Add all album tracks to queue
+    playQueue = albumTrackIds.slice();
+    queueIndex = 0;
+    playlist = albumTrackIds.slice();
+    currentTrackIndex = 0;
+    document.getElementById('queueToggleBtn').style.display = 'flex';
+    updateQueueDisplay();
+    
+    // Play first track (skip queue update since we already set it up)
+    playTrack(albumTrackIds[0], true);
 }
 
 // Load artists
@@ -931,8 +1007,14 @@ function playPlaylist(playlistId) {
     playlist = pl.tracks.slice(); // Copy array
     currentTrackIndex = 0;
     
-    // Play first track
-    playTrack(playlist[0]);
+    // Add all playlist tracks to queue
+    playQueue = pl.tracks.slice();
+    queueIndex = 0;
+    document.getElementById('queueToggleBtn').style.display = 'flex';
+    updateQueueDisplay();
+    
+    // Play first track (skip queue update since we already set it up)
+    playTrack(playlist[0], true);
 }
 
 // Play track from playlist
@@ -944,7 +1026,14 @@ function playTrackFromPlaylist(playlistId, trackId) {
     playlist = pl.tracks.slice();
     currentTrackIndex = playlist.indexOf(trackId);
     
-    playTrack(trackId);
+    // Add all playlist tracks to queue
+    playQueue = pl.tracks.slice();
+    queueIndex = playlist.indexOf(trackId);
+    document.getElementById('queueToggleBtn').style.display = 'flex';
+    updateQueueDisplay();
+    
+    // Play the selected track (skip queue update since we already set it up)
+    playTrack(trackId, true);
 }
 
 // Open create playlist modal
@@ -1085,4 +1174,189 @@ function openCreatePlaylistFromAdd() {
 // Generate unique ID
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+// ========== PLAY QUEUE MANAGEMENT ==========
+
+// Add track to queue
+function addToQueue(trackId) {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    
+    playQueue.push(trackId);
+    updateQueueDisplay();
+    
+    // Show queue button if first item
+    if (playQueue.length === 1) {
+        document.getElementById('queueToggleBtn').style.display = 'flex';
+    }
+    
+    console.log(`Added "${track.title}" to queue`);
+}
+
+// Add multiple tracks to queue
+function addMultipleToQueue(trackIds) {
+    trackIds.forEach(id => {
+        if (!playQueue.includes(id)) {
+            playQueue.push(id);
+        }
+    });
+    updateQueueDisplay();
+    
+    if (playQueue.length > 0) {
+        document.getElementById('queueToggleBtn').style.display = 'flex';
+    }
+}
+
+// Remove track from queue
+function removeFromQueue(index) {
+    if (index < 0 || index >= playQueue.length) return;
+    
+    // Adjust queue index if needed
+    if (index === queueIndex) {
+        // Removing currently playing track
+        queueIndex = -1;
+    } else if (index < queueIndex) {
+        queueIndex--;
+    }
+    
+    playQueue.splice(index, 1);
+    updateQueueDisplay();
+    
+    // Hide queue button if empty
+    if (playQueue.length === 0) {
+        document.getElementById('queueToggleBtn').style.display = 'none';
+        queueIndex = -1;
+    }
+}
+
+// Clear entire queue
+function clearQueue() {
+    if (playQueue.length === 0) return;
+    
+    if (confirm(`Clear all ${playQueue.length} tracks from queue?`)) {
+        playQueue = [];
+        queueIndex = -1;
+        updateQueueDisplay();
+        document.getElementById('queueToggleBtn').style.display = 'none';
+    }
+}
+
+// Play track from queue
+function playFromQueue(index) {
+    if (index < 0 || index >= playQueue.length) return;
+    
+    queueIndex = index;
+    playTrack(playQueue[index]);
+}
+
+// Toggle queue visibility
+function toggleQueue() {
+    isQueueVisible = !isQueueVisible;
+    const panel = document.getElementById('playQueuePanel');
+    
+    if (isQueueVisible) {
+        panel.style.display = 'flex';
+        document.body.style.paddingRight = '350px';
+    } else {
+        panel.style.display = 'none';
+        document.body.style.paddingRight = '0';
+    }
+}
+
+// Update queue display
+function updateQueueDisplay() {
+    const queueList = document.getElementById('queueList');
+    const queueCount = document.getElementById('queueCount');
+    const queueDuration = document.getElementById('queueDuration');
+    const queueBadge = document.getElementById('queueBadge');
+    
+    // Update badge
+    queueBadge.textContent = playQueue.length;
+    
+    if (playQueue.length === 0) {
+        queueList.innerHTML = `
+            <div class="queue-empty">
+                <div class="queue-empty-icon">🎵</div>
+                <p>Queue is empty</p>
+                <p class="queue-empty-hint">Add tracks to start playing</p>
+            </div>
+        `;
+        queueCount.textContent = '0 tracks';
+        queueDuration.textContent = '0:00';
+        return;
+    }
+    
+    // Calculate total duration
+    let totalDuration = 0;
+    playQueue.forEach(trackId => {
+        const track = tracks.find(t => t.id === trackId);
+        if (track && track.duration_secs) {
+            totalDuration += track.duration_secs;
+        }
+    });
+    
+    // Update info
+    queueCount.textContent = `${playQueue.length} track${playQueue.length !== 1 ? 's' : ''}`;
+    queueDuration.textContent = formatDuration(totalDuration);
+    
+    // Render queue items
+    queueList.innerHTML = playQueue.map((trackId, index) => {
+        const track = tracks.find(t => t.id === trackId);
+        if (!track) return '';
+        
+        const isCurrentTrack = index === queueIndex;
+        const coverUrl = track.has_cover ? `${API_BASE}/cover/${trackId}` : null;
+        
+        return `
+            <div class="queue-item ${isCurrentTrack ? 'playing' : ''}" onclick="playFromQueue(${index})">
+                <div class="queue-item-number">${index + 1}</div>
+                <div class="queue-item-cover">
+                    ${coverUrl 
+                        ? `<img src="${coverUrl}" alt="Cover" onerror="this.style.display='none';">` 
+                        : '📀'}
+                </div>
+                <div class="queue-item-info">
+                    <div class="queue-item-title">${escapeHtml(track.title || 'Unknown Title')}</div>
+                    <div class="queue-item-artist">${escapeHtml(track.artist || 'Unknown Artist')}</div>
+                </div>
+                <div class="queue-item-duration">${track.duration_secs ? formatDuration(track.duration_secs) : '--:--'}</div>
+                <button class="queue-item-remove" onclick="event.stopPropagation(); removeFromQueue(${index})" title="Remove from queue">
+                    ✖️
+                </button>
+            </div>
+        `;
+    }).join('');
+}
+
+// Move track up in queue
+function moveQueueItemUp(index) {
+    if (index <= 0 || index >= playQueue.length) return;
+    
+    [playQueue[index - 1], playQueue[index]] = [playQueue[index], playQueue[index - 1]];
+    
+    // Adjust current index if needed
+    if (queueIndex === index) {
+        queueIndex--;
+    } else if (queueIndex === index - 1) {
+        queueIndex++;
+    }
+    
+    updateQueueDisplay();
+}
+
+// Move track down in queue
+function moveQueueItemDown(index) {
+    if (index < 0 || index >= playQueue.length - 1) return;
+    
+    [playQueue[index], playQueue[index + 1]] = [playQueue[index + 1], playQueue[index]];
+    
+    // Adjust current index if needed
+    if (queueIndex === index) {
+        queueIndex++;
+    } else if (queueIndex === index + 1) {
+        queueIndex--;
+    }
+    
+    updateQueueDisplay();
 }
