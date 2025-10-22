@@ -137,6 +137,13 @@ function playTrack(trackId, skipQueueUpdate = false) {
     // Add visual feedback to current track
     highlightCurrentTrack(trackId);
     updateQueueDisplay();
+    
+    // Load lyrics if available
+    if (track.has_lyrics) {
+        loadLyricsForPlayer(trackId);
+    } else {
+        hideLyricsPanel();
+    }
 }
 
 function togglePlayPause() {
@@ -200,6 +207,9 @@ function updateProgress() {
         progressBar.value = progress;
         progressFill.style.width = progress + '%';
         currentTime.textContent = formatDuration(Math.floor(audio.currentTime));
+        
+        // Update synchronized lyrics
+        updateSynchronizedLyrics(audio.currentTime);
     }
 }
 
@@ -361,6 +371,9 @@ function createTrackRow(track) {
             <td class="track-actions-cell">
                 <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
                     ✏️
+                </button>
+                <button class="btn ${track.has_lyrics ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="openLyricsModal('${track.id}')" title="${track.has_lyrics ? 'View/Edit lyrics' : 'Add lyrics'}">
+                    ${track.has_lyrics ? '📝' : '📄'}
                 </button>
                 <button class="btn-add-to-queue" onclick="addToQueue('${track.id}')" title="Add to queue">
                     📋
@@ -896,6 +909,7 @@ document.addEventListener('keydown', (event) => {
         closeEditModal();
         closeCreatePlaylistModal();
         closeAddToPlaylistModal();
+        closeLyricsModal();
     }
 });
 
@@ -1359,4 +1373,384 @@ function moveQueueItemDown(index) {
     }
     
     updateQueueDisplay();
+}
+
+// ========== LYRICS MANAGEMENT ==========
+
+let currentLyricsTrackId = null;
+let currentLyrics = null;
+let isLyricsPanelVisible = false;
+
+// Open lyrics modal
+async function openLyricsModal(trackId) {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return;
+    
+    currentLyricsTrackId = trackId;
+    
+    // Update track info
+    document.getElementById('lyricsTrackTitle').textContent = track.title || 'Unknown Title';
+    document.getElementById('lyricsTrackArtist').textContent = track.artist || 'Unknown Artist';
+    
+    // Load lyrics if available
+    if (track.has_lyrics) {
+        await loadLyricsForModal(trackId);
+    } else {
+        currentLyrics = null;
+        clearLyricsModal();
+    }
+    
+    // Show modal
+    document.getElementById('lyricsModal').style.display = 'flex';
+    switchLyricsTab('view');
+}
+
+// Close lyrics modal
+function closeLyricsModal() {
+    document.getElementById('lyricsModal').style.display = 'none';
+    currentLyricsTrackId = null;
+}
+
+// Switch between view and edit tabs
+function switchLyricsTab(tab) {
+    // Update tab buttons
+    document.querySelectorAll('.lyrics-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.lyrics-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    if (tab === 'view') {
+        document.getElementById('lyricsViewTab').classList.add('active');
+    } else {
+        document.getElementById('lyricsEditTab').classList.add('active');
+        // Populate edit form if lyrics exist
+        if (currentLyrics) {
+            document.getElementById('lyricsContent').value = currentLyrics.content;
+            document.getElementById('lyricsFormat').value = currentLyrics.format || '';
+            document.getElementById('lyricsLanguage').value = currentLyrics.language || '';
+            document.getElementById('lyricsSource').value = currentLyrics.source || '';
+            document.getElementById('deleteLyricsBtn').style.display = 'inline-block';
+        } else {
+            document.getElementById('lyricsContent').value = '';
+            document.getElementById('lyricsFormat').value = '';
+            document.getElementById('lyricsLanguage').value = '';
+            document.getElementById('lyricsSource').value = '';
+            document.getElementById('deleteLyricsBtn').style.display = 'none';
+        }
+    }
+}
+
+// Load lyrics for modal
+async function loadLyricsForModal(trackId) {
+    try {
+        const response = await fetch(`${API_BASE}/lyrics/${trackId}`);
+        
+        if (response.ok) {
+            currentLyrics = await response.json();
+            displayLyricsInModal(currentLyrics);
+        } else if (response.status === 404) {
+            currentLyrics = null;
+            clearLyricsModal();
+        } else {
+            throw new Error('Failed to load lyrics');
+        }
+    } catch (error) {
+        console.error('Error loading lyrics:', error);
+        clearLyricsModal();
+    }
+}
+
+// Display lyrics in view tab
+function displayLyricsInModal(lyrics) {
+    const display = document.getElementById('lyricsDisplay');
+    
+    if (lyrics.format === 'lrc') {
+        // Parse and display LRC format
+        const lines = parseLrcLyrics(lyrics.content);
+        display.innerHTML = `
+            <div class="lyrics-content lrc-lyrics">
+                ${lines.map(line => `
+                    <div class="lyrics-line" data-time="${line.time}">
+                        ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                        <span class="lyrics-text">${escapeHtml(line.text)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        // Display plain text
+        const lines = lyrics.content.split('\n');
+        display.innerHTML = `
+            <div class="lyrics-content plain-lyrics">
+                ${lines.map(line => `
+                    <div class="lyrics-line">
+                        <span class="lyrics-text">${escapeHtml(line)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    // Show metadata
+    if (lyrics.language || lyrics.source) {
+        const metadata = [];
+        if (lyrics.language) metadata.push(`Language: ${lyrics.language}`);
+        if (lyrics.source) metadata.push(`Source: ${lyrics.source}`);
+        
+        display.innerHTML += `
+            <div class="lyrics-metadata">
+                ${metadata.join(' • ')}
+            </div>
+        `;
+    }
+}
+
+// Clear lyrics modal
+function clearLyricsModal() {
+    document.getElementById('lyricsDisplay').innerHTML = `
+        <div class="lyrics-empty">
+            <div class="lyrics-empty-icon">📄</div>
+            <p>No lyrics available for this track</p>
+            <button class="btn btn-primary" onclick="switchLyricsTab('edit')">➕ Add Lyrics</button>
+        </div>
+    `;
+}
+
+// Parse LRC lyrics
+function parseLrcLyrics(content) {
+    const lines = [];
+    const lrcRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
+    
+    content.split('\n').forEach(line => {
+        const match = line.match(lrcRegex);
+        if (match) {
+            const minutes = parseInt(match[1]);
+            const seconds = parseInt(match[2]);
+            const centiseconds = parseInt(match[3]);
+            const time = minutes * 60 + seconds + centiseconds / 100;
+            const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
+            const text = match[4].trim();
+            
+            lines.push({ time, timestamp, text });
+        } else if (line.trim()) {
+            // Non-LRC line or metadata
+            lines.push({ time: -1, timestamp: null, text: line.trim() });
+        }
+    });
+    
+    return lines;
+}
+
+// Save lyrics
+async function saveLyrics() {
+    if (!currentLyricsTrackId) return;
+    
+    const content = document.getElementById('lyricsContent').value.trim();
+    
+    if (!content) {
+        alert('Please enter lyrics content');
+        return;
+    }
+    
+    const format = document.getElementById('lyricsFormat').value || null;
+    const language = document.getElementById('lyricsLanguage').value.trim() || null;
+    const source = document.getElementById('lyricsSource').value.trim() || null;
+    
+    try {
+        const response = await fetch(`${API_BASE}/lyrics/${currentLyricsTrackId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                content,
+                format,
+                language,
+                source
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save lyrics');
+        }
+        
+        currentLyrics = await response.json();
+        
+        // Update track's has_lyrics flag
+        const track = tracks.find(t => t.id === currentLyricsTrackId);
+        if (track) {
+            track.has_lyrics = true;
+        }
+        
+        // Refresh track list
+        renderTracks();
+        
+        // Switch to view tab
+        switchLyricsTab('view');
+        
+        console.log('Lyrics saved successfully');
+    } catch (error) {
+        console.error('Error saving lyrics:', error);
+        alert('Failed to save lyrics. Please try again.');
+    }
+}
+
+// Delete lyrics
+async function deleteLyrics() {
+    if (!currentLyricsTrackId) return;
+    
+    if (!confirm('Are you sure you want to delete the lyrics for this track?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/lyrics/${currentLyricsTrackId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.status !== 204) {
+            throw new Error('Failed to delete lyrics');
+        }
+        
+        currentLyrics = null;
+        
+        // Update track's has_lyrics flag
+        const track = tracks.find(t => t.id === currentLyricsTrackId);
+        if (track) {
+            track.has_lyrics = false;
+        }
+        
+        // Refresh track list
+        renderTracks();
+        
+        // Clear modal
+        clearLyricsModal();
+        switchLyricsTab('view');
+        
+        console.log('Lyrics deleted successfully');
+    } catch (error) {
+        console.error('Error deleting lyrics:', error);
+        alert('Failed to delete lyrics. Please try again.');
+    }
+}
+
+// ========== LYRICS PANEL (PLAYER) ==========
+
+// Toggle lyrics panel
+function toggleLyricsPanel() {
+    isLyricsPanelVisible = !isLyricsPanelVisible;
+    const panel = document.getElementById('lyricsPanel');
+    
+    if (isLyricsPanelVisible) {
+        panel.style.display = 'flex';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+// Load lyrics for currently playing track
+async function loadLyricsForPlayer(trackId) {
+    try {
+        const response = await fetch(`${API_BASE}/lyrics/${trackId}`);
+        
+        if (response.ok) {
+            const lyrics = await response.json();
+            displayLyricsInPlayer(lyrics);
+            document.getElementById('lyricsToggleBtn').style.display = 'flex';
+        } else {
+            hideLyricsPanel();
+        }
+    } catch (error) {
+        console.error('Error loading lyrics for player:', error);
+        hideLyricsPanel();
+    }
+}
+
+// Display lyrics in player panel
+function displayLyricsInPlayer(lyrics) {
+    const content = document.getElementById('lyricsPanelContent');
+    
+    if (lyrics.format === 'lrc') {
+        // Parse and display LRC format with sync capability
+        const lines = parseLrcLyrics(lyrics.content);
+        content.innerHTML = `
+            <div class="lyrics-content lrc-lyrics">
+                ${lines.map((line, index) => `
+                    <div class="lyrics-line" data-time="${line.time}" data-index="${index}">
+                        ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                        <span class="lyrics-text">${escapeHtml(line.text)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        // Enable synchronized scrolling
+        enableLyricsSynchronization(lines);
+    } else {
+        // Display plain text
+        const lines = lyrics.content.split('\n');
+        content.innerHTML = `
+            <div class="lyrics-content plain-lyrics">
+                ${lines.map(line => `
+                    <div class="lyrics-line">
+                        <span class="lyrics-text">${escapeHtml(line)}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+}
+
+// Hide lyrics panel
+function hideLyricsPanel() {
+    document.getElementById('lyricsToggleBtn').style.display = 'none';
+    document.getElementById('lyricsPanel').style.display = 'none';
+    isLyricsPanelVisible = false;
+}
+
+// Enable lyrics synchronization with playback
+let lyricsLines = [];
+let currentLyricsIndex = -1;
+
+function enableLyricsSynchronization(lines) {
+    lyricsLines = lines.filter(l => l.time >= 0).sort((a, b) => a.time - b.time);
+    currentLyricsIndex = -1;
+}
+
+// Update synchronized lyrics (call this from audio timeupdate)
+function updateSynchronizedLyrics(currentTime) {
+    if (lyricsLines.length === 0) return;
+    
+    // Find the current line
+    let newIndex = -1;
+    for (let i = lyricsLines.length - 1; i >= 0; i--) {
+        if (currentTime >= lyricsLines[i].time) {
+            newIndex = i;
+            break;
+        }
+    }
+    
+    if (newIndex !== currentLyricsIndex) {
+        // Remove previous highlight
+        const prevLine = document.querySelector('.lyrics-line.active');
+        if (prevLine) {
+            prevLine.classList.remove('active');
+        }
+        
+        // Highlight current line
+        if (newIndex >= 0) {
+            const currentLine = document.querySelector(`[data-time="${lyricsLines[newIndex].time}"]`);
+            if (currentLine) {
+                currentLine.classList.add('active');
+                // Scroll to center
+                currentLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        
+        currentLyricsIndex = newIndex;
+    }
 }

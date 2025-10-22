@@ -1772,3 +1772,310 @@ header h1 {
 .metadata-value {
     color: #555;
 }
+
+/* ========== LYRICS STYLES ========== */
+
+/* Lyrics Modal */
+.lyrics-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.lyrics-track-info {
+    padding: 16px;
+    background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+    border-radius: 8px;
+    color: white;
+    text-align: center;
+}
+
+.lyrics-track-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.lyrics-track-artist {
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+/* Lyrics Tabs */
+.lyrics-tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 2px solid #e0e0e0;
+    padding: 0 4px;
+}
+
+.lyrics-tab-btn {
+    padding: 12px 24px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #666;
+    transition: all 0.3s ease;
+    position: relative;
+    top: 2px;
+}
+
+.lyrics-tab-btn:hover {
+    color: #D2691E;
+    background: rgba(210, 105, 30, 0.05);
+}
+
+.lyrics-tab-btn.active {
+    color: #702A03;
+    border-bottom-color: #D2691E;
+    background: rgba(210, 105, 30, 0.1);
+}
+
+.lyrics-tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.lyrics-tab-content.active {
+    display: block;
+}
+
+/* Lyrics Display */
+.lyrics-display {
+    min-height: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.lyrics-content {
+    line-height: 1.8;
+}
+
+.lyrics-line {
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lyrics-line:hover {
+    background: rgba(210, 105, 30, 0.1);
+}
+
+.lyrics-line.active {
+    background: linear-gradient(90deg, rgba(210, 105, 30, 0.3) 0%, rgba(210, 105, 30, 0.1) 100%);
+    border-left: 4px solid #D2691E;
+    padding-left: 8px;
+    font-weight: 600;
+    transform: translateX(4px);
+}
+
+.lyrics-timestamp {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    color: #999;
+    min-width: 70px;
+    text-align: right;
+}
+
+.lyrics-text {
+    flex: 1;
+    font-size: 15px;
+    color: #333;
+}
+
+.lrc-lyrics .lyrics-text {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+.plain-lyrics .lyrics-line {
+    justify-content: center;
+    text-align: center;
+}
+
+.plain-lyrics .lyrics-text {
+    font-size: 15px;
+    color: #444;
+}
+
+.lyrics-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.lyrics-empty-icon {
+    font-size: 60px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.lyrics-empty p {
+    font-size: 16px;
+    margin-bottom: 20px;
+}
+
+.lyrics-metadata {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+    font-size: 13px;
+    color: #666;
+    text-align: center;
+}
+
+/* Lyrics Textarea */
+.lyrics-textarea {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 300px;
+}
+
+/* Lyrics Toggle Button (Player) */
+.lyrics-toggle-btn {
+    position: fixed;
+    bottom: 140px;
+    right: 30px;
+    background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.lyrics-toggle-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #8B3503 0%, #F4A460 100%);
+}
+
+.lyrics-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+
+/* Lyrics Panel (Player) */
+.lyrics-panel {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 400px;
+    max-height: 500px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    z-index: 998;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideInRight 0.3s ease;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.lyrics-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.lyrics-panel-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.lyrics-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f9f9f9;
+}
+
+.lyrics-panel-content .lyrics-line {
+    padding: 10px 12px;
+    font-size: 15px;
+}
+
+.lyrics-panel-content .lyrics-timestamp {
+    font-size: 11px;
+    min-width: 65px;
+}
+
+/* Responsive Lyrics */
+@media (max-width: 768px) {
+    .lyrics-panel {
+        width: calc(100% - 40px);
+        right: 20px;
+        max-height: 400px;
+    }
+    
+    .lyrics-toggle-btn {
+        right: 20px;
+        bottom: 120px;
+    }
+    
+    .lyrics-display {
+        max-height: 350px;
+    }
+}
+
+/* Scrollbar for Lyrics */
+.lyrics-display::-webkit-scrollbar,
+.lyrics-panel-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.lyrics-display::-webkit-scrollbar-track,
+.lyrics-panel-content::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 10px;
+}
+
+.lyrics-display::-webkit-scrollbar-thumb,
+.lyrics-panel-content::-webkit-scrollbar-thumb {
+    background: #D2691E;
+    border-radius: 10px;
+}
+
+.lyrics-display::-webkit-scrollbar-thumb:hover,
+.lyrics-panel-content::-webkit-scrollbar-thumb:hover {
+    background: #B8621B;
+}

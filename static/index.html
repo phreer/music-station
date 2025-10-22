@@ -270,6 +270,98 @@
         </div>
     </div>
 
+    <!-- Lyrics Modal -->
+    <div id="lyricsModal" class="modal" style="display: none;">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h2>📝 Lyrics</h2>
+                <button class="close-btn" onclick="closeLyricsModal()">&times;</button>
+            </div>
+            
+            <div class="lyrics-modal-body">
+                <div class="lyrics-track-info">
+                    <div class="lyrics-track-title" id="lyricsTrackTitle">Track Title</div>
+                    <div class="lyrics-track-artist" id="lyricsTrackArtist">Artist</div>
+                </div>
+
+                <div class="lyrics-tabs">
+                    <button class="lyrics-tab-btn active" data-tab="view" onclick="switchLyricsTab('view')">
+                        👁️ View
+                    </button>
+                    <button class="lyrics-tab-btn" data-tab="edit" onclick="switchLyricsTab('edit')">
+                        ✏️ Edit
+                    </button>
+                </div>
+
+                <!-- View Tab -->
+                <div id="lyricsViewTab" class="lyrics-tab-content active">
+                    <div id="lyricsDisplay" class="lyrics-display">
+                        <div class="lyrics-empty">
+                            <div class="lyrics-empty-icon">📄</div>
+                            <p>No lyrics available for this track</p>
+                            <button class="btn btn-primary" onclick="switchLyricsTab('edit')">➕ Add Lyrics</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Tab -->
+                <div id="lyricsEditTab" class="lyrics-tab-content">
+                    <div class="form-group">
+                        <label for="lyricsContent">Lyrics Content</label>
+                        <textarea id="lyricsContent" class="form-control lyrics-textarea" placeholder="Enter lyrics here...&#10;&#10;For synchronized lyrics, use LRC format:&#10;[00:12.00]First line&#10;[00:16.50]Second line&#10;[00:21.00]Third line" rows="15"></textarea>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="lyricsFormat">Format</label>
+                            <select id="lyricsFormat" class="form-control">
+                                <option value="">Auto-detect</option>
+                                <option value="plain">Plain Text</option>
+                                <option value="lrc">LRC (Synchronized)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lyricsLanguage">Language (Optional)</label>
+                            <input type="text" id="lyricsLanguage" class="form-control" placeholder="e.g., en, es, ja">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="lyricsSource">Source (Optional)</label>
+                            <input type="text" id="lyricsSource" class="form-control" placeholder="e.g., Manual, lyrics.com">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-danger" onclick="deleteLyrics()" id="deleteLyricsBtn" style="display: none;">
+                            🗑️ Delete Lyrics
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="closeLyricsModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveLyrics()">💾 Save Lyrics</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lyrics Display Panel (for player) -->
+    <button id="lyricsToggleBtn" class="lyrics-toggle-btn" onclick="toggleLyricsPanel()" title="Show/Hide Lyrics" style="display: none;">
+        📝 <span class="lyrics-badge" id="lyricsBadge">Lyrics</span>
+    </button>
+
+    <div id="lyricsPanel" class="lyrics-panel" style="display: none;">
+        <div class="lyrics-panel-header">
+            <h3>📝 Lyrics</h3>
+            <button class="btn-icon" onclick="toggleLyricsPanel()" title="Close lyrics">✖️</button>
+        </div>
+        <div id="lyricsPanelContent" class="lyrics-panel-content">
+            <div class="lyrics-empty">
+                <div class="lyrics-empty-icon">📄</div>
+                <p>No lyrics available</p>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
