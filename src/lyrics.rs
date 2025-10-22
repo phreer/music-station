@@ -1,3 +1,6 @@
+pub mod fetcher;
+pub mod providers;
+
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};

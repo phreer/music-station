@@ -3,12 +3,18 @@ name = "music-station"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "music_station"
+path = "src/lib.rs"
+
 [dependencies]
 # HTTP Server & Async Runtime
 axum = { version = "0.7", features = ["multipart"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "cors", "trace"] }
+async-trait = "0.1"
+futures = "0.3"
 
 # Audio Processing
 symphonia = { version = "0.5", features = ["flac"] }
