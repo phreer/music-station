@@ -1,17 +1,19 @@
 # Music Station
 
-A Rust-based HTTP server for managing and streaming FLAC music files with a CLI client for browsing.
+A Rust-based HTTP server for managing and streaming music files with a CLI client and web interface.
 
 ## Features
 
 - 🎵 Scan local music library folders
-- 📊 Extract FLAC metadata (title, artist, album, duration)
+- 🎼 Support for FLAC and MP3 audio formats
+- 📊 Extract metadata (title, artist, album, duration, cover art)
 - 🌐 REST API for music library access
-- 🎧 Stream FLAC files over HTTP
+- 🎧 Stream audio files over HTTP with range request support
 - 💻 CLI client for browsing library
 - ▶️ Audio playback directly from CLI client
 - 🌐 Web client for browsing and managing tracks
-- ✏️ Edit track metadata (title, artist, album)
+- ✏️ Edit track metadata (title, artist, album, genre, year, etc.)
+- 🖼️ Cover art management (view, add, remove)
 - 📝 Lyrics support with plain text and LRC (synchronized) formats
 - 💾 SQLite database for persistent lyrics storage
 
@@ -20,7 +22,7 @@ A Rust-based HTTP server for managing and streaming FLAC music files with a CLI 
 ### Prerequisites
 
 - Rust toolchain (Edition 2024)
-- A folder with FLAC music files
+- A folder with FLAC or MP3 music files
 
 ### Running the Server
 
@@ -94,8 +96,11 @@ For detailed lyrics API usage, see [LYRICS_GUIDE.md](LYRICS_GUIDE.md).
 music-station/
 ├── src/
 │   ├── main.rs           # Server entry point
-│   ├── library.rs        # Music library scanner & FLAC parser
-│   ├── lyrics.rs         # Lyrics database management
+│   ├── library.rs        # Music library scanner & audio parser (FLAC/MP3)
+│   ├── lyrics/           # Lyrics management module
+│   │   ├── mod.rs        # Lyrics database
+│   │   ├── fetcher.rs    # Lyrics fetching API traits
+│   │   └── providers.rs  # Example lyrics providers
 │   ├── server.rs         # HTTP API handlers
 │   └── bin/
 │       └── client.rs     # CLI client
@@ -105,7 +110,8 @@ music-station/
 │   └── app.js            # Web client JavaScript
 ├── Cargo.toml
 ├── README.md
-└── LYRICS_GUIDE.md       # Lyrics feature documentation
+├── LYRICS_GUIDE.md       # Lyrics feature documentation
+└── LYRICS_API.md         # Lyrics fetching API documentation
 ```
 
 ## Development
@@ -147,9 +153,10 @@ See [DEBUG_LOGGING.md](DEBUG_LOGGING.md) for detailed logging configuration and 
 
 The server:
 1. Scans the specified library folder on startup
-2. Parses FLAC metadata using Symphonia
+2. Parses audio metadata using Symphonia (FLAC and MP3 support)
 3. Stores track information in memory (thread-safe with `Arc<RwLock>`)
 4. Serves REST API via Axum on port 3000 (configurable)
+5. Supports HTTP range requests for efficient audio streaming
 
 The client:
 1. Connects to the server via HTTP
@@ -159,17 +166,17 @@ The client:
 
 ## Current Limitations
 
-- Only FLAC format is supported
-- Full file loaded into memory for streaming (no chunked streaming)
 - Library scan happens only on startup (no hot-reload)
 - No recursive directory scanning (only top-level files)
+- MP3 metadata editing supports standard ID3v2 tags (custom fields limited)
 
 ## Dependencies
 
 - **axum** - Web framework
 - **tokio** - Async runtime
-- **symphonia** - Audio decoding (server)
+- **symphonia** - Audio decoding (FLAC and MP3 support)
 - **metaflac** - FLAC metadata writing
+- **id3** - MP3 metadata reading and writing
 - **rodio** - Audio playback (client)
 - **serde** - JSON serialization
 - **clap** - CLI argument parsing

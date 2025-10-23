@@ -93,6 +93,13 @@ async fn stream_track(
 
     tracing::debug!("Streaming file: {}", track.path.display());
 
+    // Determine content type based on file extension
+    let content_type = match track.path.extension().and_then(|s| s.to_str()) {
+        Some("flac") => "audio/flac",
+        Some("mp3") => "audio/mpeg",
+        _ => "application/octet-stream",
+    };
+
     // Get file metadata
     let file_metadata = tokio::fs::metadata(&track.path)
         .await
@@ -106,7 +113,7 @@ async fn stream_track(
         // Parse range: "bytes=start-end"
         if let Ok(range_str) = range_value.to_str() {
             if let Some(range) = parse_range(range_str, file_size) {
-                return stream_range(&track.path, range.0, range.1, file_size).await;
+                return stream_range(&track.path, range.0, range.1, file_size, content_type).await;
             }
         }
     }
@@ -127,7 +134,7 @@ async fn stream_track(
     Ok((
         StatusCode::OK,
         [
-            (header::CONTENT_TYPE, "audio/flac"),
+            (header::CONTENT_TYPE, content_type),
             (header::CONTENT_LENGTH, file_size.to_string().as_str()),
             (header::ACCEPT_RANGES, "bytes"),
             (
@@ -197,6 +204,7 @@ async fn stream_range(
     start: u64,
     end: u64,
     total_size: u64,
+    content_type: &str,
 ) -> Result<Response, StatusCode> {
     let mut file = tokio::fs::File::open(path)
         .await
@@ -226,7 +234,7 @@ async fn stream_range(
     Ok((
         StatusCode::PARTIAL_CONTENT,
         [
-            (header::CONTENT_TYPE, "audio/flac".to_string()),
+            (header::CONTENT_TYPE, content_type.to_string()),
             (header::CONTENT_LENGTH, range_length.to_string()),
             (header::ACCEPT_RANGES, "bytes".to_string()),
             (
