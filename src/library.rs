@@ -426,10 +426,14 @@ impl MusicLibrary {
             .context(format!("Failed to write metadata to file: {}", track.path.display()))?;
 
         // Re-parse the file to get updated metadata
-        let updated_track = self
+        let mut updated_track = self
             .parse_audio_file(&track.path)
             .await
             .context("Failed to re-parse file after update")?;
+
+        // Preserve the has_lyrics flag from the original track
+        // (it's stored in the lyrics database, not in the audio file)
+        updated_track.has_lyrics = track.has_lyrics;
 
         // Update in-memory track list
         {
@@ -719,10 +723,13 @@ impl MusicLibrary {
         }
 
         // Update in-memory track
-        let updated_track = self
+        let mut updated_track = self
             .parse_audio_file(&track.path)
             .await
             .context("Failed to re-parse file after cover update")?;
+
+        // Preserve the has_lyrics flag
+        updated_track.has_lyrics = track.has_lyrics;
 
         {
             let mut tracks = self.tracks.write().await;
@@ -778,10 +785,13 @@ impl MusicLibrary {
         }
 
         // Update in-memory track
-        let updated_track = self
+        let mut updated_track = self
             .parse_audio_file(&track.path)
             .await
             .context("Failed to re-parse file after cover removal")?;
+
+        // Preserve the has_lyrics flag
+        updated_track.has_lyrics = track.has_lyrics;
 
         {
             let mut tracks = self.tracks.write().await;
