@@ -412,12 +412,18 @@ impl MusicLibrary {
                 .iter()
                 .find(|t| t.id == id)
                 .cloned()
-                .ok_or_else(|| anyhow::anyhow!("Track not found"))?
+                .ok_or_else(|| anyhow::anyhow!("Track not found: {}", id))?
         };
+
+        tracing::debug!(
+            "Updating metadata for track: {} ({})",
+            track.title.as_deref().unwrap_or("Unknown"),
+            track.path.display()
+        );
 
         // Update the audio file metadata
         self.write_audio_metadata(&track.path, &update)
-            .context("Failed to write metadata to file")?;
+            .context(format!("Failed to write metadata to file: {}", track.path.display()))?;
 
         // Re-parse the file to get updated metadata
         let updated_track = self
@@ -449,9 +455,13 @@ impl MusicLibrary {
             .and_then(|s| s.to_str())
             .ok_or_else(|| anyhow::anyhow!("No file extension"))?;
 
+        tracing::debug!("Writing metadata to {} file: {}", ext, path.display());
+
         match ext {
-            "flac" => self.write_flac_metadata(path, update),
-            "mp3" => self.write_mp3_metadata(path, update),
+            "flac" => self.write_flac_metadata(path, update)
+                .context(format!("Failed to write FLAC metadata to {}", path.display())),
+            "mp3" => self.write_mp3_metadata(path, update)
+                .context(format!("Failed to write MP3 metadata to {}", path.display())),
             _ => anyhow::bail!("Unsupported file format: {}", ext),
         }
     }
@@ -508,45 +518,79 @@ impl MusicLibrary {
     fn write_mp3_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
         use id3::TagLike;
         
+        tracing::debug!("Reading MP3 tags from: {}", path.display());
+        
         let mut tag = id3::Tag::read_from_path(path)
-            .or_else(|_| Ok::<_, anyhow::Error>(id3::Tag::new()))
+            .or_else(|e| {
+                tracing::warn!("Failed to read existing MP3 tags ({}), creating new tag", e);
+                Ok::<_, anyhow::Error>(id3::Tag::new())
+            })
             .context("Failed to read MP3 tags")?;
 
         // Update ID3v2 frames using the TagLike trait
         if let Some(title) = &update.title {
+            tracing::debug!("Setting title: {}", title);
             tag.set_title(title);
         }
         if let Some(artist) = &update.artist {
+            tracing::debug!("Setting artist: {}", artist);
             tag.set_artist(artist);
         }
         if let Some(album) = &update.album {
+            tracing::debug!("Setting album: {}", album);
             tag.set_album(album);
         }
         if let Some(album_artist) = &update.album_artist {
+            tracing::debug!("Setting album artist: {}", album_artist);
             tag.set_album_artist(album_artist);
         }
         if let Some(genre) = &update.genre {
+            tracing::debug!("Setting genre: {}", genre);
             tag.set_genre(genre);
         }
         if let Some(year) = &update.year {
             if let Ok(year_num) = year.parse::<i32>() {
+                tracing::debug!("Setting year: {}", year_num);
                 tag.set_year(year_num);
+            } else {
+                tracing::warn!("Invalid year format: {}", year);
             }
         }
         if let Some(track_number) = &update.track_number {
             if let Ok(track_num) = track_number.parse::<u32>() {
+                tracing::debug!("Setting track number: {}", track_num);
                 tag.set_track(track_num);
+            } else {
+                tracing::warn!("Invalid track number format: {}", track_number);
             }
         }
         if let Some(disc_number) = &update.disc_number {
             if let Ok(disc_num) = disc_number.parse::<u32>() {
+                tracing::debug!("Setting disc number: {}", disc_num);
                 tag.set_disc(disc_num);
+            } else {
+                tracing::warn!("Invalid disc number format: {}", disc_number);
             }
         }
         // Note: composer and comment require adding frames directly
         
-        tag.write_to_path(path, id3::Version::Id3v24)
-            .context("Failed to save MP3 tags")?;
+        tracing::debug!("Writing MP3 tags to file: {}", path.display());
+        
+        // Check file permissions before writing
+        let metadata = std::fs::metadata(path)
+            .context(format!("Failed to read file metadata for {}", path.display()))?;
+        
+        if metadata.permissions().readonly() {
+            anyhow::bail!("File is read-only: {}", path.display());
+        }
+        
+        tag.write_to_path(path, id3::Version::Id3v23)
+            .map_err(|e| {
+                tracing::error!("ID3 write error details: {:?}", e);
+                anyhow::anyhow!("Failed to save MP3 tags to {}: {}", path.display(), e)
+            })?;
+
+        tracing::debug!("Successfully wrote MP3 metadata to: {}", path.display());
 
         Ok(())
     }
