@@ -65,30 +65,42 @@ cargo run --bin music-client -- play-all
 4. Click "Edit" on any track to update its metadata (title, artist, album)
 5. Changes are saved directly to the FLAC files
 
-## API Endpoints
+## API Documentation
+
+Music Station provides a comprehensive REST API for client development.
+
+**📖 For Client Developers:**
+- **[CLIENT_DEVELOPMENT_GUIDE.md](CLIENT_DEVELOPMENT_GUIDE.md)** - Quick start guide with examples in JavaScript, Python, Swift, Kotlin
+- **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete REST API reference with all endpoints, parameters, and responses
+
+**Quick API Overview:**
 
 **Tracks:**
-- `GET /` - API version information
-- `GET /tracks` - List all tracks (JSON array)
-- `GET /tracks/:id` - Get track details by ID
-- `PUT /tracks/:id` - Update track metadata (JSON: {title?, artist?, album?})
-- `GET /stream/:id` - Stream FLAC audio file
+- `GET /tracks` - List all tracks
+- `GET /tracks/:id` - Get track details
+- `PUT /tracks/:id` - Update metadata
+- `GET /stream/:id` - Stream audio (with Range support)
+
+**Cover Art:**
+- `GET /cover/:id` - Get cover image
+- `POST /cover/:id` - Upload cover (multipart)
+- `DELETE /cover/:id` - Remove cover
 
 **Lyrics:**
-- `GET /lyrics/:id` - Get lyrics for a track
-- `PUT /lyrics/:id` - Upload/update lyrics (JSON: {content, format?, language?, source?})
-- `DELETE /lyrics/:id` - Delete lyrics for a track
+- `GET /lyrics/:id` - Get lyrics
+- `PUT /lyrics/:id` - Upload/update lyrics
+- `DELETE /lyrics/:id` - Delete lyrics
 
 **Albums & Artists:**
-- `GET /albums` - List all albums
+- `GET /albums` - List albums
 - `GET /albums/:name` - Get album details
-- `GET /artists` - List all artists
+- `GET /artists` - List artists
 - `GET /artists/:name` - Get artist details
 
-**Web Client:**
-- `GET /web/*` - Static web client files
+**Statistics:**
+- `GET /stats` - Library statistics
 
-For detailed lyrics API usage, see [LYRICS_GUIDE.md](LYRICS_GUIDE.md).
+See the full documentation for detailed examples in multiple languages.
 
 ## Project Structure
 
