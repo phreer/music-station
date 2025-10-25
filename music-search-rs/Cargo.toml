@@ -1,0 +1,36 @@
+[package]
+name = "music-search-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["163MusicLyrics Contributors"]
+description = "Rust implementation of music search services for NetEase and QQ Music"
+license = "MIT"
+
+[dependencies]
+# HTTP client
+reqwest = { version = "0.11", features = ["json", "cookies"] }
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+# Encryption
+aes = "0.8"
+cbc = { version = "0.1", features = ["std"] }
+rsa = "0.9"
+base64 = "0.21"
+hex = "0.4"
+rand = "0.8"
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+# XML parsing (for QQ Music lyrics)
+quick-xml = { version = "0.31", features = ["serialize"] }
+# Compression (for QQ Music lyrics)
+flate2 = "1.0"
+# Command-line argument parsing
+clap = { version = "4.0", features = ["derive", "env"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
