@@ -41,8 +41,12 @@ chrono = "0.4"
 # Database
 sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
 
+# Music search and lyrics
+music-search-rs = { path = "music-search-rs" }
+
 # Audio Playback (client only)
 rodio = "0.19"
+regex = "1.12.2"
 
 [[bin]]
 name = "music-station"

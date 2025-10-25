@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word-Level Lyrics Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #702A03;
+            margin-bottom: 10px;
+        }
+        
+        .format-badge {
+            background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+        
+        .lyrics-line {
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+        
+        .lyrics-line.active {
+            background: rgba(210, 105, 30, 0.1);
+            border-left: 4px solid #D2691E;
+            padding-left: 8px;
+        }
+        
+        .lyrics-timestamp {
+            color: #999;
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            margin-right: 12px;
+            min-width: 60px;
+            display: inline-block;
+        }
+        
+        .word-level-text {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            line-height: 1.8;
+        }
+        
+        .lyrics-word {
+            display: inline-block;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+            color: #555;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .lyrics-word.active {
+            background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+            color: white;
+            font-weight: 700;
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(210, 105, 30, 0.4);
+            z-index: 1;
+        }
+        
+        .lyrics-word.sung {
+            color: #999;
+            opacity: 0.7;
+        }
+        
+        .controls {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 8px;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .progress {
+            margin: 20px 0;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #702A03 0%, #D2691E 100%);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Word-Level Lyrics Test</h1>
+        <div class="format-badge">Word-level synchronized lyrics (Karaoke mode)</div>
+        
+        <div class="progress">
+            <span id="currentTime">00:00</span> / <span id="totalTime">00:16</span>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div id="lyricsDisplay"></div>
+        
+        <div class="controls">
+            <button onclick="startDemo()">▶️ Play Demo</button>
+            <button onclick="pauseDemo()">⏸️ Pause</button>
+            <button onclick="resetDemo()">🔄 Reset</button>
+        </div>
+    </div>
+    
+    <script>
+        // Sample word-level lyrics (QQ Music format)
+        const testLyrics = [
+            {
+                time: 0,
+                timestamp: "00:00",
+                words: [
+                    { word: "挪", time: 0, duration: 0.721 },
+                    { word: "威", time: 0.721, duration: 0.721 },
+                    { word: "的", time: 1.442, duration: 0.721 },
+                    { word: "森", time: 2.163, duration: 0.721 },
+                    { word: "林", time: 2.884, duration: 0.721 }
+                ]
+            },
+            {
+                time: 4,
+                timestamp: "00:04",
+                words: [
+                    { word: "Another", time: 4, duration: 0.5 },
+                    { word: "line", time: 4.5, duration: 0.5 },
+                    { word: "with", time: 5, duration: 0.3 },
+                    { word: "words", time: 5.3, duration: 0.4 }
+                ]
+            },
+            {
+                time: 8,
+                timestamp: "00:08",
+                words: [
+                    { word: "测", time: 8, duration: 0.8 },
+                    { word: "试", time: 8.8, duration: 0.8 },
+                    { word: "歌", time: 9.6, duration: 0.8 },
+                    { word: "词", time: 10.4, duration: 0.8 }
+                ]
+            },
+            {
+                time: 12,
+                timestamp: "00:12",
+                words: [
+                    { word: "Karaoke", time: 12, duration: 0.7 },
+                    { word: "style", time: 12.7, duration: 0.5 },
+                    { word: "highlighting", time: 13.2, duration: 0.9 },
+                    { word: "works!", time: 14.1, duration: 0.6 }
+                ]
+            }
+        ];
+        
+        let currentTime = 0;
+        let animationId = null;
+        let isPaused = false;
+        let lastTimestamp = null;
+        const totalDuration = 16; // seconds
+        
+        // Render lyrics
+        function renderLyrics() {
+            const display = document.getElementById('lyricsDisplay');
+            display.innerHTML = testLyrics.map((line, lineIndex) => {
+                const wordsHtml = line.words.map((word, wordIndex) => 
+                    `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-line="${lineIndex}" data-word="${wordIndex}">${word.word}</span>`
+                ).join('');
+                
+                return `
+                    <div class="lyrics-line" data-time="${line.time}" data-line="${lineIndex}">
+                        <span class="lyrics-timestamp">${line.timestamp}</span>
+                        <span class="word-level-text">${wordsHtml}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // Update highlighting based on current time
+        function updateHighlighting(time) {
+            // Find current line
+            let currentLineIndex = -1;
+            for (let i = testLyrics.length - 1; i >= 0; i--) {
+                if (time >= testLyrics[i].time) {
+                    currentLineIndex = i;
+                    break;
+                }
+            }
+            
+            // Update line highlighting
+            document.querySelectorAll('.lyrics-line').forEach((line, index) => {
+                if (index === currentLineIndex) {
+                    line.classList.add('active');
+                } else {
+                    line.classList.remove('active');
+                }
+            });
+            
+            // Update word highlighting
+            if (currentLineIndex >= 0) {
+                const currentLine = testLyrics[currentLineIndex];
+                currentLine.words.forEach((word, wordIndex) => {
+                    const wordElement = document.querySelector(
+                        `[data-line="${currentLineIndex}"][data-word="${wordIndex}"]`
+                    );
+                    
+                    if (!wordElement) return;
+                    
+                    if (time >= word.time && time < word.time + word.duration) {
+                        // Currently singing
+                        wordElement.classList.add('active');
+                        wordElement.classList.remove('sung');
+                    } else if (time >= word.time + word.duration) {
+                        // Already sung
+                        wordElement.classList.remove('active');
+                        wordElement.classList.add('sung');
+                    } else {
+                        // Not yet sung
+                        wordElement.classList.remove('active', 'sung');
+                    }
+                });
+                
+                // Clear previous lines
+                for (let i = 0; i < currentLineIndex; i++) {
+                    const words = document.querySelectorAll(`[data-line="${i}"] .lyrics-word`);
+                    words.forEach(w => {
+                        w.classList.remove('active');
+                        w.classList.add('sung');
+                    });
+                }
+            }
+            
+            // Update progress
+            const progress = (time / totalDuration) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('currentTime').textContent = formatTime(time);
+        }
+        
+        // Animation loop
+        function animate(timestamp) {
+            if (isPaused) return;
+            
+            if (lastTimestamp === null) {
+                lastTimestamp = timestamp;
+            }
+            
+            const deltaTime = (timestamp - lastTimestamp) / 1000; // Convert to seconds
+            lastTimestamp = timestamp;
+            
+            currentTime += deltaTime;
+            
+            if (currentTime >= totalDuration) {
+                currentTime = totalDuration;
+                isPaused = true;
+            }
+            
+            updateHighlighting(currentTime);
+            
+            if (currentTime < totalDuration) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        // Control functions
+        function startDemo() {
+            if (currentTime >= totalDuration) {
+                resetDemo();
+            }
+            isPaused = false;
+            lastTimestamp = null;
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function pauseDemo() {
+            isPaused = true;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            lastTimestamp = null;
+        }
+        
+        function resetDemo() {
+            pauseDemo();
+            currentTime = 0;
+            updateHighlighting(0);
+            document.getElementById('currentTime').textContent = '00:00';
+            document.getElementById('progressFill').style.width = '0%';
+        }
+        
+        // Format time as MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        // Initialize
+        renderLyrics();
+        updateHighlighting(0);
+    </script>
+</body>
+</html>

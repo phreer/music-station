@@ -1,5 +1,6 @@
 pub mod fetcher;
 pub mod providers;
+pub mod music_search_provider;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -22,7 +23,9 @@ pub struct Lyric {
 #[serde(rename_all = "lowercase")]
 pub enum LyricFormat {
     Plain,
-    Lrc,  // LRC (Lyrics) format with timestamps
+    Lrc,  // Standard LRC (Lyrics) format with line-level timestamps
+    #[serde(rename = "lrc_word")]
+    LrcWord,  // Extended LRC format with word-level timestamps
 }
 
 impl LyricFormat {
@@ -30,14 +33,45 @@ impl LyricFormat {
         match self {
             LyricFormat::Plain => "plain",
             LyricFormat::Lrc => "lrc",
+            LyricFormat::LrcWord => "lrc_word",
         }
     }
 
     pub fn from_str(s: &str) -> Self {
         match s.to_lowercase().as_str() {
             "lrc" => LyricFormat::Lrc,
+            "lrc_word" | "lrcword" | "word" | "extended" => LyricFormat::LrcWord,
             _ => LyricFormat::Plain,
         }
+    }
+    
+    /// Detect format from content automatically
+    pub fn detect_from_content(content: &str) -> Self {
+        // Check for word-level timing pattern: word(offset,duration)
+        if content.contains("(") && content.contains(",") && content.contains(")") {
+            // Look for pattern like: word(123,456)
+            let word_timing_regex = regex::Regex::new(r"\S+\(\d+,\d+\)").unwrap();
+            if word_timing_regex.is_match(content) {
+                return LyricFormat::LrcWord;
+            }
+        }
+        
+        // Check for standard LRC timing pattern: [mm:ss.xx] or [offset,duration]
+        if content.contains("[") && (content.contains(":") || content.contains(",")) {
+            // Look for patterns like [00:12.34] or [12345,6789]
+            let lrc_regex = regex::Regex::new(r"\[\d+:\d{2}\.\d{2,3}\]|\[\d+,\d+\]").unwrap();
+            if lrc_regex.is_match(content) {
+                // It's LRC format, but check if it has word-level timing
+                let word_timing_regex = regex::Regex::new(r"\S+\(\d+,\d+\)").unwrap();
+                if word_timing_regex.is_match(content) {
+                    return LyricFormat::LrcWord;
+                }
+                return LyricFormat::Lrc;
+            }
+        }
+        
+        // Default to plain text
+        LyricFormat::Plain
     }
 }
 

@@ -12,15 +12,40 @@ use tower_http::trace::TraceLayer;
 
 use crate::library::{Album, Artist, LibraryStats, MusicLibrary, Track, TrackMetadataUpdate};
 use crate::lyrics::{Lyric, LyricDatabase, LyricFormat, LyricUpload};
+use crate::lyrics::fetcher::{LyricsQuery, LyricsSearchResult as FetcherSearchResult, LyricsResponse};
+use crate::lyrics::music_search_provider::{NetEaseLyricsProvider, QQMusicLyricsProvider};
+use crate::lyrics::fetcher::LyricsProvider as LyricsProviderTrait;
 
 #[derive(Clone)]
 pub struct AppState {
     pub library: MusicLibrary,
     pub lyrics_db: LyricDatabase,
+    pub netease_provider: Option<std::sync::Arc<NetEaseLyricsProvider>>,
+    pub qqmusic_provider: Option<std::sync::Arc<QQMusicLyricsProvider>>,
 }
 
 pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router {
-    let state = AppState { library, lyrics_db };
+    // Initialize lyrics providers
+    let netease_provider = NetEaseLyricsProvider::new(None)
+        .map(|p| std::sync::Arc::new(p))
+        .ok();
+    let qqmusic_provider = QQMusicLyricsProvider::new(None)
+        .map(|p| std::sync::Arc::new(p))
+        .ok();
+    
+    if netease_provider.is_none() {
+        tracing::warn!("Failed to initialize NetEase lyrics provider");
+    }
+    if qqmusic_provider.is_none() {
+        tracing::warn!("Failed to initialize QQ Music lyrics provider");
+    }
+    
+    let state = AppState { 
+        library, 
+        lyrics_db,
+        netease_provider,
+        qqmusic_provider,
+    };
 
     // Serve static files from ./static directory
     let static_service = ServeDir::new("static");
@@ -32,6 +57,8 @@ pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router 
         .route("/stream/:id", get(stream_track))
         .route("/cover/:id", get(get_cover).post(upload_cover).delete(delete_cover))
         .route("/lyrics/:id", get(get_lyrics).put(upload_lyrics).delete(delete_lyrics))
+        .route("/lyrics/search", get(search_lyrics))
+        .route("/lyrics/fetch/:provider/:song_id", get(fetch_lyrics_from_provider))
         .route("/albums", get(list_albums))
         .route("/albums/:name", get(get_album))
         .route("/artists", get(list_artists))
@@ -597,3 +624,113 @@ async fn delete_lyrics(
     tracing::debug!("Successfully deleted lyrics for track: {}", id);
     Ok(StatusCode::NO_CONTENT)
 }
+
+// ========== LYRICS SEARCH ENDPOINTS ==========
+
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct LyricsSearchQuery {
+    q: String,
+    provider: String,
+    artist: Option<String>,
+}
+
+/// Search for lyrics from external providers
+async fn search_lyrics(
+    State(state): State<AppState>,
+    axum::extract::Query(query): axum::extract::Query<LyricsSearchQuery>,
+) -> Result<Json<Vec<FetcherSearchResult>>, StatusCode> {
+    tracing::debug!(
+        "Searching lyrics: query='{}', provider='{}', artist='{:?}'",
+        query.q, query.provider, query.artist
+    );
+    
+    // Build lyrics query
+    let mut lyrics_query = LyricsQuery::new(&query.q);
+    if let Some(artist) = query.artist {
+        lyrics_query = lyrics_query.with_artist(artist);
+    }
+    
+    // Select provider and search
+    let results = match query.provider.as_str() {
+        "netease" => {
+            let provider = state.netease_provider
+                .as_ref()
+                .ok_or_else(|| {
+                    tracing::error!("NetEase provider not initialized");
+                    StatusCode::SERVICE_UNAVAILABLE
+                })?;
+            
+            provider.search(&lyrics_query).await.map_err(|e| {
+                tracing::error!("NetEase search error: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+        }
+        "qqmusic" => {
+            let provider = state.qqmusic_provider
+                .as_ref()
+                .ok_or_else(|| {
+                    tracing::error!("QQ Music provider not initialized");
+                    StatusCode::SERVICE_UNAVAILABLE
+                })?;
+            
+            provider.search(&lyrics_query).await.map_err(|e| {
+                tracing::error!("QQ Music search error: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+        }
+        _ => {
+            tracing::warn!("Unknown provider: {}", query.provider);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    
+    tracing::debug!("Found {} lyrics search results", results.len());
+    Ok(Json(results))
+}
+
+/// Fetch lyrics from a specific provider by song ID
+async fn fetch_lyrics_from_provider(
+    State(state): State<AppState>,
+    Path((provider, song_id)): Path<(String, String)>,
+) -> Result<Json<LyricsResponse>, StatusCode> {
+    tracing::debug!("Fetching lyrics: provider='{}', song_id='{}'", provider, song_id);
+    
+    let lyrics = match provider.as_str() {
+        "netease" => {
+            let provider = state.netease_provider
+                .as_ref()
+                .ok_or_else(|| {
+                    tracing::error!("NetEase provider not initialized");
+                    StatusCode::SERVICE_UNAVAILABLE
+                })?;
+            
+            provider.fetch(&song_id).await.map_err(|e| {
+                tracing::error!("NetEase fetch error: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+        }
+        "qqmusic" => {
+            let provider = state.qqmusic_provider
+                .as_ref()
+                .ok_or_else(|| {
+                    tracing::error!("QQ Music provider not initialized");
+                    StatusCode::SERVICE_UNAVAILABLE
+                })?;
+            
+            provider.fetch(&song_id).await.map_err(|e| {
+                tracing::error!("QQ Music fetch error: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?
+        }
+        _ => {
+            tracing::warn!("Unknown provider: {}", provider);
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    };
+    
+    tracing::debug!("Successfully fetched lyrics from {}", provider);
+    Ok(Json(lyrics))
+}
+

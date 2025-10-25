@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word-Level Lyrics Parser Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .lyrics-line {
+            padding: 8px;
+            margin: 4px 0;
+            background: #333;
+            border-radius: 4px;
+        }
+        .lyrics-timestamp {
+            color: #ff8c42;
+            margin-right: 10px;
+        }
+        .success {
+            color: #4caf50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>Word-Level Lyrics Parser Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Standard LRC Format</h2>
+        <div id="test1"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Extended LRC Format (Word-Level)</h2>
+        <div id="test2"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Mixed Metadata and Lyrics</h2>
+        <div id="test3"></div>
+    </div>
+
+    <script>
+        // Copy the parsing functions from app.js
+        function parseLrcLyrics(content) {
+            const lines = [];
+            const lrcRegex = /\[(\d+):(\d{2})\.(\d{2,3})\](.*)/;
+            const extendedLrcRegex = /\[(\d+),(\d+)\](.*)/;
+            
+            content.split('\n').forEach(line => {
+                let match = line.match(lrcRegex);
+                if (match) {
+                    const minutes = parseInt(match[1]);
+                    const seconds = parseInt(match[2]);
+                    const centiseconds = parseInt(match[3]);
+                    const time = minutes * 60 + seconds + centiseconds / (match[3].length === 3 ? 1000 : 100);
+                    const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
+                    let text = match[4].trim();
+                    
+                    const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
+                    
+                    if (hasWordTiming) {
+                        text = parseWordLevelLyrics(text);
+                    }
+                    
+                    lines.push({ time, timestamp, text, hasWordTiming });
+                } else {
+                    match = line.match(extendedLrcRegex);
+                    if (match) {
+                        const offset = parseInt(match[1]);
+                        const duration = parseInt(match[2]);
+                        const time = offset / 1000;
+                        const timestamp = formatTimestamp(time);
+                        let text = match[3].trim();
+                        
+                        const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
+                        if (hasWordTiming) {
+                            text = parseWordLevelLyrics(text);
+                        }
+                        
+                        lines.push({ time, timestamp, text, hasWordTiming });
+                    } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') && 
+                               !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
+                        lines.push({ time: -1, timestamp: null, text: line.trim(), hasWordTiming: false });
+                    }
+                }
+            });
+            
+            return lines;
+        }
+
+        function parseWordLevelLyrics(text) {
+            return text.replace(/(\S+?)\((\d+),(\d+)\)/g, '$1')
+                       .replace(/\s+/g, ' ')
+                       .trim();
+        }
+
+        function formatTimestamp(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const cs = Math.floor((seconds % 1) * 100);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
+        }
+
+        // Test cases
+        const test1 = `[00:12.00]First line of lyrics
+[00:16.50]Second line of lyrics
+[00:21.00]Third line of lyrics`;
+
+        const test2 = `[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)
+[11550,11550]词(11550,2310)：(13860,2310)伍(16170,2310)佰(18480,2310)
+[34659,3410]让(34659,330)我(34989,440)将(35429,460)你(35889,220)心(36109,650)儿(36759,450)摘(37209,410)下(37619,450)`;
+
+        const test3 = `[ti:挪威的森林]
+[ar:伍佰]
+[al:滚石香港黄金十年 伍佰精选]
+[by:]
+[offset:0]
+[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)
+[00:12.00]Standard line
+[34659,3410]让(34659,330)我(34989,440)将(35429,460)你(35889,220)`;
+
+        function runTest(testId, content) {
+            const result = parseLrcLyrics(content);
+            const container = document.getElementById(testId);
+            
+            container.innerHTML = `
+                <p><strong>Input:</strong></p>
+                <pre>${content}</pre>
+                <p><strong>Parsed Result (${result.length} lines):</strong></p>
+                ${result.map(line => `
+                    <div class="lyrics-line">
+                        ${line.timestamp ? `<span class="lyrics-timestamp">[${line.timestamp}]</span>` : ''}
+                        <span>${line.text}</span>
+                        ${line.hasWordTiming ? ' <span class="success">✓ Word-level</span>' : ''}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // Run tests
+        runTest('test1', test1);
+        runTest('test2', test2);
+        runTest('test3', test3);
+    </script>
+</body>
+</html>

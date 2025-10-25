@@ -1471,17 +1471,41 @@ async function loadLyricsForModal(trackId) {
 function displayLyricsInModal(lyrics) {
     const display = document.getElementById('lyricsDisplay');
     
-    if (lyrics.format === 'lrc') {
-        // Parse and display LRC format
-        const lines = parseLrcLyrics(lyrics.content);
+    if (lyrics.format === 'lrc' || lyrics.format === 'lrc_word') {
+        // Parse lyrics based on format
+        const lines = lyrics.format === 'lrc_word' 
+            ? parseWordLevelLrcLyrics(lyrics.content)
+            : parseLrcLyrics(lyrics.content);
+        
+        // Check if any line has word-level timing
+        const hasWordTiming = lines.some(l => l.hasWordTiming);
+        
         display.innerHTML = `
+            ${hasWordTiming ? '<div class="lyrics-format-badge">🎤 Word-level synchronized lyrics (Karaoke mode)</div>' : ''}
             <div class="lyrics-content lrc-lyrics">
-                ${lines.map(line => `
-                    <div class="lyrics-line" data-time="${line.time}">
-                        ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
-                        <span class="lyrics-text">${escapeHtml(line.text)}</span>
-                    </div>
-                `).join('')}
+                ${lines.map((line, lineIndex) => {
+                    if (line.words && line.words.length > 0) {
+                        // Word-level lyrics rendering
+                        const wordsHtml = line.words.map((word, wordIndex) => 
+                            `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
+                        ).join('');
+                        
+                        return `
+                            <div class="lyrics-line word-level-line" data-time="${line.time}" data-line="${lineIndex}">
+                                ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                                <span class="lyrics-text word-level-text">${wordsHtml}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Regular line-level lyrics
+                        return `
+                            <div class="lyrics-line" data-time="${line.time}">
+                                ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                                <span class="lyrics-text">${escapeHtml(line.text)}</span>
+                            </div>
+                        `;
+                    }
+                }).join('')}
             </div>
         `;
     } else {
@@ -1523,29 +1547,140 @@ function clearLyricsModal() {
     `;
 }
 
-// Parse LRC lyrics
+// Parse LRC lyrics (line-level only)
 function parseLrcLyrics(content) {
     const lines = [];
-    const lrcRegex = /\[(\d{2}):(\d{2})\.(\d{2})\](.*)/;
+    // Support both standard LRC [mm:ss.xx] and extended format [offset,duration]
+    const lrcRegex = /\[(\d+):(\d{2})\.(\d{2,3})\](.*)/;
+    const extendedLrcRegex = /\[(\d+),(\d+)\](.*)/;
     
     content.split('\n').forEach(line => {
-        const match = line.match(lrcRegex);
+        // Try standard LRC format first
+        let match = line.match(lrcRegex);
         if (match) {
             const minutes = parseInt(match[1]);
             const seconds = parseInt(match[2]);
             const centiseconds = parseInt(match[3]);
-            const time = minutes * 60 + seconds + centiseconds / 100;
+            const time = minutes * 60 + seconds + centiseconds / (match[3].length === 3 ? 1000 : 100);
             const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
-            const text = match[4].trim();
+            let text = match[4].trim();
             
-            lines.push({ time, timestamp, text });
-        } else if (line.trim()) {
-            // Non-LRC line or metadata
-            lines.push({ time: -1, timestamp: null, text: line.trim() });
+            // Check if this line has word-level timing (extended format)
+            // Format: word(offset,duration)word(offset,duration)
+            const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
+            
+            if (hasWordTiming) {
+                // Parse word-level timing and extract clean text
+                text = parseWordLevelLyrics(text);
+            }
+            
+            lines.push({ time, timestamp, text, hasWordTiming });
+        } else {
+            // Try extended format [offset,duration]
+            match = line.match(extendedLrcRegex);
+            if (match) {
+                const offset = parseInt(match[1]);
+                const duration = parseInt(match[2]);
+                const time = offset / 1000; // Convert milliseconds to seconds
+                const timestamp = formatTimestamp(time);
+                let text = match[3].trim();
+                
+                // Check for word-level timing
+                const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
+                if (hasWordTiming) {
+                    text = parseWordLevelLyrics(text);
+                }
+                
+                lines.push({ time, timestamp, text, hasWordTiming });
+            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') && 
+                       !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
+                // Non-LRC line (skip metadata tags)
+                lines.push({ time: -1, timestamp: null, text: line.trim(), hasWordTiming: false });
+            }
         }
     });
     
     return lines;
+}
+
+// Parse word-level LRC lyrics (preserves word timing data)
+function parseWordLevelLrcLyrics(content) {
+    const lines = [];
+    // Support both standard LRC [mm:ss.xx] and extended format [offset,duration]
+    const lrcRegex = /\[(\d+):(\d{2})\.(\d{2,3})\](.*)/;
+    const extendedLrcRegex = /\[(\d+),(\d+)\](.*)/;
+    
+    content.split('\n').forEach(line => {
+        // Try standard LRC format first
+        let match = line.match(lrcRegex);
+        if (match) {
+            const minutes = parseInt(match[1]);
+            const seconds = parseInt(match[2]);
+            const centiseconds = parseInt(match[3]);
+            const time = minutes * 60 + seconds + centiseconds / (match[3].length === 3 ? 1000 : 100);
+            const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
+            const text = match[4].trim();
+            
+            // Parse word-level timing
+            const words = parseWordsWithTiming(text, time);
+            
+            lines.push({ time, timestamp, text, words, hasWordTiming: words.length > 0 });
+        } else {
+            // Try extended format [offset,duration]
+            match = line.match(extendedLrcRegex);
+            if (match) {
+                const offset = parseInt(match[1]);
+                const duration = parseInt(match[2]);
+                const time = offset / 1000; // Convert milliseconds to seconds
+                const timestamp = formatTimestamp(time);
+                const text = match[3].trim();
+                
+                // Parse word-level timing
+                const words = parseWordsWithTiming(text, time);
+                
+                lines.push({ time, timestamp, text, words, hasWordTiming: words.length > 0 });
+            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') && 
+                       !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
+                // Non-LRC line (skip metadata tags)
+                lines.push({ time: -1, timestamp: null, text: line.trim(), words: [], hasWordTiming: false });
+            }
+        }
+    });
+    
+    return lines;
+}
+
+// Parse words with timing from text: word(offset,duration) -> {word, time}
+function parseWordsWithTiming(text, lineTime) {
+    const words = [];
+    // Match word(offset,duration) pattern
+    const wordRegex = /(.+?)\((\d+),(\d+)\)/g;
+    let match;
+    
+    while ((match = wordRegex.exec(text)) !== null) {
+        const word = match[1];
+        const time = parseInt(match[2]) / 1000; // Convert to seconds
+        const duration = parseInt(match[3]) / 1000; // Convert to seconds
+        words.push({ word, time, duration });
+    }
+    
+    return words;
+}
+
+// Parse word-level lyrics and extract clean text
+function parseWordLevelLyrics(text) {
+    // Remove word-level timing information: word(offset,duration) -> word
+    return text.replace(/(\S+?)\((\d+),(\d+)\)/g, '$1')
+               .replace(/\s+/g, ' ')
+               .trim();
+}
+
+// Format timestamp from seconds
+function formatTimestamp(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    const cs = Math.floor((seconds % 1) * 100);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${cs.toString().padStart(2, '0')}`;
 }
 
 // Save lyrics
@@ -1685,21 +1820,41 @@ async function loadLyricsForPlayer(trackId) {
 function displayLyricsInPlayer(lyrics) {
     const content = document.getElementById('playerLyricsContent');
     
-    if (lyrics.format === 'lrc') {
-        // Parse and display LRC format with sync capability
-        const lines = parseLrcLyrics(lyrics.content);
+    if (lyrics.format === 'lrc' || lyrics.format === 'lrc_word') {
+        // Parse lyrics based on format
+        const lines = lyrics.format === 'lrc_word' 
+            ? parseWordLevelLrcLyrics(lyrics.content)
+            : parseLrcLyrics(lyrics.content);
+        
         content.innerHTML = `
             <div class="lyrics-content lrc-lyrics">
-                ${lines.map((line, index) => `
-                    <div class="lyrics-line" data-time="${line.time}" data-index="${index}">
-                        ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
-                        <span class="lyrics-text">${escapeHtml(line.text)}</span>
-                    </div>
-                `).join('')}
+                ${lines.map((line, lineIndex) => {
+                    if (line.words && line.words.length > 0) {
+                        // Word-level lyrics rendering with karaoke effect
+                        const wordsHtml = line.words.map((word, wordIndex) => 
+                            `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-index="${lineIndex}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
+                        ).join('');
+                        
+                        return `
+                            <div class="lyrics-line word-level-line" data-time="${line.time}" data-index="${lineIndex}" data-line="${lineIndex}">
+                                ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                                <span class="lyrics-text word-level-text">${wordsHtml}</span>
+                            </div>
+                        `;
+                    } else {
+                        // Regular line-level lyrics
+                        return `
+                            <div class="lyrics-line" data-time="${line.time}" data-index="${lineIndex}" data-line="${lineIndex}">
+                                ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
+                                <span class="lyrics-text">${escapeHtml(line.text)}</span>
+                            </div>
+                        `;
+                    }
+                }).join('')}
             </div>
         `;
         
-        // Enable synchronized scrolling
+        // Enable synchronized scrolling with word-level support
         enableLyricsSynchronization(lines);
     } else {
         // Display plain text
@@ -1775,7 +1930,7 @@ function updateSynchronizedLyrics(currentTime) {
         
         // Highlight current line
         if (newIndex >= 0) {
-            const currentLine = document.querySelector(`[data-time="${lyricsLines[newIndex].time}"]`);
+            const currentLine = document.querySelector(`[data-index="${newIndex}"]`);
             if (currentLine) {
                 currentLine.classList.add('active');
                 // Scroll to center
@@ -1785,4 +1940,208 @@ function updateSynchronizedLyrics(currentTime) {
         
         currentLyricsIndex = newIndex;
     }
+    
+    // Handle word-level highlighting if available
+    if (newIndex >= 0 && lyricsLines[newIndex].words && lyricsLines[newIndex].words.length > 0) {
+        const currentLineWords = lyricsLines[newIndex].words;
+        
+        // Find and highlight current word
+        for (let i = 0; i < currentLineWords.length; i++) {
+            const word = currentLineWords[i];
+            const wordElement = document.querySelector(`[data-line="${newIndex}"][data-word="${i}"]`);
+            
+            if (!wordElement) {
+                console.log("word element not found for word:", word);
+                continue;
+            }
+            console.log("checking word:", word.word, "at time:", word.time, "duration:", word.duration, "currentTime:", currentTime);
+            console.log("wordElement:", wordElement);
+            if (currentTime >= word.time && currentTime < word.time + word.duration) {
+                // Current word - highlight it
+                console.log("highlighting word:", word.word, "at time:", word.time);
+                if (!wordElement.classList.contains('active')) {
+                    wordElement.classList.add('active');
+                }
+            } else if (currentTime >= word.time + word.duration) {
+                // Past word - mark as sung
+                if (!wordElement.classList.contains('sung')) {
+                    wordElement.classList.remove('active');
+                    wordElement.classList.add('sung');
+                }
+            } else {
+                // Future word - no highlight
+                wordElement.classList.remove('active', 'sung');
+            }
+        }
+        
+        // Clear highlighting from previous lines
+        if (currentLyricsIndex > 0) {
+            const prevWords = document.querySelectorAll(`[data-line="${currentLyricsIndex - 1}"] .lyrics-word`);
+            prevWords.forEach(w => {
+                w.classList.remove('active');
+                w.classList.add('sung');
+            });
+        }
+    }
 }
+
+// ========== LYRICS SEARCH ==========
+
+let currentSearchTrackId = null;
+
+// Open lyrics search modal
+function openLyricsSearchModal() {
+    if (!currentLyricsTrackId) return;
+    
+    // Store the track ID for search
+    currentSearchTrackId = currentLyricsTrackId;
+    
+    // Get track info to pre-fill search
+    const track = tracks.find(t => t.id === currentLyricsTrackId);
+    if (track) {
+        document.getElementById('lyricsSearchQuery').value = track.title || '';
+        document.getElementById('lyricsSearchArtist').value = track.artist || '';
+    }
+    
+    // Clear previous results
+    document.getElementById('lyricsSearchResults').style.display = 'none';
+    document.getElementById('lyricsSearchError').style.display = 'none';
+    document.getElementById('lyricsSearchResultsList').innerHTML = '';
+    
+    // Show modal
+    document.getElementById('lyricsSearchModal').style.display = 'flex';
+}
+
+// Close lyrics search modal
+function closeLyricsSearchModal() {
+    document.getElementById('lyricsSearchModal').style.display = 'none';
+    currentSearchTrackId = null;
+}
+
+// Perform lyrics search
+async function performLyricsSearch() {
+    const query = document.getElementById('lyricsSearchQuery').value.trim();
+    const artist = document.getElementById('lyricsSearchArtist').value.trim();
+    const provider = document.getElementById('lyricsSearchProvider').value;
+    
+    if (!query) {
+        alert('Please enter a song title');
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('lyricsSearchLoading').style.display = 'block';
+    document.getElementById('lyricsSearchError').style.display = 'none';
+    document.getElementById('lyricsSearchResults').style.display = 'none';
+    
+    try {
+        // Build query params
+        let url = `${API_BASE}/lyrics/search?q=${encodeURIComponent(query)}&provider=${provider}`;
+        if (artist) {
+            url += `&artist=${encodeURIComponent(artist)}`;
+        }
+        
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        
+        const results = await response.json();
+        
+        // Hide loading
+        document.getElementById('lyricsSearchLoading').style.display = 'none';
+        
+        if (results.length === 0) {
+            document.getElementById('lyricsSearchError').textContent = 'No results found. Try different search terms.';
+            document.getElementById('lyricsSearchError').style.display = 'block';
+            return;
+        }
+        
+        // Display results
+        displayLyricsSearchResults(results, provider);
+        
+    } catch (error) {
+        console.error('Error searching lyrics:', error);
+        document.getElementById('lyricsSearchLoading').style.display = 'none';
+        document.getElementById('lyricsSearchError').textContent = 'Failed to search lyrics. Please try again.';
+        document.getElementById('lyricsSearchError').style.display = 'block';
+    }
+}
+
+// Display lyrics search results
+function displayLyricsSearchResults(results, provider) {
+    const resultsList = document.getElementById('lyricsSearchResultsList');
+    resultsList.innerHTML = '';
+    
+    results.forEach(result => {
+        const item = document.createElement('div');
+        item.className = 'lyrics-search-result-item';
+        item.onclick = () => fetchAndApplyLyrics(result.id, provider);
+        
+        // Format duration
+        const duration = result.duration ? formatDuration(Math.floor(result.duration.secs)) : 'Unknown';
+        
+        item.innerHTML = `
+            <div class="lyrics-search-result-title">${escapeHtml(result.title)}</div>
+            <div class="lyrics-search-result-artist">👤 ${escapeHtml(result.artist)}</div>
+            <div class="lyrics-search-result-meta">
+                ${result.album ? `<div class="lyrics-search-result-album">💿 ${escapeHtml(result.album)}</div>` : ''}
+                <div class="lyrics-search-result-duration">⏱️ ${duration}</div>
+                <span class="lyrics-search-result-provider">${provider}</span>
+            </div>
+        `;
+        
+        resultsList.appendChild(item);
+    });
+    
+    document.getElementById('lyricsSearchResults').style.display = 'block';
+}
+
+// Fetch and apply lyrics from selected result
+async function fetchAndApplyLyrics(songId, provider) {
+    if (!currentSearchTrackId) return;
+    
+    // Show loading in search modal
+    document.getElementById('lyricsSearchLoading').style.display = 'block';
+    document.getElementById('lyricsSearchError').style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_BASE}/lyrics/fetch/${provider}/${encodeURIComponent(songId)}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch lyrics');
+        }
+        
+        const lyricsData = await response.json();
+        
+        // Apply lyrics to the edit form
+        document.getElementById('lyricsContent').value = lyricsData.content;
+        document.getElementById('lyricsFormat').value = lyricsData.format || '';
+        document.getElementById('lyricsLanguage').value = lyricsData.language || '';
+        document.getElementById('lyricsSource').value = lyricsData.source || '';
+        
+        // Close search modal
+        closeLyricsSearchModal();
+        
+        // Show success message
+        console.log('Lyrics fetched successfully from', provider);
+        
+        // Auto-save the lyrics
+        await saveLyrics();
+        
+    } catch (error) {
+        console.error('Error fetching lyrics:', error);
+        document.getElementById('lyricsSearchLoading').style.display = 'none';
+        document.getElementById('lyricsSearchError').textContent = 'Failed to fetch lyrics. Please try again.';
+        document.getElementById('lyricsSearchError').style.display = 'block';
+    }
+}
+
+// Format duration helper
+function formatDuration(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+

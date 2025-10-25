@@ -324,7 +324,7 @@
                 <div id="lyricsEditTab" class="lyrics-tab-content">
                     <div class="form-group">
                         <label for="lyricsContent">Lyrics Content</label>
-                        <textarea id="lyricsContent" class="form-control lyrics-textarea" placeholder="Enter lyrics here...&#10;&#10;For synchronized lyrics, use LRC format:&#10;[00:12.00]First line&#10;[00:16.50]Second line&#10;[00:21.00]Third line" rows="15"></textarea>
+                        <textarea id="lyricsContent" class="form-control lyrics-textarea" placeholder="Enter lyrics here...&#10;&#10;Supported formats:&#10;&#10;Plain text:&#10;First line&#10;Second line&#10;&#10;Standard LRC (line-level):&#10;[00:12.00]First line&#10;[00:16.50]Second line&#10;&#10;Extended LRC (word-level):&#10;[0,5000]First(0,500) line(500,500)&#10;[5000,6000]Second(0,600) line(600,600)" rows="15"></textarea>
                     </div>
 
                     <div class="form-grid">
@@ -334,6 +334,7 @@
                                 <option value="">Auto-detect</option>
                                 <option value="plain">Plain Text</option>
                                 <option value="lrc">LRC (Synchronized)</option>
+                                <option value="lrc_word">LRC (Word-Level Synchronized)</option>
                             </select>
                         </div>
 
@@ -349,12 +350,67 @@
                     </div>
 
                     <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="openLyricsSearchModal()" id="searchLyricsBtn">
+                            🔍 Search Online
+                        </button>
                         <button type="button" class="btn btn-danger" onclick="deleteLyrics()" id="deleteLyricsBtn" style="display: none;">
                             🗑️ Delete Lyrics
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="closeLyricsModal()">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="saveLyrics()">💾 Save Lyrics</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lyrics Search Modal -->
+    <div id="lyricsSearchModal" class="modal" style="display: none;">
+        <div class="modal-content modal-wide">
+            <div class="modal-header">
+                <h2>🔍 Search Lyrics Online</h2>
+                <button class="close-btn" onclick="closeLyricsSearchModal()">&times;</button>
+            </div>
+            
+            <div class="lyrics-search-body">
+                <div class="search-form">
+                    <div class="form-group">
+                        <label for="lyricsSearchQuery">Song Title</label>
+                        <input type="text" id="lyricsSearchQuery" class="form-control" placeholder="Enter song title..." />
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="lyricsSearchArtist">Artist (Optional)</label>
+                            <input type="text" id="lyricsSearchArtist" class="form-control" placeholder="Enter artist name..." />
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="lyricsSearchProvider">Provider</label>
+                            <select id="lyricsSearchProvider" class="form-control">
+                                <option value="netease">NetEase Cloud Music (网易云)</option>
+                                <option value="qqmusic">QQ Music (QQ音乐)</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-primary" onclick="performLyricsSearch()">
+                            🔍 Search
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="lyricsSearchLoading" class="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Searching for lyrics...</p>
+                </div>
+                
+                <div id="lyricsSearchError" class="error" style="display: none;"></div>
+                
+                <div id="lyricsSearchResults" class="lyrics-search-results" style="display: none;">
+                    <h3>Search Results</h3>
+                    <div id="lyricsSearchResultsList"></div>
                 </div>
             </div>
         </div>
