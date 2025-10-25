@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `music_search` binary is an interactive command-line tool for searching songs and downloading lyrics from NetEase Cloud Music and QQ Music.
+The `music_search` binary is an interactive command-line tool for searching songs and downloading lyrics from NetEase Cloud Music and QQ Music. It includes comprehensive tracing/logging capabilities for debugging and monitoring.
 
 ## Building
 
@@ -103,6 +103,64 @@ export MUSIC_COOKIE="MUSIC_U=your_cookie_value"
 echo 'MUSIC_COOKIE="MUSIC_U=your_cookie_value"' > .env
 ./target/release/music_search --api netease
 ```
+
+## Logging and Debugging
+
+The binary uses the `tracing` framework for structured logging. Control log output with the `RUST_LOG` environment variable.
+
+### Log Levels
+
+- **error**: Only critical errors
+- **warn**: Warnings and errors (default)
+- **info**: Informational messages (API calls, success/failure)
+- **debug**: Detailed information (request/response sizes, parameters)
+- **trace**: Very verbose output (not currently used)
+
+### Examples
+
+```bash
+# Show informational logs (recommended for monitoring)
+RUST_LOG=info ./target/release/music_search --api qq --query "test"
+
+# Show debug logs (for troubleshooting)
+RUST_LOG=debug ./target/release/music_search --api netease --query "search term"
+
+# Filter logs by module
+RUST_LOG=music_search_rs=debug ./target/release/music_search
+
+# Combine with command-line arguments
+RUST_LOG=info ./target/release/music_search --api qq --cookie "$MUSIC_COOKIE" --query "test"
+```
+
+### What Gets Logged
+
+With `RUST_LOG=info`, you'll see:
+- API client initialization
+- Search requests and results
+- Playlist/album fetching operations
+- Lyrics retrieval status
+- Success/failure of operations
+
+With `RUST_LOG=debug`, you'll additionally see:
+- HTTP request URLs and parameters
+- Response sizes and status codes
+- Cookie usage for authentication
+- Detailed parsing information
+- Decryption progress (for lyrics)
+
+Example log output:
+```
+2024-01-15T10:30:45Z  INFO Initializing QQ Music API client
+2024-01-15T10:30:45Z DEBUG No cookie provided, using anonymous access
+2024-01-15T10:30:45Z  INFO Searching for 'test' with type SongId
+2024-01-15T10:30:46Z DEBUG POST request to: https://c.y.qq.com/soso/fcgi-bin/client_search_cp
+2024-01-15T10:30:46Z DEBUG Response received, length: 12543 bytes
+2024-01-15T10:30:46Z  INFO Search successful, found 15 songs
+```
+
+### Default Behavior
+
+When `RUST_LOG` is not set, the binary defaults to showing only warnings and errors to keep output clean during normal operation.
 
 ### Interactive Workflow
 

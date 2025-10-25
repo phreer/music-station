@@ -3,6 +3,7 @@ use clap::Parser;
 use std::fs;
 use std::io::{self, Write};
 use std::path::Path;
+use tracing_subscriber::{fmt, EnvFilter};
 
 /// Music Search & Lyrics Downloader
 /// 
@@ -26,6 +27,18 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Initialize tracing subscriber for logging
+    // Use RUST_LOG environment variable to control log level
+    // Example: RUST_LOG=debug ./music_search
+    // If not set, defaults to showing warnings and errors only
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("warn"));
+    
+    tracing_subscriber::fmt()
+        .with_env_filter(env_filter)
+        .with_target(false)
+        .init();
+
     let args = Args::parse();
 
     println!("=== Music Search & Lyrics Downloader ===\n");
