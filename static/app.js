@@ -1951,16 +1951,11 @@ function updateSynchronizedLyrics(currentTime) {
         for (let i = 0; i < currentLineWords.length; i++) {
             const word = currentLineWords[i];
             const wordElement = document.querySelector(`[data-line="${newIndex}"][data-word="${i}"]`);
-            
-            if (!wordElement) {
-                console.log("word element not found for word:", word);
-                continue;
-            }
-            console.log("checking word:", word.word, "at time:", word.time, "duration:", word.duration, "currentTime:", currentTime);
-            console.log("wordElement:", wordElement);
+
+            if (!wordElement) continue;
+
             if (currentTime >= word.time && currentTime < word.time + word.duration) {
                 // Current word - highlight it
-                console.log("highlighting word:", word.word, "at time:", word.time);
                 if (!wordElement.classList.contains('active')) {
                     wordElement.classList.add('active');
                 }
