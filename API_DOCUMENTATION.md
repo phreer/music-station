@@ -140,9 +140,9 @@ Currently, the API does not require authentication. All endpoints are publicly a
 {
   track_id: string,                   // Track ID
   content: string,                    // Lyrics content
-  format: "plain" | "lrc",            // Format type
+  format: "plain" | "lrc" | "lrc_word", // Format type
   language: string | null,            // Language code (e.g., "en", "zh")
-  source: string | null,              // Source (e.g., "manual", "genius")
+  source: string | null,              // Source (e.g., "manual", "genius", "netease", "qqmusic")
   created_at: string,                 // ISO 8601 timestamp
   updated_at: string                  // ISO 8601 timestamp
 }
@@ -171,7 +171,7 @@ Currently, the API does not require authentication. All endpoints are publicly a
 ```typescript
 {
   content: string,                    // Lyrics content (required)
-  format?: "plain" | "lrc",           // Format (auto-detected if omitted)
+  format?: "plain" | "lrc" | "lrc_word", // Format (auto-detected if omitted)
   language?: string,                  // Language code
   source?: string                     // Source name
 }
@@ -567,6 +567,94 @@ Content-Type: application/json
 
 ### Lyrics
 
+#### Search Lyrics
+
+```http
+GET /lyrics/search?q={query}&provider={provider}&artist={artist}
+```
+
+**Query Parameters:**
+- `q` (required) - Search query (usually track title)
+- `provider` (required) - Lyrics provider: "netease" or "qqmusic"
+- `artist` (optional) - Artist name for better matching
+
+**Example:**
+```http
+GET /lyrics/search?q=Norwegian%20Wood&provider=qqmusic&artist=The%20Beatles
+```
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+[
+  {
+    "id": "12345",
+    "title": "Norwegian Wood",
+    "artist": "The Beatles",
+    "album": "Rubber Soul",
+    "duration": 125000,
+    "confidence": 0.95
+  }
+]
+```
+
+**Errors:**
+- `400 Bad Request` - Invalid provider or missing required parameters
+- `500 Internal Server Error` - Provider search failed
+- `503 Service Unavailable` - Provider not initialized
+
+**Notes:**
+- Returns search results ranked by confidence (0.0 to 1.0)
+- NetEase Cloud Music (网易云音乐) and QQ Music (QQ音乐) providers supported
+- Results include song metadata for verification before fetching
+
+#### Fetch Lyrics from Provider
+
+```http
+GET /lyrics/fetch/:provider/:song_id
+```
+
+**Parameters:**
+- `provider` (path) - Lyrics provider: "netease" or "qqmusic"
+- `song_id` (path) - Song ID from search results
+
+**Example:**
+```http
+GET /lyrics/fetch/qqmusic/12345
+```
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+{
+  "content": "[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)\n[11550,5000]Another(0,500) line(500,500)",
+  "format": "lrc_word",
+  "language": "zh",
+  "source": "qqmusic",
+  "url": "https://y.qq.com/n/ryqq/songDetail/12345",
+  "metadata": {
+    "copyright": "QQ Music"
+  }
+}
+```
+
+**Errors:**
+- `400 Bad Request` - Invalid provider
+- `404 Not Found` - Song ID not found
+- `500 Internal Server Error` - Failed to fetch lyrics
+- `503 Service Unavailable` - Provider not initialized
+
+**Notes:**
+- Returns lyrics with auto-detected format (`plain`, `lrc`, or `lrc_word`)
+- QQ Music often provides word-level synchronized lyrics (`lrc_word`)
+- NetEase Cloud Music typically provides line-level synchronized lyrics (`lrc`)
+- Includes source URL and metadata
+- This does NOT save lyrics to database - use `PUT /lyrics/:id` to save
+
 #### Get Lyrics
 
 ```http
@@ -622,9 +710,9 @@ Content-Type: application/json
 
 **Fields:**
 - `content` (required) - Lyrics text
-- `format` (optional) - "plain" or "lrc" (auto-detected if omitted)
+- `format` (optional) - "plain", "lrc", or "lrc_word" (auto-detected if omitted)
 - `language` (optional) - Language code (e.g., "en", "zh")
-- `source` (optional) - Source name (e.g., "manual", "genius")
+- `source` (optional) - Source name (e.g., "manual", "genius", "netease", "qqmusic")
 
 **Response:**
 ```json
@@ -649,7 +737,11 @@ Content-Type: application/json
 **Notes:**
 - Creates new lyrics or updates existing ones
 - Updates track's `has_lyrics` flag
-- LRC format auto-detected if content contains timestamps like `[00:12.34]`
+- Format is auto-detected from content:
+  - **`lrc_word`**: Detected if content contains word-level timing like `word(offset,duration)`
+  - **`lrc`**: Detected if content contains line timestamps like `[00:12.34]` or `[offset,duration]`
+  - **`plain`**: Default for plain text without timing data
+- Word-level LRC format example: `[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)`
 
 #### Delete Lyrics
 
@@ -771,6 +863,23 @@ async function uploadCover(id, imageFile) {
   return await response.json();
 }
 
+// Search lyrics
+async function searchLyrics(query, provider, artist = null) {
+  const params = new URLSearchParams({ q: query, provider });
+  if (artist) params.append('artist', artist);
+  
+  const response = await fetch(`http://localhost:3000/lyrics/search?${params}`);
+  return await response.json();
+}
+
+// Fetch lyrics from provider
+async function fetchLyricsFromProvider(provider, songId) {
+  const response = await fetch(
+    `http://localhost:3000/lyrics/fetch/${provider}/${songId}`
+  );
+  return await response.json();
+}
+
 // Upload lyrics
 async function uploadLyrics(id, content, format = 'plain') {
   const response = await fetch(`http://localhost:3000/lyrics/${id}`, {
@@ -879,6 +988,12 @@ curl -X POST http://localhost:3000/cover/abc123 \
 # Delete cover art
 curl -X DELETE http://localhost:3000/cover/abc123
 
+# Search lyrics
+curl "http://localhost:3000/lyrics/search?q=Norwegian%20Wood&provider=qqmusic&artist=The%20Beatles"
+
+# Fetch lyrics from provider
+curl http://localhost:3000/lyrics/fetch/qqmusic/12345
+
 # Get lyrics
 curl http://localhost:3000/lyrics/abc123
 
@@ -956,6 +1071,53 @@ function TrackList() {
 
 ## Additional Notes
 
+### Lyrics Formats
+
+The API supports three lyrics formats with automatic detection:
+
+**Plain Text (`plain`)**
+```
+Verse 1
+This is plain text lyrics
+No timing information
+```
+
+**Line-Level LRC (`lrc`)**
+```
+[00:12.34]This is a line of lyrics
+[00:16.78]Another line follows
+[00:20.12]Standard LRC format
+```
+
+**Word-Level LRC (`lrc_word`)**
+```
+[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)
+[11550,5000]Another(0,500) line(500,500) with(1000,300) words(1300,400)
+```
+
+Format is automatically detected based on content:
+- Contains `word(offset,duration)` pattern → `lrc_word`
+- Contains `[mm:ss.xx]` or `[offset,duration]` → `lrc`
+- Otherwise → `plain`
+
+Word-level lyrics enable karaoke-style word-by-word highlighting in the web client.
+
+### Lyrics Providers
+
+Two lyrics providers are integrated:
+
+**NetEase Cloud Music (网易云音乐)**
+- Provider ID: `netease`
+- Typically provides line-level LRC lyrics
+- Large Chinese music library
+- Some international tracks available
+
+**QQ Music (QQ音乐)**
+- Provider ID: `qqmusic`
+- Often provides word-level LRC lyrics with karaoke timing
+- Extensive Chinese music library
+- High-quality synchronized lyrics
+
 ### CORS
 
 The API has CORS enabled for all origins (`CorsLayer::permissive()`). This allows web clients from any domain to access the API.
@@ -1000,4 +1162,4 @@ For issues or questions:
 - Examine data structures: `src/library.rs`
 
 **Server Version:** 0.1.0  
-**Documentation Last Updated:** 2025-10-23
+**Documentation Last Updated:** 2025-10-26
