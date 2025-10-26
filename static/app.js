@@ -22,6 +22,7 @@ let trackToAdd = null;
 
 // Load tracks on page load
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
     loadTracks();
     loadPlaylists();
     setupEventListeners();
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     document.getElementById('refreshBtn').addEventListener('click', loadTracks);
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -2143,5 +2145,42 @@ function formatDuration(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ========== THEME MANAGEMENT ==========
+
+// Initialize theme on page load
+function initTheme() {
+    // Check localStorage for saved theme preference
+    const savedTheme = localStorage.getItem('music_station_theme');
+    
+    // Default to light mode if no preference saved
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeIcon(true);
+    } else {
+        // Explicitly set to light mode (default)
+        document.body.classList.remove('dark-mode');
+        updateThemeIcon(false);
+    }
+}
+
+// Toggle between light and dark mode
+function toggleTheme() {
+    const isDarkMode = document.body.classList.toggle('dark-mode');
+    
+    // Save preference to localStorage
+    localStorage.setItem('music_station_theme', isDarkMode ? 'dark' : 'light');
+    
+    // Update icon
+    updateThemeIcon(isDarkMode);
+}
+
+// Update the theme toggle icon
+function updateThemeIcon(isDarkMode) {
+    const themeIcon = document.querySelector('.theme-icon');
+    if (themeIcon) {
+        themeIcon.textContent = isDarkMode ? '☀️' : '🌙';
+    }
 }
 
