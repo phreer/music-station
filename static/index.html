@@ -33,6 +33,7 @@
         <div id="tracks-view" class="tab-content active">
             <div class="controls">
                 <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Library</button>
+                <button id="autoFetchLyricsBtn" class="btn btn-secondary">🎵 Auto-Fetch Lyrics</button>
                 <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search tracks, artists, albums..." />
                 <span id="trackCount" class="track-count"></span>
             </div>
@@ -416,10 +417,62 @@
                 
                 <div id="lyricsSearchError" class="error" style="display: none;"></div>
                 
-                <div id="lyricsSearchResults" class="lyrics-search-results" style="display: none;">
+                                <div id="lyricsSearchResults" class="lyrics-search-results" style="display: none;">
                     <h3>Search Results</h3>
                     <div id="lyricsSearchResultsList"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-Fetch Lyrics Modal -->
+    <div id="autoFetchModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>🎵 Auto-Fetch Lyrics</h2>
+                <button class="close-btn" onclick="closeAutoFetchModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div id="autoFetchStatus" class="auto-fetch-status">
+                    <div class="progress-container">
+                        <div class="progress-text">
+                            <span id="autoFetchProgress">Preparing...</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div id="autoFetchProgressBar" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="autoFetchDetails" class="auto-fetch-details">
+                        <p><strong>Total tracks without lyrics:</strong> <span id="autoFetchTotal">0</span></p>
+                        <p><strong>Processed:</strong> <span id="autoFetchProcessed">0</span></p>
+                        <p><strong>Succeeded:</strong> <span id="autoFetchSucceeded">0</span></p>
+                        <p><strong>Failed:</strong> <span id="autoFetchFailed">0</span></p>
+                        <p><strong>Skipped:</strong> <span id="autoFetchSkipped">0</span></p>
+                    </div>
+                    
+                    <div id="autoFetchCurrentTrack" class="auto-fetch-current-track"></div>
+                    
+                    <div id="autoFetchLog" class="auto-fetch-log"></div>
+                </div>
+                
+                <div class="form-actions">
+                    <button id="autoFetchCancelBtn" class="btn btn-secondary" onclick="cancelAutoFetch()">
+                        ⏸️ Cancel
+                    </button>
+                    <button id="autoFetchCloseBtn" class="btn btn-primary" onclick="closeAutoFetchModal()" style="display: none;">
+                        ✓ Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+```
             </div>
         </div>
     </div>

@@ -48,6 +48,7 @@ function setupEventListeners() {
         allTracksLoaded = false;
         loadTracks(false);
     });
+    document.getElementById('autoFetchLyricsBtn').addEventListener('click', startAutoFetchLyrics);
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     
@@ -2373,5 +2374,240 @@ function updateThemeIcon(isDarkMode) {
     if (themeIcon) {
         themeIcon.textContent = isDarkMode ? '☀️' : '🌙';
     }
+}
+
+// ========== AUTO-FETCH LYRICS ==========
+
+let autoFetchState = {
+    isRunning: false,
+    isCancelled: false,
+    total: 0,
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0
+};
+
+// Start auto-fetch lyrics process
+async function startAutoFetchLyrics() {
+    // Get tracks without lyrics
+    const tracksWithoutLyrics = tracks.filter(track => !track.has_lyrics);
+    
+    if (tracksWithoutLyrics.length === 0) {
+        alert('All tracks already have lyrics! 🎉');
+        return;
+    }
+    
+    // Confirm with user
+    const confirmed = confirm(
+        `Found ${tracksWithoutLyrics.length} tracks without lyrics.\n\n` +
+        `This will search for lyrics using QQ Music API and automatically apply them.\n\n` +
+        `Continue?`
+    );
+    
+    if (!confirmed) return;
+    
+    // Reset state
+    autoFetchState = {
+        isRunning: true,
+        isCancelled: false,
+        total: tracksWithoutLyrics.length,
+        processed: 0,
+        succeeded: 0,
+        failed: 0,
+        skipped: 0
+    };
+    
+    // Show modal
+    openAutoFetchModal();
+    updateAutoFetchUI();
+    
+    // Process tracks
+    for (let i = 0; i < tracksWithoutLyrics.length; i++) {
+        if (autoFetchState.isCancelled) {
+            addAutoFetchLog('Process cancelled by user', 'info');
+            break;
+        }
+        
+        const track = tracksWithoutLyrics[i];
+        await processTrackForAutoFetch(track);
+        
+        // Sleep 1 second between requests (except for last track)
+        if (i < tracksWithoutLyrics.length - 1 && !autoFetchState.isCancelled) {
+            await sleep(1000);
+        }
+    }
+    
+    // Finalize
+    autoFetchState.isRunning = false;
+    document.getElementById('autoFetchCancelBtn').style.display = 'none';
+    document.getElementById('autoFetchCloseBtn').style.display = 'inline-block';
+    
+    if (!autoFetchState.isCancelled) {
+        addAutoFetchLog('✅ Auto-fetch completed!', 'success');
+    }
+    
+    // Refresh tracks to update has_lyrics flags
+    await loadTracks(false);
+}
+
+// Process single track for auto-fetch
+async function processTrackForAutoFetch(track) {
+    autoFetchState.processed++;
+    updateAutoFetchUI();
+    
+    const trackTitle = track.title || 'Unknown';
+    const trackArtist = track.artist || '';
+    
+    // Update current track display
+    document.getElementById('autoFetchCurrentTrack').innerHTML = 
+        `<strong>Processing:</strong> ${escapeHtml(trackTitle)} ${trackArtist ? `- ${escapeHtml(trackArtist)}` : ''}`;
+    
+    try {
+        // Search for lyrics
+        let url = `${API_BASE}/lyrics/search?q=${encodeURIComponent(trackTitle)}&provider=qqmusic`;
+        if (trackArtist) {
+            url += `&artist=${encodeURIComponent(trackArtist)}`;
+        }
+        
+        const searchResponse = await fetch(url);
+        if (!searchResponse.ok) {
+            throw new Error('Search failed');
+        }
+        
+        const results = await searchResponse.json();
+        
+        if (results.length === 0) {
+            autoFetchState.skipped++;
+            addAutoFetchLog(`⊘ No results: ${trackTitle}`, 'skip');
+            return;
+        }
+        
+        // Find best match based on duration
+        let bestMatch = null;
+        let minDurationDiff = Infinity;
+        
+        for (const result of results) {
+            if (!result.duration || !result.duration.secs || !track.duration_secs) {
+                continue;
+            }
+            
+            const durationDiff = Math.abs(result.duration.secs - track.duration_secs);
+            
+            // Check if duration difference is within 10 seconds
+            if (durationDiff < 10 && durationDiff < minDurationDiff) {
+                bestMatch = result;
+                minDurationDiff = durationDiff;
+            }
+        }
+        
+        if (!bestMatch) {
+            autoFetchState.skipped++;
+            addAutoFetchLog(`⊘ No match (duration): ${trackTitle}`, 'skip');
+            return;
+        }
+        
+        // Fetch lyrics
+        const fetchResponse = await fetch(
+            `${API_BASE}/lyrics/fetch/qqmusic/${encodeURIComponent(bestMatch.id)}`
+        );
+        
+        if (!fetchResponse.ok) {
+            throw new Error('Failed to fetch lyrics');
+        }
+        
+        const lyricsData = await fetchResponse.json();
+        
+        // Upload lyrics to track
+        const uploadResponse = await fetch(`${API_BASE}/lyrics/${track.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: lyricsData.content,
+                format: lyricsData.format,
+                language: lyricsData.language,
+                source: lyricsData.source
+            })
+        });
+        
+        if (!uploadResponse.ok) {
+            throw new Error('Failed to upload lyrics');
+        }
+        
+        // Success
+        autoFetchState.succeeded++;
+        track.has_lyrics = true; // Update local state
+        addAutoFetchLog(`✓ Success: ${trackTitle}`, 'success');
+        
+    } catch (error) {
+        autoFetchState.failed++;
+        addAutoFetchLog(`✗ Error: ${trackTitle} - ${error.message}`, 'error');
+        console.error('Auto-fetch error:', error);
+    }
+}
+
+// Update auto-fetch UI
+function updateAutoFetchUI() {
+    const { total, processed, succeeded, failed, skipped } = autoFetchState;
+    
+    // Update progress text
+    document.getElementById('autoFetchProgress').textContent = 
+        `${processed} / ${total} tracks processed`;
+    
+    // Update progress bar
+    const percentage = total > 0 ? (processed / total) * 100 : 0;
+    const progressBar = document.getElementById('autoFetchProgressBar');
+    progressBar.style.width = `${percentage}%`;
+    progressBar.textContent = `${Math.round(percentage)}%`;
+    
+    // Update details
+    document.getElementById('autoFetchTotal').textContent = total;
+    document.getElementById('autoFetchProcessed').textContent = processed;
+    document.getElementById('autoFetchSucceeded').textContent = succeeded;
+    document.getElementById('autoFetchFailed').textContent = failed;
+    document.getElementById('autoFetchSkipped').textContent = skipped;
+}
+
+// Add log entry
+function addAutoFetchLog(message, type = 'info') {
+    const log = document.getElementById('autoFetchLog');
+    const entry = document.createElement('div');
+    entry.className = `log-entry log-${type}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    log.appendChild(entry);
+    
+    // Auto-scroll to bottom
+    log.scrollTop = log.scrollHeight;
+}
+
+// Open auto-fetch modal
+function openAutoFetchModal() {
+    document.getElementById('autoFetchModal').style.display = 'flex';
+    document.getElementById('autoFetchCancelBtn').style.display = 'inline-block';
+    document.getElementById('autoFetchCloseBtn').style.display = 'none';
+    document.getElementById('autoFetchLog').innerHTML = '';
+    document.getElementById('autoFetchCurrentTrack').innerHTML = '';
+}
+
+// Close auto-fetch modal
+function closeAutoFetchModal() {
+    if (autoFetchState.isRunning) {
+        const confirmed = confirm('Auto-fetch is still running. Are you sure you want to close?');
+        if (!confirmed) return;
+        autoFetchState.isCancelled = true;
+    }
+    document.getElementById('autoFetchModal').style.display = 'none';
+}
+
+// Cancel auto-fetch
+function cancelAutoFetch() {
+    if (!confirm('Are you sure you want to cancel auto-fetch?')) return;
+    autoFetchState.isCancelled = true;
+    addAutoFetchLog('Cancelling...', 'info');
+}
+
+// Sleep helper
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
