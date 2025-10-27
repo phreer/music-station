@@ -5,6 +5,15 @@ let tracks = [];
 let currentEditTrackId = null;
 let currentView = 'tracks';
 
+// Pagination state
+let currentPage = 1;
+let pageSize = 100; // Number of tracks to load per page
+let totalTracks = 0;
+let isLoadingMore = false;
+let allTracksLoaded = false;
+let searchQuery = '';
+let filteredTracks = [];
+
 // Music player state
 let currentTrackIndex = -1;
 let playlist = [];
@@ -29,12 +38,28 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMusicPlayer();
     setupPlaylistEventListeners();
     updateQueueDisplay();
+    setupInfiniteScroll();
 });
 
 function setupEventListeners() {
-    document.getElementById('refreshBtn').addEventListener('click', loadTracks);
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        // Reset pagination and reload from scratch
+        currentPage = 1;
+        allTracksLoaded = false;
+        loadTracks(false);
+    });
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    
+    // Search input with debouncing
+    let searchTimeout;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            filterAndRenderTracks();
+        }, 300); // 300ms debounce
+    });
     
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -265,7 +290,7 @@ function switchTab(tabName) {
     switch(tabName) {
         case 'tracks':
             if (tracks.length === 0) {
-                loadTracks();
+                loadTracks(false);
             }
             break;
         case 'albums':
@@ -283,8 +308,18 @@ function switchTab(tabName) {
     }
 }
 
-async function loadTracks() {
-    showLoading();
+async function loadTracks(append = false) {
+    if (isLoadingMore || (allTracksLoaded && append)) return;
+    
+    if (!append) {
+        showLoading();
+        tracks = [];
+        currentPage = 1;
+        allTracksLoaded = false;
+    } else {
+        isLoadingMore = true;
+    }
+    
     hideError();
 
     try {
@@ -294,33 +329,104 @@ async function loadTracks() {
             throw new Error(`Server returned ${response.status}: ${response.statusText}`);
         }
 
-        tracks = await response.json();
-        renderTracks();
+        const allTracks = await response.json();
+        totalTracks = allTracks.length;
+        
+        // Calculate pagination
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, allTracks.length);
+        const newTracks = allTracks.slice(startIndex, endIndex);
+        
+        if (append) {
+            tracks = [...tracks, ...newTracks];
+        } else {
+            tracks = newTracks;
+        }
+        
+        // Check if all tracks are loaded
+        if (tracks.length >= totalTracks) {
+            allTracksLoaded = true;
+        }
+        
+        renderTracks(append);
         updateTrackCount();
+        
+        currentPage++;
     } catch (error) {
         showError(`Failed to load tracks: ${error.message}`);
         console.error('Error loading tracks:', error);
     } finally {
         hideLoading();
+        isLoadingMore = false;
     }
 }
 
-function renderTracks() {
+// Setup infinite scroll
+function setupInfiniteScroll() {
+    // Use window scroll instead of element scroll for better cross-browser compatibility
+    const handleScroll = () => {
+        if (currentView !== 'tracks' || allTracksLoaded || isLoadingMore || searchQuery) return;
+        
+        // Get the scroll position relative to the document
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        
+        // Load more when scrolled to 80% of the content
+        if (scrollTop + windowHeight >= documentHeight * 0.8) {
+            loadTracks(true);
+        }
+    };
+    
+    // Add scroll listener to window for cross-browser compatibility
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Also check on resize in case content changes
+    window.addEventListener('resize', handleScroll, { passive: true });
+}
+
+// Filter and render tracks based on search query
+function filterAndRenderTracks() {
+    if (!searchQuery) {
+        // No search query, render all loaded tracks
+        filteredTracks = tracks;
+        renderTracks(false);
+        updateTrackCount();
+        return;
+    }
+    
+    // Filter tracks based on search query
+    filteredTracks = tracks.filter(track => {
+        const title = (track.title || '').toLowerCase();
+        const artist = (track.artist || '').toLowerCase();
+        const album = (track.album || '').toLowerCase();
+        const genre = (track.genre || '').toLowerCase();
+        
+        return title.includes(searchQuery) || 
+               artist.includes(searchQuery) || 
+               album.includes(searchQuery) ||
+               genre.includes(searchQuery);
+    });
+    
+    // Render filtered tracks
+    renderFilteredTracks();
+    updateTrackCount();
+}
+
+// Render filtered tracks (for search)
+function renderFilteredTracks() {
     const trackList = document.getElementById('trackList');
     
-    if (tracks.length === 0) {
+    if (filteredTracks.length === 0) {
         trackList.innerHTML = `
             <div style="text-align: center; padding: 40px; background: white; border-radius: 8px;">
-                <p style="font-size: 1.2em; color: #666;">No tracks found in the library.</p>
-                <p style="color: #999; margin-top: 10px;">Make sure your server is configured with a music folder containing FLAC files.</p>
+                <p style="font-size: 1.2em; color: #666;">No tracks found matching "${escapeHtml(searchQuery)}"</p>
+                <p style="color: #999; margin-top: 10px;">Try a different search term</p>
             </div>
         `;
         return;
     }
-
-    // Update playlist
-    playlist = tracks.map(t => t.id);
-
+    
     trackList.innerHTML = `
         <div class="track-table-container">
             <table class="track-table">
@@ -336,12 +442,95 @@ function renderTracks() {
                         <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    ${tracks.map(track => createTrackRow(track)).join('')}
+                <tbody id="trackTableBody">
+                    ${filteredTracks.map(track => createTrackRow(track)).join('')}
                 </tbody>
             </table>
         </div>
     `;
+}
+
+function renderTracks(append = false) {
+    const trackList = document.getElementById('trackList');
+    
+    // Use filtered tracks if search is active
+    const displayTracks = searchQuery ? filteredTracks : tracks;
+    
+    if (displayTracks.length === 0 && !append) {
+        trackList.innerHTML = `
+            <div style="text-align: center; padding: 40px; background: white; border-radius: 8px;">
+                <p style="font-size: 1.2em; color: #666;">No tracks found in the library.</p>
+                <p style="color: #999; margin-top: 10px;">Make sure your server is configured with a music folder containing FLAC files.</p>
+            </div>
+        `;
+        return;
+    }
+
+    if (!append || searchQuery) {
+        // Initial render or search mode - create table structure
+        trackList.innerHTML = `
+            <div class="track-table-container">
+                <table class="track-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Cover</th>
+                            <th style="width: 40px;"></th>
+                            <th>Title</th>
+                            <th>Artist</th>
+                            <th>Album</th>
+                            <th>Duration</th>
+                            <th>Size</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackTableBody">
+                        ${displayTracks.map(track => createTrackRow(track)).join('')}
+                    </tbody>
+                </table>
+                ${!allTracksLoaded && !searchQuery ? `
+                    <div id="loadMoreIndicator" style="text-align: center; padding: 20px;">
+                        <div style="color: #666; margin-bottom: 10px;">Scroll down to load more tracks...</div>
+                        <button class="btn btn-secondary btn-small" onclick="loadTracks(true)" style="margin-top: 10px;">
+                            ⬇️ Load More Tracks
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    } else {
+        // Append new tracks to existing table (infinite scroll mode)
+        const tbody = document.getElementById('trackTableBody');
+        if (tbody) {
+            const startIndex = tracks.length - pageSize;
+            const newTracks = tracks.slice(Math.max(0, startIndex));
+            
+            // Create a temporary tbody element to properly parse <tr> tags
+            const tempTbody = document.createElement('tbody');
+            tempTbody.innerHTML = newTracks.map(track => createTrackRow(track)).join('');
+            
+            // Use DocumentFragment for better performance
+            const fragment = document.createDocumentFragment();
+            while (tempTbody.firstChild) {
+                fragment.appendChild(tempTbody.firstChild);
+            }
+            tbody.appendChild(fragment);
+            
+            // Update or remove load more indicator
+            const indicator = document.getElementById('loadMoreIndicator');
+            if (indicator) {
+                if (allTracksLoaded) {
+                    indicator.innerHTML = `<div style="color: #999; padding: 20px;">✅ All ${totalTracks} tracks loaded</div>`;
+                } else {
+                    indicator.innerHTML = `
+                        <div style="color: #666; margin-bottom: 10px;">Loaded ${tracks.length} of ${totalTracks} tracks...</div>
+                        <button class="btn btn-secondary btn-small" onclick="loadTracks(true)">
+                            ⬇️ Load More Tracks
+                        </button>
+                    `;
+                }
+            }
+        }
+    }
 }
 
 function createTrackRow(track) {
@@ -661,7 +850,14 @@ function formatFileSize(bytes) {
 
 function updateTrackCount() {
     const countElement = document.getElementById('trackCount');
-    countElement.textContent = `${tracks.length} track${tracks.length !== 1 ? 's' : ''} in library`;
+    
+    if (searchQuery) {
+        countElement.textContent = `${filteredTracks.length} of ${totalTracks} track${totalTracks !== 1 ? 's' : ''} match`;
+    } else if (allTracksLoaded) {
+        countElement.textContent = `${totalTracks} track${totalTracks !== 1 ? 's' : ''} in library`;
+    } else {
+        countElement.textContent = `${tracks.length} of ${totalTracks} track${totalTracks !== 1 ? 's' : ''} loaded`;
+    }
 }
 
 function showLoading() {

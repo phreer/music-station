@@ -89,37 +89,58 @@ impl MusicLibrary {
         tracing::info!("Scanning library at: {}", self.library_path.display());
 
         let mut tracks = Vec::new();
-        let mut entries = tokio::fs::read_dir(&self.library_path)
-            .await
-            .context("Failed to read library directory")?;
-
-        while let Some(entry) = entries.next_entry().await? {
-            let path = entry.path();
-
-            // Process both FLAC and MP3 files
-            if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-                if ext == "flac" || ext == "mp3" {
-                    match self.parse_audio_file(&path).await {
-                        Ok(track) => {
-                            tracing::info!(
-                                "Found track: {}",
-                                track.title.as_deref().unwrap_or("Unknown")
-                            );
-                            tracks.push(track);
-                        }
-                        Err(e) => {
-                            tracing::warn!("Failed to parse {}: {}", path.display(), e);
-                        }
-                    }
-                }
-            }
-        }
+        Box::pin(self.scan_directory(&self.library_path.clone(), &mut tracks)).await?;
 
         let mut library_tracks = self.tracks.write().await;
         *library_tracks = tracks;
 
         tracing::info!("Scan complete. Found {} tracks", library_tracks.len());
         Ok(())
+    }
+
+    /// Recursively scan a directory for audio files
+    fn scan_directory<'a>(
+        &'a self,
+        dir: &'a Path,
+        tracks: &'a mut Vec<Track>,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + 'a>> {
+        Box::pin(async move {
+            let mut entries = tokio::fs::read_dir(dir)
+                .await
+                .context(format!("Failed to read directory: {}", dir.display()))?;
+
+            while let Some(entry) = entries.next_entry().await? {
+                let path = entry.path();
+                let metadata = tokio::fs::metadata(&path).await?;
+
+                if metadata.is_dir() {
+                    // Recursively scan subdirectories
+                    tracing::debug!("Scanning subdirectory: {}", path.display());
+                    self.scan_directory(&path, tracks).await?;
+                } else if metadata.is_file() {
+                    // Process audio files
+                    if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+                        if ext == "flac" || ext == "mp3" {
+                            match self.parse_audio_file(&path).await {
+                                Ok(track) => {
+                                    tracing::info!(
+                                        "Found track: {} - {}",
+                                        track.artist.as_deref().unwrap_or("Unknown Artist"),
+                                        track.title.as_deref().unwrap_or("Unknown")
+                                    );
+                                    tracks.push(track);
+                                }
+                                Err(e) => {
+                                    tracing::warn!("Failed to parse {}: {}", path.display(), e);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Ok(())
+        })
     }
 
     /// Parse an audio file (FLAC or MP3) and extract metadata
