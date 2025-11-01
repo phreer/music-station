@@ -2391,7 +2391,7 @@ let autoFetchState = {
 // Start auto-fetch lyrics process
 async function startAutoFetchLyrics() {
     // Get tracks without lyrics
-    const tracksWithoutLyrics = tracks.filter(track => !track.has_lyrics);
+    const tracksWithoutLyrics = tracks.filter(track => !track.has_lyrics && track.title);
     
     if (tracksWithoutLyrics.length === 0) {
         alert('All tracks already have lyrics! 🎉');
