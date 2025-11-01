@@ -83,15 +83,6 @@ async fn main() -> Result<()> {
     let addr = format!("0.0.0.0:{}", cli.port);
 
     tracing::info!("Server listening on http://{}", addr);
-    tracing::info!("API endpoints:");
-    tracing::info!("  GET  /              - API info");
-    tracing::info!("  GET  /tracks        - List all tracks");
-    tracing::info!("  GET  /tracks/:id    - Get track details");
-    tracing::info!("  PUT  /tracks/:id    - Update track metadata");
-    tracing::info!("  GET  /stream/:id    - Stream track audio");
-    tracing::info!("  GET  /lyrics/:id    - Get track lyrics");
-    tracing::info!("  PUT  /lyrics/:id    - Upload/update track lyrics");
-    tracing::info!("  DELETE /lyrics/:id  - Delete track lyrics");
     tracing::info!("Web Client:");
     tracing::info!("  http://localhost:{}/web/index.html", cli.port);
 
