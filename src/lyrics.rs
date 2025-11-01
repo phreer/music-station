@@ -1,6 +1,6 @@
 pub mod fetcher;
-pub mod providers;
 pub mod music_search_provider;
+pub mod providers;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -23,9 +23,9 @@ pub struct Lyric {
 #[serde(rename_all = "lowercase")]
 pub enum LyricFormat {
     Plain,
-    Lrc,  // Standard LRC (Lyrics) format with line-level timestamps
+    Lrc, // Standard LRC (Lyrics) format with line-level timestamps
     #[serde(rename = "lrc_word")]
-    LrcWord,  // Extended LRC format with word-level timestamps
+    LrcWord, // Extended LRC format with word-level timestamps
 }
 
 impl LyricFormat {
@@ -44,7 +44,7 @@ impl LyricFormat {
             _ => LyricFormat::Plain,
         }
     }
-    
+
     /// Detect format from content automatically
     pub fn detect_from_content(content: &str) -> Self {
         // Check for word-level timing pattern: word(offset,duration)
@@ -55,7 +55,7 @@ impl LyricFormat {
                 return LyricFormat::LrcWord;
             }
         }
-        
+
         // Check for standard LRC timing pattern: [mm:ss.xx] or [offset,duration]
         if content.contains("[") && (content.contains(":") || content.contains(",")) {
             // Look for patterns like [00:12.34] or [12345,6789]
@@ -69,7 +69,7 @@ impl LyricFormat {
                 return LyricFormat::Lrc;
             }
         }
-        
+
         // Default to plain text
         LyricFormat::Plain
     }
@@ -84,15 +84,14 @@ impl LyricDatabase {
     /// Create a new lyric database connection
     pub async fn new<P: AsRef<Path>>(db_path: P) -> Result<Self> {
         let db_path = db_path.as_ref();
-        
+
         // Create parent directory if it doesn't exist
         if let Some(parent) = db_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
         let connection_string = format!("sqlite:{}", db_path.display());
-        let options = SqliteConnectOptions::from_str(&connection_string)?
-            .create_if_missing(true);
+        let options = SqliteConnectOptions::from_str(&connection_string)?.create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
@@ -175,7 +174,18 @@ impl LyricDatabase {
 
     /// Get lyrics for a specific track
     pub async fn get_lyric(&self, track_id: &str) -> Result<Option<Lyric>> {
-        let row = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>, String, String)>(
+        let row = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                String,
+                Option<String>,
+                Option<String>,
+                String,
+                String,
+            ),
+        >(
             r#"
             SELECT track_id, content, format, language, source, created_at, updated_at
             FROM lyrics
@@ -187,8 +197,8 @@ impl LyricDatabase {
         .await
         .context("Failed to fetch lyric")?;
 
-        Ok(row.map(|(track_id, content, format, language, source, created_at, updated_at)| {
-            Lyric {
+        Ok(row.map(
+            |(track_id, content, format, language, source, created_at, updated_at)| Lyric {
                 track_id,
                 content,
                 format: LyricFormat::from_str(&format),
@@ -196,8 +206,8 @@ impl LyricDatabase {
                 source,
                 created_at,
                 updated_at,
-            }
-        }))
+            },
+        ))
     }
 
     /// Delete lyrics for a track
@@ -247,17 +257,14 @@ impl LyricDatabase {
 
     /// Get statistics about lyrics in the database
     pub async fn get_stats(&self) -> Result<LyricStats> {
-        let (total_lyrics,): (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM lyrics"
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let (total_lyrics,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM lyrics")
+            .fetch_one(&self.pool)
+            .await?;
 
-        let (lrc_count,): (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM lyrics WHERE format = 'lrc'"
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        let (lrc_count,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM lyrics WHERE format = 'lrc'")
+                .fetch_one(&self.pool)
+                .await?;
 
         Ok(LyricStats {
             total_lyrics: total_lyrics as usize,

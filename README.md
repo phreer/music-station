@@ -16,6 +16,7 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 - 🖼️ Cover art management (view, add, remove)
 - 📝 Lyrics support with plain text and LRC (synchronized) formats
 - 💾 SQLite database for persistent lyrics storage
+- 📋 Playlist management with server-side persistence
 
 ## Quick Start
 
@@ -91,6 +92,13 @@ Music Station provides a comprehensive REST API for client development.
 - `PUT /lyrics/:id` - Upload/update lyrics
 - `DELETE /lyrics/:id` - Delete lyrics
 
+**Playlists:**
+- `GET /playlists` - List all playlists
+- `GET /playlists/:id` - Get playlist details
+- `POST /playlists` - Create playlist
+- `PUT /playlists/:id` - Update playlist
+- `DELETE /playlists/:id` - Delete playlist
+
 **Albums & Artists:**
 - `GET /albums` - List albums
 - `GET /albums/:name` - Get album details
@@ -113,6 +121,7 @@ music-station/
 │   │   ├── mod.rs        # Lyrics database
 │   │   ├── fetcher.rs    # Lyrics fetching API traits
 │   │   └── providers.rs  # Example lyrics providers
+│   ├── playlist.rs       # Playlist management module
 │   ├── server.rs         # HTTP API handlers
 │   └── bin/
 │       └── client.rs     # CLI client

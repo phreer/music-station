@@ -3,7 +3,7 @@
 //! This module provides a trait-based system for fetching lyrics from various internet sources.
 //! It supports both synchronized (LRC format) and plain text lyrics.
 
-use super::{LyricFormat, Lyric};
+use super::{Lyric, LyricFormat};
 use anyhow::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
@@ -124,7 +124,7 @@ impl Default for ProviderConfig {
 }
 
 /// Main trait for lyrics providers
-/// 
+///
 /// Implement this trait to create a new lyrics source (e.g., Genius, Netease, etc.)
 #[async_trait]
 pub trait LyricsProvider: Send + Sync {
@@ -149,14 +149,14 @@ pub trait LyricsProvider: Send + Sync {
     async fn fetch(&self, result_id: &str) -> Result<LyricsResponse>;
 
     /// Convenience method: search and fetch the best match automatically
-    /// 
+    ///
     /// This default implementation:
     /// 1. Searches for matches
     /// 2. Picks the result with highest confidence
     /// 3. Fetches lyrics if confidence is above threshold
     async fn search_and_fetch(&self, query: &LyricsQuery) -> Result<Option<LyricsResponse>> {
         let results = self.search(query).await?;
-        
+
         // Get the highest confidence result
         let best_match = results
             .into_iter()
@@ -221,13 +221,13 @@ impl LyricsAggregator {
     }
 
     /// Try to fetch lyrics from all providers in order (with fallback)
-    /// 
+    ///
     /// This tries each provider sequentially until one succeeds.
     /// Useful for reliability when some providers might be down.
     pub async fn fetch_lyrics(&self, query: &LyricsQuery) -> Result<Option<LyricsResponse>> {
         for provider in &self.providers {
             tracing::debug!("Trying provider: {}", provider.name());
-            
+
             match provider.search_and_fetch(query).await {
                 Ok(Some(lyrics)) => {
                     tracing::info!("✓ Found lyrics from provider: {}", provider.name());
@@ -238,11 +238,7 @@ impl LyricsAggregator {
                     continue;
                 }
                 Err(e) => {
-                    tracing::warn!(
-                        "✗ Provider {} failed: {:?}",
-                        provider.name(),
-                        e
-                    );
+                    tracing::warn!("✗ Provider {} failed: {:?}", provider.name(), e);
                     continue;
                 }
             }
@@ -268,7 +264,7 @@ impl LyricsAggregator {
     }
 
     /// Search all providers in parallel and return all results
-    /// 
+    ///
     /// Useful for showing users multiple options to choose from.
     pub async fn search_all(
         &self,

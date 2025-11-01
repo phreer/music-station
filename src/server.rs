@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
-    extract::{Path, State, Multipart},
-    http::{StatusCode, header, HeaderMap},
+    extract::{Multipart, Path, State},
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
 };
@@ -11,20 +11,28 @@ use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 use crate::library::{Album, Artist, LibraryStats, MusicLibrary, Track, TrackMetadataUpdate};
-use crate::lyrics::{Lyric, LyricDatabase, LyricFormat, LyricUpload};
-use crate::lyrics::fetcher::{LyricsQuery, LyricsSearchResult as FetcherSearchResult, LyricsResponse};
-use crate::lyrics::music_search_provider::{NetEaseLyricsProvider, QQMusicLyricsProvider};
 use crate::lyrics::fetcher::LyricsProvider as LyricsProviderTrait;
+use crate::lyrics::fetcher::{
+    LyricsQuery, LyricsResponse, LyricsSearchResult as FetcherSearchResult,
+};
+use crate::lyrics::music_search_provider::{NetEaseLyricsProvider, QQMusicLyricsProvider};
+use crate::lyrics::{Lyric, LyricDatabase, LyricFormat, LyricUpload};
+use crate::playlist::{Playlist, PlaylistCreate, PlaylistDatabase, PlaylistUpdate};
 
 #[derive(Clone)]
 pub struct AppState {
     pub library: MusicLibrary,
     pub lyrics_db: LyricDatabase,
+    pub playlist_db: PlaylistDatabase,
     pub netease_provider: Option<std::sync::Arc<NetEaseLyricsProvider>>,
     pub qqmusic_provider: Option<std::sync::Arc<QQMusicLyricsProvider>>,
 }
 
-pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router {
+pub fn create_router(
+    library: MusicLibrary,
+    lyrics_db: LyricDatabase,
+    playlist_db: PlaylistDatabase,
+) -> Router {
     // Initialize lyrics providers
     let netease_provider = NetEaseLyricsProvider::new(None)
         .map(|p| std::sync::Arc::new(p))
@@ -32,17 +40,18 @@ pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router 
     let qqmusic_provider = QQMusicLyricsProvider::new(None)
         .map(|p| std::sync::Arc::new(p))
         .ok();
-    
+
     if netease_provider.is_none() {
         tracing::warn!("Failed to initialize NetEase lyrics provider");
     }
     if qqmusic_provider.is_none() {
         tracing::warn!("Failed to initialize QQ Music lyrics provider");
     }
-    
-    let state = AppState { 
-        library, 
+
+    let state = AppState {
+        library,
         lyrics_db,
+        playlist_db,
         netease_provider,
         qqmusic_provider,
     };
@@ -55,15 +64,35 @@ pub fn create_router(library: MusicLibrary, lyrics_db: LyricDatabase) -> Router 
         .route("/tracks", get(list_tracks))
         .route("/tracks/:id", get(get_track).put(update_track))
         .route("/stream/:id", get(stream_track))
-        .route("/cover/:id", get(get_cover).post(upload_cover).delete(delete_cover))
-        .route("/lyrics/:id", get(get_lyrics).put(upload_lyrics).delete(delete_lyrics))
+        .route(
+            "/cover/:id",
+            get(get_cover).post(upload_cover).delete(delete_cover),
+        )
+        .route(
+            "/lyrics/:id",
+            get(get_lyrics).put(upload_lyrics).delete(delete_lyrics),
+        )
         .route("/lyrics/search", get(search_lyrics))
-        .route("/lyrics/fetch/:provider/:song_id", get(fetch_lyrics_from_provider))
+        .route(
+            "/lyrics/fetch/:provider/:song_id",
+            get(fetch_lyrics_from_provider),
+        )
         .route("/albums", get(list_albums))
         .route("/albums/:name", get(get_album))
         .route("/artists", get(list_artists))
         .route("/artists/:name", get(get_artist))
         .route("/stats", get(get_stats))
+        .route("/playlists", get(list_playlists).post(create_playlist))
+        .route(
+            "/playlists/:id",
+            get(get_playlist)
+                .put(update_playlist)
+                .delete(delete_playlist),
+        )
+        .route(
+            "/playlists/:id/tracks/:track_id",
+            axum::routing::post(add_track_to_playlist).delete(remove_track_from_playlist),
+        )
         .nest_service("/web", static_service)
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
@@ -135,7 +164,7 @@ async fn stream_track(
 
     // Parse Range header
     let range_header = headers.get(header::RANGE);
-    
+
     if let Some(range_value) = range_header {
         // Parse range: "bytes=start-end"
         if let Ok(range_str) = range_value.to_str() {
@@ -393,8 +422,12 @@ async fn get_cover(
 
     match state.library.get_cover_art(&track.path) {
         Ok(Some(image_data)) => {
-            tracing::debug!("Found cover art for track: {} ({} bytes)", id, image_data.len());
-            
+            tracing::debug!(
+                "Found cover art for track: {} ({} bytes)",
+                id,
+                image_data.len()
+            );
+
             // Try to determine MIME type from image data
             let mime_type = if image_data.starts_with(&[0xFF, 0xD8, 0xFF]) {
                 "image/jpeg"
@@ -491,14 +524,10 @@ async fn delete_cover(
 ) -> Result<Json<Track>, StatusCode> {
     tracing::debug!("Deleting cover art for track: {}", id);
 
-    state
-        .library
-        .remove_cover_art(&id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Error removing cover art for track {}: {}", id, e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    state.library.remove_cover_art(&id).await.map_err(|e| {
+        tracing::error!("Error removing cover art for track {}: {}", id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     // Return updated track
     let track = state
@@ -519,14 +548,14 @@ async fn get_lyrics(
     Path(id): Path<String>,
 ) -> Result<Json<Lyric>, StatusCode> {
     tracing::debug!("Fetching lyrics for track: {}", id);
-    
+
     // Check if track exists
     state
         .library
         .get_track(&id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
-    
+
     // Get lyrics from database
     let lyric = state
         .lyrics_db
@@ -540,7 +569,7 @@ async fn get_lyrics(
             tracing::debug!("No lyrics found for track: {}", id);
             StatusCode::NOT_FOUND
         })?;
-    
+
     tracing::debug!("Successfully fetched lyrics for track: {}", id);
     Ok(Json(lyric))
 }
@@ -552,14 +581,14 @@ async fn upload_lyrics(
     Json(upload): Json<LyricUpload>,
 ) -> Result<Json<Lyric>, StatusCode> {
     tracing::debug!("Uploading lyrics for track: {}", id);
-    
+
     // Check if track exists
     state
         .library
         .get_track(&id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
-    
+
     // Determine format
     let format = if let Some(fmt) = upload.format {
         LyricFormat::from_str(&fmt)
@@ -571,7 +600,7 @@ async fn upload_lyrics(
             LyricFormat::Plain
         }
     };
-    
+
     // Save lyrics
     let lyric = state
         .lyrics_db
@@ -581,10 +610,10 @@ async fn upload_lyrics(
             tracing::error!("Error saving lyrics for track {}: {}", id, e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
-    
+
     // Update track's has_lyrics flag
     state.library.update_track_lyrics_status(&id, true).await;
-    
+
     tracing::debug!("Successfully uploaded lyrics for track: {}", id);
     Ok(Json(lyric))
 }
@@ -595,32 +624,28 @@ async fn delete_lyrics(
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
     tracing::debug!("Deleting lyrics for track: {}", id);
-    
+
     // Check if track exists
     state
         .library
         .get_track(&id)
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
-    
+
     // Delete lyrics
-    let deleted = state
-        .lyrics_db
-        .delete_lyric(&id)
-        .await
-        .map_err(|e| {
-            tracing::error!("Error deleting lyrics for track {}: {}", id, e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
-    
+    let deleted = state.lyrics_db.delete_lyric(&id).await.map_err(|e| {
+        tracing::error!("Error deleting lyrics for track {}: {}", id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     if !deleted {
         tracing::debug!("No lyrics found to delete for track: {}", id);
         return Err(StatusCode::NOT_FOUND);
     }
-    
+
     // Update track's has_lyrics flag
     state.library.update_track_lyrics_status(&id, false).await;
-    
+
     tracing::debug!("Successfully deleted lyrics for track: {}", id);
     Ok(StatusCode::NO_CONTENT)
 }
@@ -643,38 +668,36 @@ async fn search_lyrics(
 ) -> Result<Json<Vec<FetcherSearchResult>>, StatusCode> {
     tracing::debug!(
         "Searching lyrics: query='{}', provider='{}', artist='{:?}'",
-        query.q, query.provider, query.artist
+        query.q,
+        query.provider,
+        query.artist
     );
-    
+
     // Build lyrics query
     let mut lyrics_query = LyricsQuery::new(&query.q);
     if let Some(artist) = query.artist {
         lyrics_query = lyrics_query.with_artist(artist);
     }
-    
+
     // Select provider and search
     let results = match query.provider.as_str() {
         "netease" => {
-            let provider = state.netease_provider
-                .as_ref()
-                .ok_or_else(|| {
-                    tracing::error!("NetEase provider not initialized");
-                    StatusCode::SERVICE_UNAVAILABLE
-                })?;
-            
+            let provider = state.netease_provider.as_ref().ok_or_else(|| {
+                tracing::error!("NetEase provider not initialized");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+
             provider.search(&lyrics_query).await.map_err(|e| {
                 tracing::error!("NetEase search error: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?
         }
         "qqmusic" => {
-            let provider = state.qqmusic_provider
-                .as_ref()
-                .ok_or_else(|| {
-                    tracing::error!("QQ Music provider not initialized");
-                    StatusCode::SERVICE_UNAVAILABLE
-                })?;
-            
+            let provider = state.qqmusic_provider.as_ref().ok_or_else(|| {
+                tracing::error!("QQ Music provider not initialized");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+
             provider.search(&lyrics_query).await.map_err(|e| {
                 tracing::error!("QQ Music search error: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -685,7 +708,7 @@ async fn search_lyrics(
             return Err(StatusCode::BAD_REQUEST);
         }
     };
-    
+
     tracing::debug!("Found {} lyrics search results", results.len());
     Ok(Json(results))
 }
@@ -695,30 +718,30 @@ async fn fetch_lyrics_from_provider(
     State(state): State<AppState>,
     Path((provider, song_id)): Path<(String, String)>,
 ) -> Result<Json<LyricsResponse>, StatusCode> {
-    tracing::debug!("Fetching lyrics: provider='{}', song_id='{}'", provider, song_id);
-    
+    tracing::debug!(
+        "Fetching lyrics: provider='{}', song_id='{}'",
+        provider,
+        song_id
+    );
+
     let lyrics = match provider.as_str() {
         "netease" => {
-            let provider = state.netease_provider
-                .as_ref()
-                .ok_or_else(|| {
-                    tracing::error!("NetEase provider not initialized");
-                    StatusCode::SERVICE_UNAVAILABLE
-                })?;
-            
+            let provider = state.netease_provider.as_ref().ok_or_else(|| {
+                tracing::error!("NetEase provider not initialized");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+
             provider.fetch(&song_id).await.map_err(|e| {
                 tracing::error!("NetEase fetch error: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?
         }
         "qqmusic" => {
-            let provider = state.qqmusic_provider
-                .as_ref()
-                .ok_or_else(|| {
-                    tracing::error!("QQ Music provider not initialized");
-                    StatusCode::SERVICE_UNAVAILABLE
-                })?;
-            
+            let provider = state.qqmusic_provider.as_ref().ok_or_else(|| {
+                tracing::error!("QQ Music provider not initialized");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+
             provider.fetch(&song_id).await.map_err(|e| {
                 tracing::error!("QQ Music fetch error: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
@@ -729,8 +752,178 @@ async fn fetch_lyrics_from_provider(
             return Err(StatusCode::BAD_REQUEST);
         }
     };
-    
+
     tracing::debug!("Successfully fetched lyrics from {}", provider);
     Ok(Json(lyrics))
 }
 
+// ========== PLAYLIST ENDPOINTS ==========
+
+/// List all playlists
+async fn list_playlists(State(state): State<AppState>) -> Result<Json<Vec<Playlist>>, StatusCode> {
+    tracing::debug!("Fetching all playlists");
+
+    let playlists = state.playlist_db.get_playlists().await.map_err(|e| {
+        tracing::error!("Error fetching playlists: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::debug!("Returning {} playlists", playlists.len());
+    Ok(Json(playlists))
+}
+
+/// Get a specific playlist by ID
+async fn get_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<Playlist>, StatusCode> {
+    tracing::debug!("Fetching playlist: {}", id);
+
+    let playlist = state
+        .playlist_db
+        .get_playlist(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error fetching playlist {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::debug!("Playlist {} not found", id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    tracing::debug!(
+        "Playlist {} found with {} tracks",
+        id,
+        playlist.tracks.len()
+    );
+    Ok(Json(playlist))
+}
+
+/// Create a new playlist
+async fn create_playlist(
+    State(state): State<AppState>,
+    Json(create): Json<PlaylistCreate>,
+) -> Result<Json<Playlist>, StatusCode> {
+    tracing::debug!("Creating playlist: {}", create.name);
+
+    let playlist = state
+        .playlist_db
+        .create_playlist(create)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error creating playlist: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    tracing::debug!("Successfully created playlist: {}", playlist.id);
+    Ok(Json(playlist))
+}
+
+/// Update a playlist
+async fn update_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(update): Json<PlaylistUpdate>,
+) -> Result<Json<Playlist>, StatusCode> {
+    tracing::debug!("Updating playlist: {}", id);
+
+    let playlist = state
+        .playlist_db
+        .update_playlist(&id, update)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error updating playlist {}: {}", id, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::debug!("Playlist {} not found", id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    tracing::debug!("Successfully updated playlist: {}", id);
+    Ok(Json(playlist))
+}
+
+/// Delete a playlist
+async fn delete_playlist(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    tracing::debug!("Deleting playlist: {}", id);
+
+    let deleted = state.playlist_db.delete_playlist(&id).await.map_err(|e| {
+        tracing::error!("Error deleting playlist {}: {}", id, e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    if deleted {
+        tracing::debug!("Successfully deleted playlist: {}", id);
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        tracing::debug!("Playlist {} not found", id);
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+/// Add a track to a playlist
+async fn add_track_to_playlist(
+    State(state): State<AppState>,
+    Path((playlist_id, track_id)): Path<(String, String)>,
+) -> Result<Json<Playlist>, StatusCode> {
+    tracing::debug!("Adding track {} to playlist {}", track_id, playlist_id);
+
+    // Verify track exists
+    state.library.get_track(&track_id).await.ok_or_else(|| {
+        tracing::warn!("Track {} not found", track_id);
+        StatusCode::NOT_FOUND
+    })?;
+
+    let playlist = state
+        .playlist_db
+        .add_track_to_playlist(&playlist_id, &track_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error adding track to playlist: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::debug!("Playlist {} not found", playlist_id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    tracing::debug!(
+        "Successfully added track {} to playlist {}",
+        track_id,
+        playlist_id
+    );
+    Ok(Json(playlist))
+}
+
+/// Remove a track from a playlist
+async fn remove_track_from_playlist(
+    State(state): State<AppState>,
+    Path((playlist_id, track_id)): Path<(String, String)>,
+) -> Result<Json<Playlist>, StatusCode> {
+    tracing::debug!("Removing track {} from playlist {}", track_id, playlist_id);
+
+    let playlist = state
+        .playlist_db
+        .remove_track_from_playlist(&playlist_id, &track_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error removing track from playlist: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or_else(|| {
+            tracing::debug!("Playlist {} or track {} not found", playlist_id, track_id);
+            StatusCode::NOT_FOUND
+        })?;
+
+    tracing::debug!(
+        "Successfully removed track {} from playlist {}",
+        track_id,
+        playlist_id
+    );
+    Ok(Json(playlist))
+}

@@ -17,6 +17,7 @@
   - [Artists](#artists)
   - [Cover Art](#cover-art)
   - [Lyrics](#lyrics)
+  - [Playlists](#playlists)
   - [Statistics](#statistics)
 - [Error Handling](#error-handling)
 - [Client Development Examples](#client-development-examples)
@@ -174,6 +175,39 @@ Currently, the API does not require authentication. All endpoints are publicly a
   format?: "plain" | "lrc" | "lrc_word", // Format (auto-detected if omitted)
   language?: string,                  // Language code
   source?: string                     // Source name
+}
+```
+
+### Playlist
+
+```typescript
+{
+  id: string,                         // UUID
+  name: string,                       // Playlist name
+  description: string | null,         // Optional description
+  track_ids: string[],                // Array of track IDs
+  created_at: string,                 // ISO 8601 timestamp
+  updated_at: string                  // ISO 8601 timestamp
+}
+```
+
+### PlaylistCreate
+
+```typescript
+{
+  name: string,                       // Playlist name (required)
+  description?: string,               // Optional description
+  track_ids?: string[]                // Initial tracks (default: empty array)
+}
+```
+
+### PlaylistUpdate
+
+```typescript
+{
+  name?: string,                      // New playlist name
+  description?: string | null,        // New description (null to clear)
+  track_ids?: string[]                // New track list (replaces entire list)
 }
 ```
 
@@ -767,6 +801,173 @@ DELETE /lyrics/:id
 
 ---
 
+### Playlists
+
+#### List All Playlists
+
+```http
+GET /playlists
+```
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "My Favorites",
+    "description": "My favorite tracks",
+    "track_ids": ["a1b2c3d4...", "e5f6g7h8..."],
+    "created_at": "2024-01-01T12:00:00Z",
+    "updated_at": "2024-01-01T12:00:00Z"
+  }
+]
+```
+
+**Notes:**
+- Returns all playlists sorted by creation date (newest first)
+
+#### Get Playlist by ID
+
+```http
+GET /playlists/:id
+```
+
+**Parameters:**
+- `id` (path) - Playlist ID (UUID)
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "My Favorites",
+  "description": "My favorite tracks",
+  "track_ids": ["a1b2c3d4...", "e5f6g7h8..."],
+  "created_at": "2024-01-01T12:00:00Z",
+  "updated_at": "2024-01-01T12:00:00Z"
+}
+```
+
+**Errors:**
+- `404 Not Found` - Playlist not found
+
+#### Create Playlist
+
+```http
+POST /playlists
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "name": "My Favorites",
+  "description": "My favorite tracks",
+  "track_ids": ["a1b2c3d4...", "e5f6g7h8..."]
+}
+```
+
+**Fields:**
+- `name` (required) - Playlist name
+- `description` (optional) - Playlist description
+- `track_ids` (optional) - Initial track IDs (default: empty array)
+
+**Response:**
+```json
+201 Created
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "My Favorites",
+  "description": "My favorite tracks",
+  "track_ids": ["a1b2c3d4...", "e5f6g7h8..."],
+  "created_at": "2024-01-01T12:00:00Z",
+  "updated_at": "2024-01-01T12:00:00Z"
+}
+```
+
+**Errors:**
+- `400 Bad Request` - Invalid request body (missing name)
+- `500 Internal Server Error` - Failed to create playlist
+
+#### Update Playlist
+
+```http
+PUT /playlists/:id
+Content-Type: application/json
+```
+
+**Parameters:**
+- `id` (path) - Playlist ID (UUID)
+
+**Request Body:**
+```json
+{
+  "name": "Updated Favorites",
+  "description": "My updated favorite tracks",
+  "track_ids": ["a1b2c3d4...", "e5f6g7h8...", "i9j0k1l2..."]
+}
+```
+
+**Fields:**
+- `name` (optional) - New playlist name
+- `description` (optional) - New description (use `null` to clear)
+- `track_ids` (optional) - New track list (replaces entire list)
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Updated Favorites",
+  "description": "My updated favorite tracks",
+  "track_ids": ["a1b2c3d4...", "e5f6g7h8...", "i9j0k1l2..."],
+  "created_at": "2024-01-01T12:00:00Z",
+  "updated_at": "2024-01-02T15:30:00Z"
+}
+```
+
+**Errors:**
+- `404 Not Found` - Playlist not found
+- `500 Internal Server Error` - Failed to update playlist
+
+**Notes:**
+- All fields are optional - only provided fields will be updated
+- Track IDs are stored as a comma-separated list in the database
+- Invalid track IDs are not validated; they are stored as-is
+
+#### Delete Playlist
+
+```http
+DELETE /playlists/:id
+```
+
+**Parameters:**
+- `id` (path) - Playlist ID (UUID)
+
+**Response:**
+```http
+204 No Content
+```
+
+**Errors:**
+- `404 Not Found` - Playlist not found
+- `500 Internal Server Error` - Failed to delete playlist
+
+**Notes:**
+- Permanently deletes the playlist
+- Does not affect the tracks themselves
+
+---
+
 ### Statistics
 
 #### Get Library Statistics
@@ -895,6 +1096,47 @@ async function getStats() {
   const response = await fetch('http://localhost:3000/stats');
   return await response.json();
 }
+
+// List all playlists
+async function getPlaylists() {
+  const response = await fetch('http://localhost:3000/playlists');
+  return await response.json();
+}
+
+// Get playlist by ID
+async function getPlaylist(id) {
+  const response = await fetch(`http://localhost:3000/playlists/${id}`);
+  if (!response.ok) throw new Error('Playlist not found');
+  return await response.json();
+}
+
+// Create playlist
+async function createPlaylist(name, description = null, trackIds = []) {
+  const response = await fetch('http://localhost:3000/playlists', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description, track_ids: trackIds })
+  });
+  return await response.json();
+}
+
+// Update playlist
+async function updatePlaylist(id, updates) {
+  const response = await fetch(`http://localhost:3000/playlists/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates)
+  });
+  return await response.json();
+}
+
+// Delete playlist
+async function deletePlaylist(id) {
+  const response = await fetch(`http://localhost:3000/playlists/${id}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error('Failed to delete playlist');
+}
 ```
 
 ### Python (requests)
@@ -955,6 +1197,44 @@ def upload_lyrics(track_id, content, format='plain'):
 def get_stats():
     response = requests.get(f'{BASE_URL}/stats')
     return response.json()
+
+# List all playlists
+def get_playlists():
+    response = requests.get(f'{BASE_URL}/playlists')
+    return response.json()
+
+# Get playlist by ID
+def get_playlist(playlist_id):
+    response = requests.get(f'{BASE_URL}/playlists/{playlist_id}')
+    response.raise_for_status()
+    return response.json()
+
+# Create playlist
+def create_playlist(name, description=None, track_ids=None):
+    data = {'name': name}
+    if description:
+        data['description'] = description
+    if track_ids:
+        data['track_ids'] = track_ids
+    
+    response = requests.post(
+        f'{BASE_URL}/playlists',
+        json=data
+    )
+    return response.json()
+
+# Update playlist
+def update_playlist(playlist_id, updates):
+    response = requests.put(
+        f'{BASE_URL}/playlists/{playlist_id}',
+        json=updates
+    )
+    return response.json()
+
+# Delete playlist
+def delete_playlist(playlist_id):
+    response = requests.delete(f'{BASE_URL}/playlists/{playlist_id}')
+    response.raise_for_status()
 ```
 
 ### cURL Examples

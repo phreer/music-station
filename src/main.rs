@@ -1,11 +1,13 @@
 mod library;
 mod lyrics;
+mod playlist;
 mod server;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use library::MusicLibrary;
 use lyrics::LyricDatabase;
+use playlist::PlaylistDatabase;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -26,7 +28,7 @@ async fn main() -> Result<()> {
     // Initialize tracing with debug level
     // Enable debug logging for symphonia to see audio parsing details
     use tracing_subscriber::EnvFilter;
-    
+
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_target(true)
@@ -39,7 +41,7 @@ async fn main() -> Result<()> {
                 .add_directive("symphonia=debug".parse().unwrap())
                 .add_directive("symphonia_core=debug".parse().unwrap())
                 .add_directive("symphonia_format_isomp4=debug".parse().unwrap())
-                .add_directive("symphonia_codec_mp3=debug".parse().unwrap())
+                .add_directive("symphonia_codec_mp3=debug".parse().unwrap()),
         )
         .init();
 
@@ -68,8 +70,16 @@ async fn main() -> Result<()> {
     let lyrics_db = LyricDatabase::new(&db_path)
         .await
         .context("Failed to initialize lyrics database")?;
-    
+
     tracing::info!("Lyrics database: {}", db_path.display());
+
+    // Initialize playlist database
+    let playlist_db_path = cli.library.join(".music-station").join("playlists.db");
+    let playlist_db = PlaylistDatabase::new(&playlist_db_path)
+        .await
+        .context("Failed to initialize playlist database")?;
+
+    tracing::info!("Playlist database: {}", playlist_db_path.display());
 
     // Update has_lyrics flags for all tracks
     if let Ok(tracks_with_lyrics) = lyrics_db.get_tracks_with_lyrics().await {
@@ -79,7 +89,7 @@ async fn main() -> Result<()> {
     }
 
     // Create and start the server
-    let app = server::create_router(library, lyrics_db);
+    let app = server::create_router(library, lyrics_db, playlist_db);
     let addr = format!("0.0.0.0:{}", cli.port);
 
     tracing::info!("Server listening on http://{}", addr);

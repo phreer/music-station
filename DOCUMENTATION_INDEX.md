@@ -109,6 +109,11 @@ GET  /cover/:id           # Get cover art
 POST /cover/:id           # Upload cover
 GET  /lyrics/:id          # Get lyrics
 PUT  /lyrics/:id          # Upload lyrics
+GET  /playlists           # List playlists
+GET  /playlists/:id       # Get playlist
+POST /playlists           # Create playlist
+PUT  /playlists/:id       # Update playlist
+DELETE /playlists/:id     # Delete playlist
 GET  /albums              # List albums
 GET  /artists             # List artists
 GET  /stats               # Library stats
@@ -184,6 +189,18 @@ static/
 - `GET /tracks/:id`
 - `PUT /tracks/:id`
 - `POST /cover/:id`
+
+### Managing Playlists
+
+**Required Reading:**
+1. [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) - Section: Playlists
+
+**Key Endpoints:**
+- `GET /playlists` - List all playlists
+- `GET /playlists/:id` - Get playlist details
+- `POST /playlists` - Create new playlist
+- `PUT /playlists/:id` - Update playlist (name, description, tracks)
+- `DELETE /playlists/:id` - Delete playlist
 
 ---
 

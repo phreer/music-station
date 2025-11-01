@@ -183,31 +183,44 @@ impl MusicLibrary {
 
         // Standard tags to extract (supporting both FLAC/Vorbis and ID3 naming)
         let standard_tags = [
-            "TITLE", "TIT2",  // Title
-            "ARTIST", "TPE1",  // Artist
-            "ALBUM", "TALB",  // Album
-            "ALBUMARTIST", "TPE2",  // Album Artist
-            "GENRE", "TCON",  // Genre
-            "DATE", "YEAR", "TDRC",  // Year/Date
-            "TRACKNUMBER", "TRCK",  // Track Number
-            "DISCNUMBER", "TPOS",  // Disc Number
-            "COMPOSER", "TCOM",  // Composer
-            "COMMENT", "COMM", "DESCRIPTION"  // Comment
+            "TITLE",
+            "TIT2", // Title
+            "ARTIST",
+            "TPE1", // Artist
+            "ALBUM",
+            "TALB", // Album
+            "ALBUMARTIST",
+            "TPE2", // Album Artist
+            "GENRE",
+            "TCON", // Genre
+            "DATE",
+            "YEAR",
+            "TDRC", // Year/Date
+            "TRACKNUMBER",
+            "TRCK", // Track Number
+            "DISCNUMBER",
+            "TPOS", // Disc Number
+            "COMPOSER",
+            "TCOM", // Composer
+            "COMMENT",
+            "COMM",
+            "DESCRIPTION", // Comment
         ];
 
         let format_metadata = format.metadata();
         // Get metadata from format or metadata revisions
-        if let Some(metadata_rev) = format_metadata
-            .current()
-            .map_or_else(|| {
-                metadata.get().map_or_else(|| None, |m| m.current().cloned())
-            }, |x| {
-            Some(x).cloned()
-        }) {
+        if let Some(metadata_rev) = format_metadata.current().map_or_else(
+            || {
+                metadata
+                    .get()
+                    .map_or_else(|| None, |m| m.current().cloned())
+            },
+            |x| Some(x).cloned(),
+        ) {
             for tag in metadata_rev.tags() {
                 let key = tag.key.as_str();
                 let value = tag.value.to_string();
-                
+
                 match key {
                     // Title (FLAC: TITLE, MP3: TIT2)
                     "TITLE" | "TIT2" => title = Some(value),
@@ -444,7 +457,10 @@ impl MusicLibrary {
 
         // Update the audio file metadata
         self.write_audio_metadata(&track.path, &update)
-            .context(format!("Failed to write metadata to file: {}", track.path.display()))?;
+            .context(format!(
+                "Failed to write metadata to file: {}",
+                track.path.display()
+            ))?;
 
         // Re-parse the file to get updated metadata
         let mut updated_track = self
@@ -483,10 +499,14 @@ impl MusicLibrary {
         tracing::debug!("Writing metadata to {} file: {}", ext, path.display());
 
         match ext {
-            "flac" => self.write_flac_metadata(path, update)
-                .context(format!("Failed to write FLAC metadata to {}", path.display())),
-            "mp3" => self.write_mp3_metadata(path, update)
-                .context(format!("Failed to write MP3 metadata to {}", path.display())),
+            "flac" => self.write_flac_metadata(path, update).context(format!(
+                "Failed to write FLAC metadata to {}",
+                path.display()
+            )),
+            "mp3" => self.write_mp3_metadata(path, update).context(format!(
+                "Failed to write MP3 metadata to {}",
+                path.display()
+            )),
             _ => anyhow::bail!("Unsupported file format: {}", ext),
         }
     }
@@ -542,9 +562,9 @@ impl MusicLibrary {
     /// Write metadata to an MP3 file
     fn write_mp3_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
         use id3::TagLike;
-        
+
         tracing::debug!("Reading MP3 tags from: {}", path.display());
-        
+
         let mut tag = id3::Tag::read_from_path(path)
             .or_else(|e| {
                 tracing::warn!("Failed to read existing MP3 tags ({}), creating new tag", e);
@@ -598,22 +618,23 @@ impl MusicLibrary {
             }
         }
         // Note: composer and comment require adding frames directly
-        
+
         tracing::debug!("Writing MP3 tags to file: {}", path.display());
-        
+
         // Check file permissions before writing
-        let metadata = std::fs::metadata(path)
-            .context(format!("Failed to read file metadata for {}", path.display()))?;
-        
+        let metadata = std::fs::metadata(path).context(format!(
+            "Failed to read file metadata for {}",
+            path.display()
+        ))?;
+
         if metadata.permissions().readonly() {
             anyhow::bail!("File is read-only: {}", path.display());
         }
-        
-        tag.write_to_path(path, id3::Version::Id3v23)
-            .map_err(|e| {
-                tracing::error!("ID3 write error details: {:?}", e);
-                anyhow::anyhow!("Failed to save MP3 tags to {}: {}", path.display(), e)
-            })?;
+
+        tag.write_to_path(path, id3::Version::Id3v23).map_err(|e| {
+            tracing::error!("ID3 write error details: {:?}", e);
+            anyhow::anyhow!("Failed to save MP3 tags to {}: {}", path.display(), e)
+        })?;
 
         tracing::debug!("Successfully wrote MP3 metadata to: {}", path.display());
 
@@ -623,7 +644,7 @@ impl MusicLibrary {
     /// Check if an audio file has embedded cover art
     fn has_embedded_cover(&self, path: &Path) -> bool {
         let ext = path.extension().and_then(|s| s.to_str());
-        
+
         match ext {
             Some("flac") => {
                 if let Ok(tag) = metaflac::Tag::read_from_path(path) {
@@ -652,7 +673,8 @@ impl MusicLibrary {
 
         match ext {
             "flac" => {
-                let tag = metaflac::Tag::read_from_path(path).context("Failed to read FLAC tags")?;
+                let tag =
+                    metaflac::Tag::read_from_path(path).context("Failed to read FLAC tags")?;
                 // Get the first picture (usually the front cover)
                 if let Some(picture) = tag.pictures().next() {
                     Ok(Some(picture.data.clone()))
@@ -674,9 +696,14 @@ impl MusicLibrary {
     }
 
     /// Set cover art for an audio file (FLAC or MP3)
-    pub async fn set_cover_art(&self, id: &str, image_data: Vec<u8>, mime_type: &str) -> Result<()> {
+    pub async fn set_cover_art(
+        &self,
+        id: &str,
+        image_data: Vec<u8>,
+        mime_type: &str,
+    ) -> Result<()> {
         use id3::TagLike;
-        
+
         // Find the track
         let track = {
             let tracks = self.tracks.read().await;
@@ -687,7 +714,8 @@ impl MusicLibrary {
                 .ok_or_else(|| anyhow::anyhow!("Track not found"))?
         };
 
-        let ext = track.path
+        let ext = track
+            .path
             .extension()
             .and_then(|s| s.to_str())
             .ok_or_else(|| anyhow::anyhow!("No file extension"))?;
@@ -713,12 +741,9 @@ impl MusicLibrary {
                 };
 
                 // Add picture to tag
-                tag.add_picture(
-                    picture.mime_type,
-                    picture.picture_type,
-                    picture.data,
-                );
-                tag.save().context("Failed to save FLAC tags with cover art")?;
+                tag.add_picture(picture.mime_type, picture.picture_type, picture.data);
+                tag.save()
+                    .context("Failed to save FLAC tags with cover art")?;
             }
             "mp3" => {
                 let mut tag = id3::Tag::read_from_path(&track.path)
@@ -767,7 +792,7 @@ impl MusicLibrary {
     /// Remove cover art from an audio file (FLAC or MP3)
     pub async fn remove_cover_art(&self, id: &str) -> Result<()> {
         use id3::TagLike;
-        
+
         // Find the track
         let track = {
             let tracks = self.tracks.read().await;
@@ -778,7 +803,8 @@ impl MusicLibrary {
                 .ok_or_else(|| anyhow::anyhow!("Track not found"))?
         };
 
-        let ext = track.path
+        let ext = track
+            .path
             .extension()
             .and_then(|s| s.to_str())
             .ok_or_else(|| anyhow::anyhow!("No file extension"))?;
@@ -793,12 +819,12 @@ impl MusicLibrary {
                 tag.save().context("Failed to save FLAC tags")?;
             }
             "mp3" => {
-                let mut tag = id3::Tag::read_from_path(&track.path)
-                    .context("Failed to read MP3 tags")?;
+                let mut tag =
+                    id3::Tag::read_from_path(&track.path).context("Failed to read MP3 tags")?;
 
                 // Remove all pictures
                 tag.remove_all_pictures();
-                
+
                 tag.write_to_path(&track.path, id3::Version::Id3v24)
                     .context("Failed to save MP3 tags")?;
             }

@@ -21,13 +21,19 @@ fn test_extended_lrc_detection() {
 #[test]
 fn test_word_level_lrc_detection() {
     let word_lrc = "[0,11550]挪(0,721)威(721,721)的(1442,721)森(2163,721)林(2884,721)";
-    assert_eq!(LyricFormat::detect_from_content(word_lrc), LyricFormat::LrcWord);
+    assert_eq!(
+        LyricFormat::detect_from_content(word_lrc),
+        LyricFormat::LrcWord
+    );
 }
 
 #[test]
 fn test_mixed_word_level_detection() {
     let mixed = "[11550,5000]Another(0,500) line(500,500) with(1000,300) words(1300,400)";
-    assert_eq!(LyricFormat::detect_from_content(mixed), LyricFormat::LrcWord);
+    assert_eq!(
+        LyricFormat::detect_from_content(mixed),
+        LyricFormat::LrcWord
+    );
 }
 
 #[test]
@@ -51,13 +57,13 @@ fn test_format_as_str() {
 #[test]
 fn test_format_serialization() {
     use serde_json;
-    
+
     let plain = LyricFormat::Plain;
     assert_eq!(serde_json::to_string(&plain).unwrap(), "\"plain\"");
-    
+
     let lrc = LyricFormat::Lrc;
     assert_eq!(serde_json::to_string(&lrc).unwrap(), "\"lrc\"");
-    
+
     let word = LyricFormat::LrcWord;
     assert_eq!(serde_json::to_string(&word).unwrap(), "\"lrc_word\"");
 }

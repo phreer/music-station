@@ -1,13 +1,13 @@
 //! Example lyrics provider implementations
 
-use super::fetcher::*;
 use super::LyricFormat;
+use super::fetcher::*;
 use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
 /// A mock/example lyrics provider for testing and demonstration
-/// 
+///
 /// This provider stores lyrics in memory and can be used for:
 /// - Testing the lyrics fetching infrastructure
 /// - Providing fallback lyrics
@@ -33,7 +33,11 @@ impl MockLyricsProvider {
         content: String,
         format: LyricFormat,
     ) -> Self {
-        let key = format!("{}:{}", title.into().to_lowercase(), artist.into().to_lowercase());
+        let key = format!(
+            "{}:{}",
+            title.into().to_lowercase(),
+            artist.into().to_lowercase()
+        );
         self.lyrics_db.insert(key, (content, format));
         self
     }
@@ -142,7 +146,7 @@ impl LyricsProvider for MockLyricsProvider {
 }
 
 /// A local file-based lyrics provider
-/// 
+///
 /// Reads lyrics from a local directory structure:
 /// ```
 /// lyrics/
@@ -177,10 +181,11 @@ impl LocalLyricsProvider {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            
+
             if path.is_dir() {
                 // Assume directory name is artist
-                let artist = path.file_name()
+                let artist = path
+                    .file_name()
                     .and_then(|n| n.to_str())
                     .unwrap_or("")
                     .to_string();
@@ -199,8 +204,11 @@ impl LocalLyricsProvider {
                             .to_string();
 
                         // Simple matching
-                        let title_match = title.to_lowercase().contains(&query.title.to_lowercase());
-                        let artist_match = query.artist.as_ref()
+                        let title_match =
+                            title.to_lowercase().contains(&query.title.to_lowercase());
+                        let artist_match = query
+                            .artist
+                            .as_ref()
                             .map(|a| artist.to_lowercase().contains(&a.to_lowercase()))
                             .unwrap_or(true);
 
@@ -211,7 +219,11 @@ impl LocalLyricsProvider {
                                 artist: artist.clone(),
                                 album: None,
                                 duration: None,
-                                confidence: if title_match && artist_match { 0.9 } else { 0.6 },
+                                confidence: if title_match && artist_match {
+                                    0.9
+                                } else {
+                                    0.6
+                                },
                             });
                         }
                     }
@@ -238,8 +250,8 @@ impl LyricsProvider for LocalLyricsProvider {
     }
 
     async fn fetch(&self, result_id: &str) -> Result<LyricsResponse> {
-        use tokio::fs;
         use std::path::Path;
+        use tokio::fs;
 
         let path = Path::new(result_id);
         let content = fs::read_to_string(path).await?;
