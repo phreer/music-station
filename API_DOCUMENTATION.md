@@ -873,7 +873,7 @@ Content-Type: application/json
 ```
 
 **Fields:**
-- `name` (required) - Playlist name
+- `name` (required) - Playlist name (must be unique)
 - `description` (optional) - Playlist description
 - `track_ids` (optional) - Initial track IDs (default: empty array)
 
@@ -893,8 +893,12 @@ Content-Type: application/json
 ```
 
 **Errors:**
-- `400 Bad Request` - Invalid request body (missing name)
+- `400 Bad Request` - Invalid request body (missing name or duplicate name)
 - `500 Internal Server Error` - Failed to create playlist
+
+**Notes:**
+- Playlist names must be unique across all playlists
+- Returns 400 Bad Request if a playlist with the same name already exists
 
 #### Update Playlist
 
@@ -916,7 +920,7 @@ Content-Type: application/json
 ```
 
 **Fields:**
-- `name` (optional) - New playlist name
+- `name` (optional) - New playlist name (must be unique)
 - `description` (optional) - New description (use `null` to clear)
 - `track_ids` (optional) - New track list (replaces entire list)
 
@@ -936,11 +940,13 @@ Content-Type: application/json
 ```
 
 **Errors:**
+- `400 Bad Request` - Duplicate playlist name
 - `404 Not Found` - Playlist not found
 - `500 Internal Server Error` - Failed to update playlist
 
 **Notes:**
 - All fields are optional - only provided fields will be updated
+- Playlist names must be unique; returns 400 Bad Request if name is already taken
 - Track IDs are stored as a comma-separated list in the database
 - Invalid track IDs are not validated; they are stored as-is
 

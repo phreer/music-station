@@ -58,7 +58,7 @@ impl PlaylistDatabase {
             r#"
             CREATE TABLE IF NOT EXISTS playlists (
                 id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
+                name TEXT NOT NULL UNIQUE,
                 description TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
@@ -105,7 +105,7 @@ impl PlaylistDatabase {
         let id = uuid::Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
 
-        sqlx::query(
+        let result = sqlx::query(
             r#"
             INSERT INTO playlists (id, name, description, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?)
@@ -117,17 +117,25 @@ impl PlaylistDatabase {
         .bind(&now)
         .bind(&now)
         .execute(&self.pool)
-        .await
-        .context("Failed to insert playlist")?;
+        .await;
 
-        Ok(Playlist {
-            id,
-            name: create.name,
-            description: create.description,
-            tracks: Vec::new(),
-            created_at: now.clone(),
-            updated_at: now,
-        })
+        match result {
+            Ok(_) => Ok(Playlist {
+                id,
+                name: create.name,
+                description: create.description,
+                tracks: Vec::new(),
+                created_at: now.clone(),
+                updated_at: now,
+            }),
+            Err(e) => {
+                if e.to_string().contains("UNIQUE constraint failed") {
+                    anyhow::bail!("A playlist with the name '{}' already exists", create.name)
+                } else {
+                    Err(e).context("Failed to insert playlist")
+                }
+            }
+        }
     }
 
     /// Get all playlists
@@ -235,7 +243,7 @@ impl PlaylistDatabase {
             let name = update.name.unwrap_or(current.name);
             let description = update.description.or(current.description);
 
-            sqlx::query(
+            let result = sqlx::query(
                 r#"
                 UPDATE playlists
                 SET name = ?, description = ?, updated_at = ?
@@ -247,8 +255,15 @@ impl PlaylistDatabase {
             .bind(&now)
             .bind(id)
             .execute(&self.pool)
-            .await
-            .context("Failed to update playlist")?;
+            .await;
+
+            if let Err(e) = result {
+                if e.to_string().contains("UNIQUE constraint failed") {
+                    anyhow::bail!("A playlist with the name '{}' already exists", name)
+                } else {
+                    return Err(e).context("Failed to update playlist");
+                }
+            }
         }
 
         // Update tracks if provided
