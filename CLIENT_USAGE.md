@@ -43,6 +43,69 @@ cargo run --bin music-client -- play-all
 ```
 This will queue up all tracks and play them sequentially.
 
+### Playlist Management
+
+#### List All Playlists
+```bash
+cargo run --bin music-client -- playlist list
+```
+
+#### Create a New Playlist
+```bash
+# With name only
+cargo run --bin music-client -- playlist create "My Favorites"
+
+# With name and description
+cargo run --bin music-client -- playlist create "Chill Vibes" --description "Relaxing music"
+```
+
+#### Get Playlist Details
+```bash
+cargo run --bin music-client -- playlist info <playlist-id>
+```
+This shows the playlist name, description, creation date, and all tracks in the playlist.
+
+#### Update a Playlist
+```bash
+# Update name
+cargo run --bin music-client -- playlist update <playlist-id> --name "New Name"
+
+# Update description
+cargo run --bin music-client -- playlist update <playlist-id> --description "New description"
+
+# Update both
+cargo run --bin music-client -- playlist update <playlist-id> --name "New Name" --description "New desc"
+```
+
+#### Delete a Playlist
+```bash
+cargo run --bin music-client -- playlist delete <playlist-id>
+```
+
+#### Add Tracks to Playlist
+```bash
+# Add one track
+cargo run --bin music-client -- playlist add-track <playlist-id> <track-id>
+
+# Add multiple tracks
+cargo run --bin music-client -- playlist add-track <playlist-id> <track-id-1> <track-id-2> <track-id-3>
+```
+
+#### Remove Tracks from Playlist
+```bash
+# Remove one track
+cargo run --bin music-client -- playlist remove-track <playlist-id> <track-id>
+
+# Remove multiple tracks
+cargo run --bin music-client -- playlist remove-track <playlist-id> <track-id-1> <track-id-2>
+```
+
+#### Play a Playlist
+```bash
+cargo run --bin music-client -- playlist play <playlist-id>
+```
+This will play all tracks in the playlist in order.
+
 ### 3. Custom Server URL
 If your server is running on a different host/port:
 ```bash
@@ -78,6 +141,30 @@ cargo run --bin music-client -- play a1b2c3d4e5f6
 
 # Play all tracks
 cargo run --bin music-client -- play-all
+
+# Create a playlist
+cargo run --bin music-client -- playlist create "My Favorites" --description "Best songs"
+# Output: ✓ Playlist created successfully!
+#         ID: 550e8400-e29b-41d4-a716-446655440000
+#         Name: My Favorites
+#         Description: Best songs
+
+# Add tracks to playlist
+cargo run --bin music-client -- playlist add-track 550e8400-e29b-41d4-a716-446655440000 a1b2c3d4e5f6 x9y8z7w6v5u4
+
+# List playlists
+cargo run --bin music-client -- playlist list
+# Output: Playlists (1):
+#         📋 My Favorites
+#            Description: Best songs
+#            Tracks: 2
+#            ID: 550e8400-e29b-41d4-a716-446655440000
+
+# View playlist details
+cargo run --bin music-client -- playlist info 550e8400-e29b-41d4-a716-446655440000
+
+# Play the playlist
+cargo run --bin music-client -- playlist play 550e8400-e29b-41d4-a716-446655440000
 ```
 
 ## Features
