@@ -56,3 +56,7 @@ path = "src/main.rs"
 [[bin]]
 name = "music-client"
 path = "src/bin/client.rs"
+
+[[bin]]
+name = "export-lyrics"
+path = "src/bin/export_lyrics.rs"
