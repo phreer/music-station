@@ -264,8 +264,13 @@ impl MusicLibrary {
         // Check for embedded cover art
         let has_cover = self.has_embedded_cover(path);
 
-        // Generate a unique ID from the file path
-        let id = format!("{:x}", md5::compute(path.to_string_lossy().as_bytes()));
+        // Generate a unique ID from the relative path (relative to library directory)
+        // This ensures consistent IDs regardless of where the library is mounted
+        let relative_path = path
+            .strip_prefix(&self.library_path)
+            .unwrap_or(path)
+            .to_string_lossy();
+        let id = format!("{:x}", md5::compute(relative_path.as_bytes()));
 
         Ok(Track {
             id,

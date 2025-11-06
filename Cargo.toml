@@ -60,3 +60,7 @@ path = "src/bin/client.rs"
 [[bin]]
 name = "export-lyrics"
 path = "src/bin/export_lyrics.rs"
+
+[[bin]]
+name = "migrate-track-ids"
+path = "src/bin/migrate_track_ids.rs"
