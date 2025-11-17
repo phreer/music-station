@@ -218,10 +218,11 @@ impl MusicLibrary {
             |x| Some(x).cloned(),
         ) {
             for tag in metadata_rev.tags() {
-                let key = tag.key.as_str();
+                let key = tag.key.to_uppercase();
                 let value = tag.value.to_string();
 
-                match key {
+                tracing::debug!("Metadata tag: {} = {}", key, value);
+                match key.as_str() {
                     // Title (FLAC: TITLE, MP3: TIT2)
                     "TITLE" | "TIT2" => title = Some(value),
                     // Artist (FLAC: ARTIST, MP3: TPE1)
@@ -244,8 +245,8 @@ impl MusicLibrary {
                     "COMMENT" | "COMM" | "DESCRIPTION" => comment = Some(value),
                     // Store any other tags as custom fields
                     _ => {
-                        if !standard_tags.contains(&key) {
-                            custom_fields.insert(key.to_string(), value);
+                        if !standard_tags.contains(&key.as_str()) {
+                            custom_fields.insert(key, value);
                         }
                     }
                 }
