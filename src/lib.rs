@@ -3,6 +3,7 @@
 //! This library provides the core functionality for the Music Station server,
 //! including music library management and lyrics fetching capabilities.
 
+pub mod audio;
 pub mod library;
 pub mod lyrics;
 pub mod playlist;
