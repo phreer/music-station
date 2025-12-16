@@ -107,7 +107,7 @@ impl MusicLibrary {
                 } else if metadata.is_file() {
                     // Process audio files
                     if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-                        if ext == "flac" || ext == "mp3" {
+                        if ext == "flac" || ext == "mp3" || ext == "ogg" {
                             match self.parse_audio_file(&path).await {
                                 Ok(track) => {
                                     tracing::info!(

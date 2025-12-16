@@ -17,8 +17,8 @@ async-trait = "0.1"
 futures = "0.3"
 
 # Audio Processing
-# symphonia = { path = '/home/liuweife/workspace/Symphonia/symphonia', features = ["flac", "mp3"] }
-symphonia = { version = '0.5', features = ["flac", "mp3"] }
+# symphonia = { path = '/home/liuweife/workspace/Symphonia/symphonia', features = ["flac", "mp3", "ogg"] }
+symphonia = { version = '0.5', features = ["flac", "mp3", "ogg"] }
 metaflac = "0.2"
 id3 = "1.14"
 

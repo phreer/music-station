@@ -445,11 +445,208 @@ impl AudioFile for Mp3File {
     }
 }
 
+/// OGG Vorbis audio file implementation
+pub struct OggFile;
+
+impl AudioFile for OggFile {
+    fn format_name(&self) -> &'static str {
+        "ogg"
+    }
+
+    fn parse_metadata(&self, path: &Path) -> Result<AudioMetadata> {
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let file = std::fs::File::open(path).context("Failed to open OGG file")?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        let mut hint = Hint::new();
+        hint.with_extension("ogg");
+
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &Default::default(), &MetadataOptions::default())
+            .context("Failed to probe OGG file")?;
+
+        let mut format = probed.format;
+        let mut metadata = probed.metadata;
+
+        let mut audio_metadata = AudioMetadata {
+            title: None,
+            artist: None,
+            album: None,
+            album_artist: None,
+            genre: None,
+            year: None,
+            track_number: None,
+            disc_number: None,
+            composer: None,
+            comment: None,
+            duration_secs: None,
+            custom_fields: HashMap::new(),
+        };
+
+        // Standard tags for OGG Vorbis (Vorbis comments - same as FLAC)
+        let standard_tags = [
+            "TITLE",
+            "ARTIST",
+            "ALBUM",
+            "ALBUMARTIST",
+            "GENRE",
+            "DATE",
+            "YEAR",
+            "TRACKNUMBER",
+            "DISCNUMBER",
+            "COMPOSER",
+            "COMMENT",
+            "DESCRIPTION",
+        ];
+
+        // Extract metadata from Vorbis comments
+        let format_metadata = format.metadata();
+        if let Some(metadata_rev) = format_metadata.current().map_or_else(
+            || metadata.get().and_then(|m| m.current().cloned()),
+            |x| Some(x).cloned(),
+        ) {
+            for tag in metadata_rev.tags() {
+                let key = tag.key.to_uppercase();
+                let value = tag.value.to_string();
+
+                tracing::debug!("OGG metadata tag: {} = {}", key, value);
+
+                match key.as_str() {
+                    "TITLE" => audio_metadata.title = Some(value),
+                    "ARTIST" => audio_metadata.artist = Some(value),
+                    "ALBUM" => audio_metadata.album = Some(value),
+                    "ALBUMARTIST" => audio_metadata.album_artist = Some(value),
+                    "GENRE" => audio_metadata.genre = Some(value),
+                    "DATE" | "YEAR" => audio_metadata.year = Some(value),
+                    "TRACKNUMBER" => audio_metadata.track_number = Some(value),
+                    "DISCNUMBER" => audio_metadata.disc_number = Some(value),
+                    "COMPOSER" => audio_metadata.composer = Some(value),
+                    "COMMENT" | "DESCRIPTION" => audio_metadata.comment = Some(value),
+                    _ => {
+                        if !standard_tags.contains(&key.as_str()) {
+                            audio_metadata.custom_fields.insert(key, value);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Get duration from the default track
+        if let Some(track) = format.default_track() {
+            if let Some(time_base) = track.codec_params.time_base {
+                if let Some(n_frames) = track.codec_params.n_frames {
+                    audio_metadata.duration_secs = Some(time_base.calc_time(n_frames).seconds);
+                }
+            }
+        }
+
+        Ok(audio_metadata)
+    }
+
+    fn write_metadata(&self, path: &Path, update: &MetadataUpdate) -> Result<()> {
+        // OGG Vorbis metadata writing requires external tools or specialized libraries
+        // For now, we'll return an error indicating this is not yet supported
+        // TODO: Implement OGG metadata writing using vorbis-comments or similar crate
+        anyhow::bail!(
+            "OGG metadata writing is not yet supported. File: {}",
+            path.display()
+        )
+    }
+
+    fn has_cover_art(&self, path: &Path) -> Result<bool> {
+        // OGG Vorbis can have embedded artwork through METADATA_BLOCK_PICTURE
+        // We'll check this through Symphonia's metadata
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let file = std::fs::File::open(path).context("Failed to open OGG file")?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        let mut hint = Hint::new();
+        hint.with_extension("ogg");
+
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &Default::default(), &MetadataOptions::default())
+            .context("Failed to probe OGG file")?;
+
+        let mut format = probed.format;
+        let mut metadata = probed.metadata;
+
+        // Check for visual metadata (cover art)
+        let format_metadata = format.metadata();
+        if let Some(metadata_rev) = format_metadata.current().map_or_else(
+            || metadata.get().and_then(|m| m.current().cloned()),
+            |x| Some(x).cloned(),
+        ) {
+            Ok(metadata_rev.visuals().len() > 0)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn get_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let file = std::fs::File::open(path).context("Failed to open OGG file")?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        let mut hint = Hint::new();
+        hint.with_extension("ogg");
+
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &Default::default(), &MetadataOptions::default())
+            .context("Failed to probe OGG file")?;
+
+        let mut format = probed.format;
+        let mut metadata = probed.metadata;
+
+        // Get visual metadata (cover art)
+        let format_metadata = format.metadata();
+        if let Some(metadata_rev) = format_metadata.current().map_or_else(
+            || metadata.get().and_then(|m| m.current().cloned()),
+            |x| Some(x).cloned(),
+        ) {
+            if let Some(visual) = metadata_rev.visuals().first() {
+                Ok(Some(visual.data.to_vec()))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn set_cover_art(&self, path: &Path, data: Vec<u8>, mime_type: &str) -> Result<()> {
+        // OGG cover art writing is not yet supported
+        // TODO: Implement using a suitable library
+        anyhow::bail!(
+            "OGG cover art writing is not yet supported. File: {}",
+            path.display()
+        )
+    }
+
+    fn remove_cover_art(&self, path: &Path) -> Result<()> {
+        // OGG cover art removal is not yet supported
+        // TODO: Implement using a suitable library
+        anyhow::bail!(
+            "OGG cover art removal is not yet supported. File: {}",
+            path.display()
+        )
+    }
+}
+
 /// Factory function to create the appropriate AudioFile implementation based on file extension
 pub fn get_audio_file_handler(extension: &str) -> Option<Box<dyn AudioFile>> {
     match extension.to_lowercase().as_str() {
         "flac" => Some(Box::new(FlacFile)),
         "mp3" => Some(Box::new(Mp3File)),
+        "ogg" => Some(Box::new(OggFile)),
         _ => None,
     }
 }

@@ -5,7 +5,7 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 ## Features
 
 - 🎵 Scan local music library folders
-- 🎼 Support for FLAC and MP3 audio formats
+- 🎼 Support for FLAC, MP3, and OGG Vorbis audio formats
 - 📊 Extract metadata (title, artist, album, duration, cover art)
 - 🌐 REST API for music library access
 - 🎧 Stream audio files over HTTP with range request support
@@ -18,12 +18,14 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 - 💾 SQLite database for persistent lyrics storage
 - 📋 Playlist management with server-side persistence
 
+**Note**: OGG Vorbis support is currently read-only (playback and metadata viewing only).
+
 ## Quick Start
 
 ### Prerequisites
 
 - Rust toolchain (Edition 2024)
-- A folder with FLAC or MP3 music files
+- A folder with FLAC, MP3, or OGG music files
 
 ### Running the Server
 
