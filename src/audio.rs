@@ -36,6 +36,43 @@ pub struct AudioMetadata {
     pub custom_fields: HashMap<String, String>,
 }
 
+impl AudioMetadata {
+    pub fn new() -> Self {
+        AudioMetadata {
+            title: None,
+            artist: None,
+            album: None,
+            album_artist: None,
+            genre: None,
+            year: None,
+            track_number: None,
+            disc_number: None,
+            composer: None,
+            comment: None,
+            duration_secs: None,
+            custom_fields: HashMap::new(),
+        }
+    }
+    pub fn update_from_std_key(
+        &mut self,
+        std_key: symphonia::core::meta::StandardTagKey,
+        value: String,
+    ) {
+        match std_key {
+            symphonia::core::meta::StandardTagKey::TrackTitle => self.title = Some(value),
+            symphonia::core::meta::StandardTagKey::Artist => self.artist = Some(value),
+            symphonia::core::meta::StandardTagKey::Album => self.album = Some(value),
+            symphonia::core::meta::StandardTagKey::AlbumArtist => self.album_artist = Some(value),
+            symphonia::core::meta::StandardTagKey::Genre => self.genre = Some(value),
+            symphonia::core::meta::StandardTagKey::Date => self.year = Some(value),
+            symphonia::core::meta::StandardTagKey::TrackNumber => self.track_number = Some(value),
+            symphonia::core::meta::StandardTagKey::DiscNumber => self.disc_number = Some(value),
+            symphonia::core::meta::StandardTagKey::Composer => self.composer = Some(value),
+            symphonia::core::meta::StandardTagKey::Comment => self.comment = Some(value),
+            _ => {}
+        }
+    }
+}
 /// Trait representing operations on audio files
 pub trait AudioFile: Send + Sync {
     /// Get the file format name (e.g., "flac", "mp3")
@@ -86,20 +123,7 @@ impl AudioFile for FlacFile {
         let mut format = probed.format;
         let mut metadata = probed.metadata;
 
-        let mut audio_metadata = AudioMetadata {
-            title: None,
-            artist: None,
-            album: None,
-            album_artist: None,
-            genre: None,
-            year: None,
-            track_number: None,
-            disc_number: None,
-            composer: None,
-            comment: None,
-            duration_secs: None,
-            custom_fields: HashMap::new(),
-        };
+        let mut audio_metadata = AudioMetadata::new();
 
         // Standard tags for FLAC (Vorbis comments)
         let standard_tags = [
@@ -275,20 +299,7 @@ impl AudioFile for Mp3File {
         let mut format = probed.format;
         let mut metadata = probed.metadata;
 
-        let mut audio_metadata = AudioMetadata {
-            title: None,
-            artist: None,
-            album: None,
-            album_artist: None,
-            genre: None,
-            year: None,
-            track_number: None,
-            disc_number: None,
-            composer: None,
-            comment: None,
-            duration_secs: None,
-            custom_fields: HashMap::new(),
-        };
+        let mut audio_metadata = AudioMetadata::new();
 
         // Standard tags for MP3 (ID3v2)
         let standard_tags = [
@@ -471,20 +482,7 @@ impl AudioFile for OggFile {
         let mut format = probed.format;
         let mut metadata = probed.metadata;
 
-        let mut audio_metadata = AudioMetadata {
-            title: None,
-            artist: None,
-            album: None,
-            album_artist: None,
-            genre: None,
-            year: None,
-            track_number: None,
-            disc_number: None,
-            composer: None,
-            comment: None,
-            duration_secs: None,
-            custom_fields: HashMap::new(),
-        };
+        let mut audio_metadata = AudioMetadata::new();
 
         // Standard tags for OGG Vorbis (Vorbis comments - same as FLAC)
         let standard_tags = [
@@ -667,20 +665,7 @@ impl AudioFile for M4aFile {
         let mut format = probed.format;
         let mut metadata = probed.metadata;
 
-        let mut audio_metadata = AudioMetadata {
-            title: None,
-            artist: None,
-            album: None,
-            album_artist: None,
-            genre: None,
-            year: None,
-            track_number: None,
-            disc_number: None,
-            composer: None,
-            comment: None,
-            duration_secs: None,
-            custom_fields: HashMap::new(),
-        };
+        let mut audio_metadata = AudioMetadata::new();
 
         // Standard tags for M4A (iTunes-style tags)
         let standard_tags = [
@@ -708,43 +693,7 @@ impl AudioFile for M4aFile {
                 let value = tag.value.to_string();
 
                 if let Some(std_key) = tag.std_key {
-                    match std_key {
-                        symphonia::core::meta::StandardTagKey::TrackTitle => {
-                            audio_metadata.title = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Artist => {
-                            audio_metadata.artist = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Album => {
-                            audio_metadata.album = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::AlbumArtist => {
-                            audio_metadata.album_artist = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Genre => {
-                            audio_metadata.genre = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Date => {
-                            audio_metadata.year = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::TrackNumber => {
-                            audio_metadata.track_number = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::DiscNumber => {
-                            audio_metadata.disc_number = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Composer => {
-                            audio_metadata.composer = Some(value)
-                        }
-                        symphonia::core::meta::StandardTagKey::Comment => {
-                            audio_metadata.comment = Some(value)
-                        }
-                        _ => {
-                            if !standard_tags.contains(&key.as_str()) {
-                                audio_metadata.custom_fields.insert(key.to_string(), value);
-                            }
-                        }
-                    }
+                    audio_metadata.update_from_std_key(std_key, value);
                 } else {
                     tracing::debug!("M4A custom metadata tag: {} = {}", key, value);
                     match key.as_str() {
