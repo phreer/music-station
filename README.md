@@ -18,8 +18,6 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 - 💾 SQLite database for persistent lyrics storage
 - 📋 Playlist management with server-side persistence
 
-**Note**: OGG Vorbis support is currently read-only (playback and metadata viewing only).
-
 ## Quick Start
 
 ### Prerequisites
@@ -60,6 +58,10 @@ cargo run --bin music-client -- play <track-id>
 cargo run --bin music-client -- play-all
 ```
 
+### Using gtk client
+
+See [music-station-client-gtk](https://github.com/phreer/music-station-client-gtk) for a GTK-based GUI client.
+
 ### Using the Web Client
 
 1. Start the server (see above)
@@ -76,105 +78,10 @@ Music Station provides a comprehensive REST API for client development.
 - **[CLIENT_DEVELOPMENT_GUIDE.md](CLIENT_DEVELOPMENT_GUIDE.md)** - Quick start guide with examples in JavaScript, Python, Swift, Kotlin
 - **[API_DOCUMENTATION.md](API_DOCUMENTATION.md)** - Complete REST API reference with all endpoints, parameters, and responses
 
-**Quick API Overview:**
-
-**Tracks:**
-- `GET /tracks` - List all tracks
-- `GET /tracks/:id` - Get track details
-- `PUT /tracks/:id` - Update metadata
-- `GET /stream/:id` - Stream audio (with Range support)
-
-**Cover Art:**
-- `GET /cover/:id` - Get cover image
-- `POST /cover/:id` - Upload cover (multipart)
-- `DELETE /cover/:id` - Remove cover
-
-**Lyrics:**
-- `GET /lyrics/:id` - Get lyrics
-- `PUT /lyrics/:id` - Upload/update lyrics
-- `DELETE /lyrics/:id` - Delete lyrics
-
-**Playlists:**
-- `GET /playlists` - List all playlists
-- `GET /playlists/:id` - Get playlist details
-- `POST /playlists` - Create playlist
-- `PUT /playlists/:id` - Update playlist
-- `DELETE /playlists/:id` - Delete playlist
-
-**Albums & Artists:**
-- `GET /albums` - List albums
-- `GET /albums/:name` - Get album details
-- `GET /artists` - List artists
-- `GET /artists/:name` - Get artist details
-
-**Statistics:**
-- `GET /stats` - Library statistics
-
-See the full documentation for detailed examples in multiple languages.
-
-## Project Structure
-
-```
-music-station/
-├── src/
-│   ├── main.rs           # Server entry point
-│   ├── library.rs        # Music library scanner & audio parser (FLAC/MP3/OGG/M4A)
-│   ├── lyrics/           # Lyrics management module
-│   │   ├── mod.rs        # Lyrics database
-│   │   ├── fetcher.rs    # Lyrics fetching API traits
-│   │   └── providers.rs  # Example lyrics providers
-│   ├── playlist.rs       # Playlist management module
-│   ├── server.rs         # HTTP API handlers
-│   └── bin/
-│       └── client.rs     # CLI client
-├── static/
-│   ├── index.html        # Web client UI
-│   ├── styles.css        # Web client styles
-│   └── app.js            # Web client JavaScript
-├── Cargo.toml
-├── README.md
-├── LYRICS_GUIDE.md       # Lyrics feature documentation
-└── LYRICS_API.md         # Lyrics fetching API documentation
-```
-
-## Development
-
-```bash
-# Build the project
-cargo build
-
-# Run tests
-cargo test
-
-# Check code without building
-cargo check
-
-# Format code
-cargo fmt
-
-# Lint code
-cargo clippy
-
-# Run with debug logging (default)
-cargo run -- --library /path/to/music
-
-# Run with less verbose logging
-RUST_LOG=info cargo run -- --library /path/to/music
-```
-
-### Debug Logging
-
-The server includes comprehensive debug logging:
-- All HTTP requests and responses
-- File operations and metadata updates
-- Performance metrics (request duration)
-- Error diagnostics
-
-See [DEBUG_LOGGING.md](DEBUG_LOGGING.md) for detailed logging configuration and troubleshooting guide.
-
 ## Architecture
 
 The server:
+
 1. Scans the specified library folder on startup
 2. Parses audio metadata using Symphonia (FLAC, MP3, OGG, and M4A support)
 3. Stores track information in memory (thread-safe with `Arc<RwLock>`)
@@ -182,31 +89,11 @@ The server:
 5. Supports HTTP range requests for efficient audio streaming
 
 The client:
+
 1. Connects to the server via HTTP
 2. Fetches and displays track information
 3. Provides formatted output for easy browsing
 4. Streams and plays audio using Rodio audio library
-
-## Current Limitations
-
-- Library scan happens only on startup (no hot-reload)
-- No recursive directory scanning (only top-level files)
-- MP3 metadata editing supports standard ID3v2 tags (custom fields limited)
-
-## Dependencies
-
-- **axum** - Web framework
-- **tokio** - Async runtime
-- **symphonia** - Audio decoding (FLAC, MP3, OGG, and M4A/AAC support)
-- **metaflac** - FLAC metadata writing
-- **id3** - MP3 metadata reading and writing
-- **mp4ameta** - M4A metadata reading and writing
-- **rodio** - Audio playback (client)
-- **serde** - JSON serialization
-- **clap** - CLI argument parsing
-- **reqwest** - HTTP client (for CLI)
-- **sqlx** - Database driver for lyrics storage
-- **chrono** - Date and time handling
 
 ## License
 
