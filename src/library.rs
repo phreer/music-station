@@ -107,19 +107,17 @@ impl MusicLibrary {
                 } else if metadata.is_file() {
                     // Process audio files
                     if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-                        if ext == "flac" || ext == "mp3" || ext == "ogg" {
-                            match self.parse_audio_file(&path).await {
-                                Ok(track) => {
-                                    tracing::info!(
-                                        "Found track: {} - {}",
-                                        track.artist.as_deref().unwrap_or("Unknown Artist"),
-                                        track.title.as_deref().unwrap_or("Unknown")
-                                    );
-                                    tracks.push(track);
-                                }
-                                Err(e) => {
-                                    tracing::warn!("Failed to parse {}: {}", path.display(), e);
-                                }
+                        match self.parse_audio_file(&path).await {
+                            Ok(track) => {
+                                tracing::info!(
+                                    "Found track: {} - {}",
+                                    track.artist.as_deref().unwrap_or("Unknown Artist"),
+                                    track.title.as_deref().unwrap_or("Unknown")
+                                );
+                                tracks.push(track);
+                            }
+                            Err(e) => {
+                                tracing::warn!("Failed to parse {}: {}", path.display(), e);
                             }
                         }
                     }

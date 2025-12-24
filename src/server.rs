@@ -153,6 +153,8 @@ async fn stream_track(
     let content_type = match track.path.extension().and_then(|s| s.to_str()) {
         Some("flac") => "audio/flac",
         Some("mp3") => "audio/mpeg",
+        Some("ogg") => "audio/ogg",
+        Some("m4a") => "audio/mp4",
         _ => "application/octet-stream",
     };
 

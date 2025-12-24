@@ -5,7 +5,7 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 ## Features
 
 - 🎵 Scan local music library folders
-- 🎼 Support for FLAC, MP3, and OGG Vorbis audio formats
+- 🎼 Support for FLAC, MP3, OGG Vorbis, and M4A (AAC) audio formats
 - 📊 Extract metadata (title, artist, album, duration, cover art)
 - 🌐 REST API for music library access
 - 🎧 Stream audio files over HTTP with range request support
@@ -25,7 +25,7 @@ A Rust-based HTTP server for managing and streaming music files with a CLI clien
 ### Prerequisites
 
 - Rust toolchain (Edition 2024)
-- A folder with FLAC, MP3, or OGG music files
+- A folder with FLAC, MP3, OGG, or M4A music files
 
 ### Running the Server
 
@@ -118,7 +118,7 @@ See the full documentation for detailed examples in multiple languages.
 music-station/
 ├── src/
 │   ├── main.rs           # Server entry point
-│   ├── library.rs        # Music library scanner & audio parser (FLAC/MP3)
+│   ├── library.rs        # Music library scanner & audio parser (FLAC/MP3/OGG/M4A)
 │   ├── lyrics/           # Lyrics management module
 │   │   ├── mod.rs        # Lyrics database
 │   │   ├── fetcher.rs    # Lyrics fetching API traits
@@ -176,7 +176,7 @@ See [DEBUG_LOGGING.md](DEBUG_LOGGING.md) for detailed logging configuration and 
 
 The server:
 1. Scans the specified library folder on startup
-2. Parses audio metadata using Symphonia (FLAC and MP3 support)
+2. Parses audio metadata using Symphonia (FLAC, MP3, OGG, and M4A support)
 3. Stores track information in memory (thread-safe with `Arc<RwLock>`)
 4. Serves REST API via Axum on port 3000 (configurable)
 5. Supports HTTP range requests for efficient audio streaming
@@ -197,9 +197,10 @@ The client:
 
 - **axum** - Web framework
 - **tokio** - Async runtime
-- **symphonia** - Audio decoding (FLAC and MP3 support)
+- **symphonia** - Audio decoding (FLAC, MP3, OGG, and M4A/AAC support)
 - **metaflac** - FLAC metadata writing
 - **id3** - MP3 metadata reading and writing
+- **mp4ameta** - M4A metadata reading and writing
 - **rodio** - Audio playback (client)
 - **serde** - JSON serialization
 - **clap** - CLI argument parsing

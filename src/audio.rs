@@ -641,12 +641,245 @@ impl AudioFile for OggFile {
     }
 }
 
+/// M4A (AAC) audio file implementation
+pub struct M4aFile;
+
+impl AudioFile for M4aFile {
+    fn format_name(&self) -> &'static str {
+        "m4a"
+    }
+
+    fn parse_metadata(&self, path: &Path) -> Result<AudioMetadata> {
+        use symphonia::core::io::MediaSourceStream;
+        use symphonia::core::meta::MetadataOptions;
+        use symphonia::core::probe::Hint;
+
+        let file = std::fs::File::open(path).context("Failed to open M4A file")?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        let mut hint = Hint::new();
+        hint.with_extension("m4a");
+
+        let probed = symphonia::default::get_probe()
+            .format(&hint, mss, &Default::default(), &MetadataOptions::default())
+            .context("Failed to probe M4A file")?;
+
+        let mut format = probed.format;
+        let mut metadata = probed.metadata;
+
+        let mut audio_metadata = AudioMetadata {
+            title: None,
+            artist: None,
+            album: None,
+            album_artist: None,
+            genre: None,
+            year: None,
+            track_number: None,
+            disc_number: None,
+            composer: None,
+            comment: None,
+            duration_secs: None,
+            custom_fields: HashMap::new(),
+        };
+
+        // Standard tags for M4A (iTunes-style tags)
+        let standard_tags = [
+            "©NAM", // title
+            "©ART", // artist
+            "©ALB", // album
+            "AART", // album artist
+            "©GEN", // genre
+            "©DAY", // year
+            "TRKN", // track number
+            "DISK", // disc number
+            "©WRT", // composer
+            "©CMT", // comment
+        ];
+
+        // Extract metadata from M4A tags
+        let format_metadata = format.metadata();
+        if let Some(metadata_rev) = format_metadata.current().map_or_else(
+            || metadata.get().and_then(|m| m.current().cloned()),
+            |x| Some(x).cloned(),
+        ) {
+            tracing::debug!("M4A metadata revision found: {:?}", metadata_rev);
+            for tag in metadata_rev.tags() {
+                let key = &tag.key;
+                let value = tag.value.to_string();
+
+                if let Some(std_key) = tag.std_key {
+                    match std_key {
+                        symphonia::core::meta::StandardTagKey::TrackTitle => {
+                            audio_metadata.title = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Artist => {
+                            audio_metadata.artist = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Album => {
+                            audio_metadata.album = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::AlbumArtist => {
+                            audio_metadata.album_artist = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Genre => {
+                            audio_metadata.genre = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Date => {
+                            audio_metadata.year = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::TrackNumber => {
+                            audio_metadata.track_number = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::DiscNumber => {
+                            audio_metadata.disc_number = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Composer => {
+                            audio_metadata.composer = Some(value)
+                        }
+                        symphonia::core::meta::StandardTagKey::Comment => {
+                            audio_metadata.comment = Some(value)
+                        }
+                        _ => {
+                            if !standard_tags.contains(&key.as_str()) {
+                                audio_metadata.custom_fields.insert(key.to_string(), value);
+                            }
+                        }
+                    }
+                } else {
+                    tracing::debug!("M4A custom metadata tag: {} = {}", key, value);
+                    match key.as_str() {
+                        "©NAM" | "NAME" => audio_metadata.title = Some(value),
+                        "©ART" | "ARTIST" => audio_metadata.artist = Some(value),
+                        "©ALB" | "ALBUM" => audio_metadata.album = Some(value),
+                        "AART" | "ALBUMARTIST" => audio_metadata.album_artist = Some(value),
+                        "©GEN" | "GENRE" => audio_metadata.genre = Some(value),
+                        "©DAY" | "DATE" | "YEAR" => audio_metadata.year = Some(value),
+                        "TRKN" | "TRACKNUMBER" => audio_metadata.track_number = Some(value),
+                        "DISK" | "DISCNUMBER" => audio_metadata.disc_number = Some(value),
+                        "©WRT" | "COMPOSER" => audio_metadata.composer = Some(value),
+                        "©CMT" | "COMMENT" => audio_metadata.comment = Some(value),
+                        _ => {
+                            if !standard_tags.contains(&key.as_str()) {
+                                audio_metadata.custom_fields.insert(key.to_string(), value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Get duration from the default track
+        if let Some(track) = format.default_track() {
+            if let Some(time_base) = track.codec_params.time_base {
+                if let Some(n_frames) = track.codec_params.n_frames {
+                    audio_metadata.duration_secs = Some(time_base.calc_time(n_frames).seconds);
+                }
+            }
+        }
+
+        Ok(audio_metadata)
+    }
+
+    fn write_metadata(&self, path: &Path, update: &MetadataUpdate) -> Result<()> {
+        use mp4ameta::Tag;
+
+        let mut tag =
+            Tag::read_from_path(path).or_else(|_| Ok::<_, anyhow::Error>(Tag::default()))?;
+
+        // Update basic metadata fields
+        if let Some(ref title) = update.title {
+            tag.set_title(title);
+        }
+        if let Some(ref artist) = update.artist {
+            tag.set_artist(artist);
+        }
+        if let Some(ref album) = update.album {
+            tag.set_album(album);
+        }
+        if let Some(ref album_artist) = update.album_artist {
+            tag.set_album_artist(album_artist);
+        }
+        if let Some(ref genre) = update.genre {
+            tag.set_genre(genre);
+        }
+        if let Some(ref year) = update.year {
+            tag.set_year(year);
+        }
+        if let Some(ref track_number) = update.track_number {
+            if let Ok(num) = track_number.parse::<u16>() {
+                tag.set_track_number(num);
+            }
+        }
+        if let Some(ref disc_number) = update.disc_number {
+            if let Ok(num) = disc_number.parse::<u16>() {
+                tag.set_disc_number(num);
+            }
+        }
+        if let Some(ref composer) = update.composer {
+            tag.set_composer(composer);
+        }
+        if let Some(ref comment) = update.comment {
+            tag.set_comment(comment);
+        }
+
+        tag.write_to_path(path).context("Failed to save M4A tags")?;
+        Ok(())
+    }
+
+    fn has_cover_art(&self, path: &Path) -> Result<bool> {
+        use mp4ameta::Tag;
+
+        let tag = Tag::read_from_path(path).context("Failed to read M4A tags")?;
+        Ok(tag.artworks().count() > 0)
+    }
+
+    fn get_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
+        use mp4ameta::Tag;
+
+        let tag = Tag::read_from_path(path).context("Failed to read M4A tags")?;
+        if let Some(artwork) = tag.artworks().next() {
+            Ok(Some(artwork.data.to_vec()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn set_cover_art(&self, path: &Path, data: Vec<u8>, mime_type: &str) -> Result<()> {
+        use mp4ameta::{Img, Tag};
+
+        let mut tag =
+            Tag::read_from_path(path).or_else(|_| Ok::<_, anyhow::Error>(Tag::default()))?;
+
+        // Determine image format from MIME type
+        let img = match mime_type {
+            "image/jpeg" => Img::jpeg(data),
+            "image/png" => Img::png(data),
+            _ => anyhow::bail!("Unsupported image format: {}", mime_type),
+        };
+
+        tag.set_artwork(img);
+        tag.write_to_path(path)
+            .context("Failed to save M4A tags with cover art")?;
+        Ok(())
+    }
+
+    fn remove_cover_art(&self, path: &Path) -> Result<()> {
+        use mp4ameta::Tag;
+
+        let mut tag = Tag::read_from_path(path).context("Failed to read M4A tags")?;
+        tag.remove_artworks();
+        tag.write_to_path(path).context("Failed to save M4A tags")?;
+        Ok(())
+    }
+}
+
 /// Factory function to create the appropriate AudioFile implementation based on file extension
 pub fn get_audio_file_handler(extension: &str) -> Option<Box<dyn AudioFile>> {
     match extension.to_lowercase().as_str() {
         "flac" => Some(Box::new(FlacFile)),
         "mp3" => Some(Box::new(Mp3File)),
         "ogg" => Some(Box::new(OggFile)),
+        "m4a" => Some(Box::new(M4aFile)),
         _ => None,
     }
 }
