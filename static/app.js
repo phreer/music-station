@@ -156,6 +156,28 @@ function playTrack(trackId, skipQueueUpdate = false) {
     audio.src = streamUrl;
     audio.load();
     audio.play();
+
+    // Increment play count on server
+    fetch(`${API_BASE}/tracks/${trackId}/play`, { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+        })
+        .then(newCount => {
+            if (newCount !== undefined) {
+                // Update local track object
+                const trackIdx = tracks.findIndex(t => t.id === trackId);
+                if (trackIdx !== -1) {
+                    tracks[trackIdx].play_count = newCount;
+                    // If we are in stats view, we might want to refresh it
+                    if (currentView === 'stats') {
+                        loadStats();
+                    }
+                }
+            }
+        })
+        .catch(err => console.error('Failed to increment play count:', err));
     
     // Update UI
     document.getElementById('playerTitle').textContent = track.title || 'Unknown Title';
@@ -439,6 +461,7 @@ function renderFilteredTracks() {
                         <th>Artist</th>
                         <th>Album</th>
                         <th>Duration</th>
+                        <th>Plays</th>
                         <th>Size</th>
                         <th>Actions</th>
                     </tr>
@@ -480,6 +503,7 @@ function renderTracks(append = false) {
                             <th>Artist</th>
                             <th>Album</th>
                             <th>Duration</th>
+                            <th>Plays</th>
                             <th>Size</th>
                             <th>Actions</th>
                         </tr>
@@ -562,6 +586,7 @@ function createTrackRow(track) {
             <td class="track-artist-cell">${escapeHtml(artist)}</td>
             <td class="track-album-cell">${escapeHtml(album)}</td>
             <td class="track-duration-cell">${duration}</td>
+            <td class="track-plays-cell">${track.play_count || 0}</td>
             <td class="track-size-cell">${fileSize}</td>
             <td class="track-actions-cell">
                 <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
@@ -1084,6 +1109,11 @@ function displayStats(stats) {
                 <div class="stat-icon">📊</div>
                 <div class="stat-value">${avgTrackSize}</div>
                 <div class="stat-label">Avg Track Size</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">▶️</div>
+                <div class="stat-value">${stats.total_plays || 0}</div>
+                <div class="stat-label">Total Plays</div>
             </div>
         </div>
     `;

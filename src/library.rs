@@ -25,6 +25,7 @@ pub struct Track {
     pub file_size: u64,
     pub has_cover: bool,
     pub has_lyrics: bool,
+    pub play_count: u64,
     pub custom_fields: HashMap<String, String>,
 }
 
@@ -55,6 +56,7 @@ pub struct LibraryStats {
     pub total_artists: usize,
     pub total_duration_secs: u64,
     pub total_size_bytes: u64,
+    pub total_plays: u64,
 }
 
 #[derive(Clone)]
@@ -175,6 +177,7 @@ impl MusicLibrary {
             file_size,
             has_cover,
             has_lyrics: false, // Will be updated when lyrics database is queried
+            play_count: 0,     // Will be updated when stats database is queried
             custom_fields: audio_metadata.custom_fields,
         })
     }
@@ -205,6 +208,14 @@ impl MusicLibrary {
         let mut tracks = self.tracks.write().await;
         if let Some(track) = tracks.iter_mut().find(|t| t.id == track_id) {
             track.has_lyrics = has_lyrics;
+        }
+    }
+
+    /// Update the play count for a track
+    pub async fn update_track_play_count(&self, track_id: &str, play_count: u64) {
+        let mut tracks = self.tracks.write().await;
+        if let Some(track) = tracks.iter_mut().find(|t| t.id == track_id) {
+            track.play_count = play_count;
         }
     }
 
@@ -314,6 +325,7 @@ impl MusicLibrary {
 
         let total_duration_secs = tracks.iter().filter_map(|t| t.duration_secs).sum();
         let total_size_bytes = tracks.iter().map(|t| t.file_size).sum();
+        let total_plays = tracks.iter().map(|t| t.play_count).sum();
 
         LibraryStats {
             total_tracks: tracks.len(),
@@ -321,6 +333,7 @@ impl MusicLibrary {
             total_artists: artists.len(),
             total_duration_secs,
             total_size_bytes,
+            total_plays,
         }
     }
 

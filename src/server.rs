@@ -18,12 +18,14 @@ use crate::lyrics::fetcher::{
 use crate::lyrics::music_search_provider::{NetEaseLyricsProvider, QQMusicLyricsProvider};
 use crate::lyrics::{Lyric, LyricDatabase, LyricFormat, LyricUpload};
 use crate::playlist::{Playlist, PlaylistCreate, PlaylistDatabase, PlaylistUpdate};
+use crate::stats::StatsDatabase;
 
 #[derive(Clone)]
 pub struct AppState {
     pub library: MusicLibrary,
     pub lyrics_db: LyricDatabase,
     pub playlist_db: PlaylistDatabase,
+    pub stats_db: StatsDatabase,
     pub netease_provider: Option<std::sync::Arc<NetEaseLyricsProvider>>,
     pub qqmusic_provider: Option<std::sync::Arc<QQMusicLyricsProvider>>,
 }
@@ -32,6 +34,7 @@ pub fn create_router(
     library: MusicLibrary,
     lyrics_db: LyricDatabase,
     playlist_db: PlaylistDatabase,
+    stats_db: StatsDatabase,
 ) -> Router {
     // Initialize lyrics providers
     let netease_provider = NetEaseLyricsProvider::new(None)
@@ -52,6 +55,7 @@ pub fn create_router(
         library,
         lyrics_db,
         playlist_db,
+        stats_db,
         netease_provider,
         qqmusic_provider,
     };
@@ -63,6 +67,10 @@ pub fn create_router(
         .route("/", get(root))
         .route("/tracks", get(list_tracks))
         .route("/tracks/:id", get(get_track).put(update_track))
+        .route(
+            "/tracks/:id/play",
+            axum::routing::post(increment_play_count),
+        )
         .route("/stream/:id", get(stream_track))
         .route(
             "/cover/:id",
@@ -132,6 +140,33 @@ async fn get_track(
     }
 
     result
+}
+
+/// Increment play count for a track
+async fn increment_play_count(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<Json<u64>, StatusCode> {
+    tracing::debug!("Incrementing play count for track: {}", id);
+
+    // Check if track exists
+    if state.library.get_track(&id).await.is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let count = state
+        .stats_db
+        .increment_play_count(&id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to increment play count: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // Update in-memory library
+    state.library.update_track_play_count(&id, count).await;
+
+    Ok(Json(count))
 }
 
 /// Stream a track by ID with HTTP Range support

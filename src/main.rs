@@ -3,12 +3,14 @@ mod library;
 mod lyrics;
 mod playlist;
 mod server;
+mod stats;
 
 use anyhow::{Context, Result};
 use clap::Parser;
 use library::MusicLibrary;
 use lyrics::LyricDatabase;
 use playlist::PlaylistDatabase;
+use stats::StatsDatabase;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -82,6 +84,14 @@ async fn main() -> Result<()> {
 
     tracing::info!("Playlist database: {}", playlist_db_path.display());
 
+    // Initialize stats database
+    let stats_db_path = cli.library.join(".music-station").join("stats.db");
+    let stats_db = StatsDatabase::new(&stats_db_path)
+        .await
+        .context("Failed to initialize stats database")?;
+
+    tracing::info!("Stats database: {}", stats_db_path.display());
+
     // Update has_lyrics flags for all tracks
     if let Ok(tracks_with_lyrics) = lyrics_db.get_tracks_with_lyrics().await {
         for track_id in tracks_with_lyrics {
@@ -89,8 +99,15 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Update play counts for all tracks
+    if let Ok(play_counts) = stats_db.get_all_play_counts().await {
+        for (track_id, count) in play_counts {
+            library.update_track_play_count(&track_id, count).await;
+        }
+    }
+
     // Create and start the server
-    let app = server::create_router(library, lyrics_db, playlist_db);
+    let app = server::create_router(library, lyrics_db, playlist_db, stats_db);
     let addr = format!("0.0.0.0:{}", cli.port);
 
     tracing::info!("Server listening on http://{}", addr);

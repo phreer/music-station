@@ -14,6 +14,7 @@ struct Track {
     album: Option<String>,
     duration_secs: Option<u64>,
     file_size: u64,
+    play_count: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -211,6 +212,7 @@ async fn show_track_info(server: &str, id: &str) -> Result<()> {
 
     println!("File:     {}", track.path.display());
     println!("Size:     {} bytes", track.file_size);
+    println!("Plays:    {}", track.play_count);
     println!("ID:       {}", track.id);
     println!("Stream:   {}/stream/{}", server, track.id);
 
@@ -246,6 +248,13 @@ async fn play_track(server: &str, id: &str) -> Result<()> {
     }
     println!("{:-<80}", "");
     println!();
+
+    // Increment play count
+    let play_url = format!("{}/tracks/{}/play", server, id);
+    let client = reqwest::Client::new();
+    if let Err(e) = client.post(&play_url).send().await {
+        eprintln!("Warning: Failed to increment play count: {}", e);
+    }
 
     // Stream and play the audio
     let stream_url = format!("{}/stream/{}", server, id);

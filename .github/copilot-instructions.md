@@ -1,19 +1,26 @@
 # Music Station - AI Coding Agent Instructions
 
 ## Project Overview
-Music Station is a Rust-based HTTP server that scans a music library folder, extracts metadata from FLAC files, and provides a REST API for browsing and streaming music. Currently supports FLAC format only.
+Music Station is a Rust-based HTTP server that scans a music library folder, extracts metadata from audio files, and provides a REST API for browsing and streaming music.
 
 **Architecture**: Client-server with REST API + Web UI
 - Server: `music-station` binary scans library and serves HTTP API
 - CLI Client: `music-client` CLI tool for browsing and playing music
 - Web Client: Single-page web app with tabbed interface for browsing tracks, albums, artists, and statistics
+- Desktop/Mobile Clients
 
 ## Development Environment
 - **Language**: Rust (Edition 2024)
 - **Build Tool**: Cargo
 - **Runtime**: Tokio async runtime
 - **Web Framework**: Axum with tower-http middleware
-- **Audio**: Symphonia for FLAC parsing, metaflac for writing
+
+## Style Guidelines
+- Follow Rust's official style guidelines (rustfmt)
+- Use idiomatic Rust patterns (Result, Option, iterators, error handling with anyhow)
+- Write modular, reusable functions with clear responsibilities
+- Document public functions and complex logic with comments, avoid trivial and unnecessary comments
+- Always keep code and documentation in sync
 
 ## Key Commands
 ```bash
@@ -35,24 +42,6 @@ cargo clippy     # Linting
 cargo fmt        # Auto-format code
 cargo build      # Build without running
 cargo test       # Run tests
-```
-
-## Project Structure
-```
-music-station/
-├── src/
-│   ├── main.rs           # Server entry: CLI parsing, library init, HTTP server
-│   ├── library.rs        # Music library scanner and FLAC metadata parser
-│   ├── server.rs         # Axum HTTP routes and handlers
-│   └── bin/
-│       └── client.rs     # CLI client for browsing library
-├── static/
-│   ├── index.html        # Web client UI with tabbed navigation (5 tabs)
-│   ├── styles.css        # Web client styles with playlist support
-│   └── app.js            # Web client JavaScript with playlist management
-├── Cargo.toml            # Two binaries: music-station, music-client
-└── .github/
-    └── copilot-instructions.md
 ```
 
 ## Architecture & Data Flow
@@ -225,8 +214,3 @@ pub struct AppState {
 - **Data Structure**: JSON array with playlist objects containing id, name, description, tracks[], createdAt
 - **Integration**: Add-to-playlist button on all track rows; play entire playlist or individual tracks
 - **Limitations**: Not synced across devices/browsers; data persists per browser only
-
-## VS Code Integration
-- Custom workspace theme (brown/orange titlebar)
-- Use Rust Analyzer for code completion and inline errors
-- Run tasks: Create tasks.json for common cargo commands

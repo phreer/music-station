@@ -96,6 +96,7 @@ Currently, the API does not require authentication. All endpoints are publicly a
   file_size: number,                  // File size in bytes
   has_cover: boolean,                 // Has embedded cover art
   has_lyrics: boolean,                // Has lyrics in database
+  play_count: number,                 // Number of times played
   custom_fields: Record<string, string> // Other metadata tags
 }
 ```
@@ -329,6 +330,30 @@ Content-Type: application/json
 - FLAC uses Vorbis comments (TITLE, ARTIST, ALBUM, etc.)
 - MP3 uses ID3v2 tags (TIT2, TPE1, TALB, etc.)
 - The `has_lyrics` flag is preserved during updates
+
+#### Increment Play Count
+
+```http
+POST /tracks/:id/play
+```
+
+Increments the play count for the specified track and updates the last played timestamp.
+
+**Parameters:**
+- `id` (path) - Track ID
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+5
+```
+Returns the new play count as a number.
+
+**Errors:**
+- `404 Not Found` - Track not found
+- `500 Internal Server Error` - Database error
 
 #### Stream Track
 
@@ -992,7 +1017,8 @@ Content-Type: application/json
   "total_albums": 120,
   "total_artists": 45,
   "total_duration_secs": 345600,
-  "total_size_bytes": 12000000000
+  "total_size_bytes": 12000000000,
+  "total_plays": 5678
 }
 ```
 

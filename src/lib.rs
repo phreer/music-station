@@ -8,3 +8,4 @@ pub mod library;
 pub mod lyrics;
 pub mod playlist;
 pub mod server;
+pub mod stats;
