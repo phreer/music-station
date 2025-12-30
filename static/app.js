@@ -1136,10 +1136,18 @@ function displayArtists(artists) {
         return;
     }
 
-    artistList.innerHTML = artists.map((artist, index) => `
+    artistList.innerHTML = artists.map((artist, index) => {
+        const firstAlbum = artist.albums[0];
+        const firstTrack = firstAlbum ? firstAlbum.tracks[0] : null;
+        const artistImageUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
+
+        return `
         <div class="artist-card" id="artist-card-${index}" onclick="toggleArtist(this, ${index})">
             <div class="artist-image-wrapper">
-                <div class="artist-icon-large"><i data-lucide="user"></i></div>
+                ${artistImageUrl 
+                    ? `<img src="${artistImageUrl}" alt="${escapeHtml(artist.name)}" class="artist-profile-img" onerror="this.style.display='none'; this.parentElement.querySelector('.artist-icon-large').style.display='flex';">` 
+                    : ''}
+                <div class="artist-icon-large" ${artistImageUrl ? 'style="display: none;"' : ''}><i data-lucide="user"></i></div>
             </div>
             <div class="artist-details-content">
                 <h3>${escapeHtml(artist.name)}</h3>
@@ -1158,7 +1166,7 @@ function displayArtists(artists) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `}).join('');
     lucide.createIcons();
 }
 
@@ -1213,10 +1221,19 @@ function renderArtistAlbums(index, container) {
     
     container.innerHTML = `
         <div class="artist-albums-grid">
-            ${artist.albums.map((album, albumIndex) => `
+            ${artist.albums.map((album, albumIndex) => {
+                const firstTrack = album.tracks[0];
+                const coverUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
+                
+                return `
                 <div class="artist-album-mini-card" onclick="event.stopPropagation(); toggleArtistAlbumTracks(${index}, ${albumIndex}, this)">
                     <div class="artist-album-mini-header">
-                        <div class="artist-album-mini-icon"><i data-lucide="disc"></i></div>
+                        <div class="artist-album-mini-icon">
+                            ${coverUrl 
+                                ? `<img src="${coverUrl}" alt="${escapeHtml(album.name)}" class="mini-album-cover" onerror="this.style.display='none'; this.parentElement.querySelector('i').style.display='block';">` 
+                                : ''}
+                            <i data-lucide="disc" ${coverUrl ? 'style="display: none;"' : ''}></i>
+                        </div>
                         <div class="artist-album-mini-info">
                             <h4>${escapeHtml(album.name)}</h4>
                             <div class="artist-album-mini-meta">
@@ -1234,7 +1251,7 @@ function renderArtistAlbums(index, container) {
                         <div class="loading-mini"><i data-lucide="refresh-cw" class="spin"></i> Loading tracks...</div>
                     </div>
                 </div>
-            `).join('')}
+            `}).join('')}
         </div>
     `;
 }
