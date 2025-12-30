@@ -1144,9 +1144,9 @@ function displayArtists(artists) {
         return `
         <div class="artist-card" id="artist-card-${index}" onclick="toggleArtist(this, ${index})">
             <div class="artist-image-wrapper">
-                ${artistImageUrl 
-                    ? `<img src="${artistImageUrl}" alt="${escapeHtml(artist.name)}" class="artist-profile-img" onerror="this.style.display='none'; this.parentElement.querySelector('.artist-icon-large').style.display='flex';">` 
-                    : ''}
+                ${artistImageUrl
+                ? `<img src="${artistImageUrl}" alt="${escapeHtml(artist.name)}" class="artist-profile-img" onerror="this.style.display='none'; this.parentElement.querySelector('.artist-icon-large').style.display='flex';">`
+                : ''}
                 <div class="artist-icon-large" ${artistImageUrl ? 'style="display: none;"' : ''}><i data-lucide="user"></i></div>
             </div>
             <div class="artist-details-content">
@@ -1186,11 +1186,11 @@ function toggleArtist(element, index) {
         element.classList.add('expanded');
         element.querySelector('.artist-view-selector').style.display = 'flex';
         element.querySelector('.artist-expanded-content').style.display = 'block';
-        
+
         // Default to albums view
         const albumsBtn = element.querySelector('.view-btn.active');
         switchArtistView(index, 'albums', albumsBtn);
-        
+
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
         element.classList.remove('expanded');
@@ -1202,7 +1202,7 @@ function toggleArtist(element, index) {
 function switchArtistView(index, mode, btnElement) {
     const artist = currentArtists[index];
     const contentContainer = document.getElementById(`artist-content-${index}`);
-    
+
     // Update active button
     const selector = btnElement.parentElement;
     selector.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
@@ -1218,20 +1218,20 @@ function switchArtistView(index, mode, btnElement) {
 
 function renderArtistAlbums(index, container) {
     const artist = currentArtists[index];
-    
+
     container.innerHTML = `
         <div class="artist-albums-grid">
             ${artist.albums.map((album, albumIndex) => {
-                const firstTrack = album.tracks[0];
-                const coverUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
-                
-                return `
+        const firstTrack = album.tracks[0];
+        const coverUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
+
+        return `
                 <div class="artist-album-mini-card" onclick="event.stopPropagation(); toggleArtistAlbumTracks(${index}, ${albumIndex}, this)">
                     <div class="artist-album-mini-header">
                         <div class="artist-album-mini-icon">
-                            ${coverUrl 
-                                ? `<img src="${coverUrl}" alt="${escapeHtml(album.name)}" class="mini-album-cover" onerror="this.style.display='none'; this.parentElement.querySelector('i').style.display='block';">` 
-                                : ''}
+                            ${coverUrl
+                ? `<img src="${coverUrl}" alt="${escapeHtml(album.name)}" class="mini-album-cover" onerror="this.style.display='none'; this.parentElement.querySelector('i').style.display='block';">`
+                : ''}
                             <i data-lucide="disc" ${coverUrl ? 'style="display: none;"' : ''}></i>
                         </div>
                         <div class="artist-album-mini-info">
@@ -1264,12 +1264,12 @@ async function toggleArtistAlbumTracks(artistIndex, albumIndex, element) {
 
     if (!isExpanded) {
         element.classList.add('expanded');
-        
+
         const artist = currentArtists[artistIndex];
         const album = artist.albums[albumIndex];
-        
+
         // Filter tracks from fullTracks
-        const albumTracks = fullTracks.filter(t => 
+        const albumTracks = fullTracks.filter(t =>
             t.artist === artist.name && t.album === album.name
         );
 
@@ -1297,10 +1297,10 @@ async function toggleArtistAlbumTracks(artistIndex, albumIndex, element) {
 
 function renderArtistAllTracks(index, container) {
     const artist = currentArtists[index];
-    
+
     // Filter all tracks for this artist
     const artistTracks = fullTracks.filter(t => t.artist === artist.name);
-    
+
     if (artistTracks.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No tracks found for this artist</p>';
         return;
@@ -1462,7 +1462,7 @@ function displayPlaylists() {
         const trackCount = pl.tracks.length;
         const playlistTracks = pl.tracks.map(id => fullTracks.find(t => t.id === id)).filter(Boolean);
         const totalDuration = playlistTracks.reduce((sum, t) => sum + (t.duration_secs || 0), 0);
-        
+
         // Get up to 4 unique covers for the grid
         const covers = [];
         for (const track of playlistTracks) {
@@ -1631,7 +1631,7 @@ async function handleCreatePlaylist(event) {
         if (response.ok) {
             const newPlaylist = await response.json();
             playlists.push(newPlaylist);
-            
+
             // Close modal and refresh display
             closeCreatePlaylistModal();
             displayPlaylists();
@@ -1696,13 +1696,13 @@ async function addTrackToPlaylist(playlistId) {
         if (response.ok) {
             // Update local state
             pl.tracks.push(trackToAdd);
-            
+
             // Close modal and refresh if on playlists view
             closeAddToPlaylistModal();
             if (currentView === 'playlists') {
                 displayPlaylists();
             }
-            
+
             // Show success message
             const track = fullTracks.find(t => t.id === trackToAdd);
             console.log(`Added "${track?.title}" to playlist "${pl.name}"`);

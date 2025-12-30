@@ -35,8 +35,10 @@
         <!-- Tracks View -->
         <div id="tracks-view" class="tab-content active">
             <div class="controls">
-                <button id="refreshBtn" class="btn btn-primary"><i data-lucide="refresh-cw"></i> Refresh Library</button>
-                <button id="autoFetchLyricsBtn" class="btn btn-secondary"><i data-lucide="wand-2"></i> Auto-Fetch Lyrics</button>
+                <button id="refreshBtn" class="btn btn-primary"><i data-lucide="refresh-cw"></i> Refresh
+                    Library</button>
+                <button id="autoFetchLyricsBtn" class="btn btn-secondary"><i data-lucide="wand-2"></i> Auto-Fetch
+                    Lyrics</button>
                 <div class="search-container">
                     <i data-lucide="search" class="search-icon"></i>
                     <input type="text" id="searchInput" class="search-input"
@@ -69,7 +71,8 @@
         <div id="playlists-view" class="tab-content">
             <div class="playlists-header">
                 <h2>My Playlists</h2>
-                <button id="createPlaylistBtn" class="btn btn-primary"><i data-lucide="plus"></i> Create Playlist</button>
+                <button id="createPlaylistBtn" class="btn btn-primary"><i data-lucide="plus"></i> Create
+                    Playlist</button>
             </div>
             <div id="playlist-list" class="playlist-list"></div>
         </div>
@@ -131,7 +134,8 @@
     <div id="playerLyricsContainer" class="lyrics-sidebar" style="display: none;">
         <div class="lyrics-sidebar-header">
             <h3><i data-lucide="file-text"></i> Lyrics</h3>
-            <button class="btn-icon" onclick="togglePlayerLyrics()" title="Close lyrics"><i data-lucide="x"></i></button>
+            <button class="btn-icon" onclick="togglePlayerLyrics()" title="Close lyrics"><i
+                    data-lucide="x"></i></button>
         </div>
         <div id="playerLyricsContent" class="lyrics-sidebar-content"></div>
         <div id="lyricsResizeHandle" class="resize-handle-right"></div>
@@ -142,7 +146,8 @@
         <div class="play-queue-header">
             <h3><i data-lucide="list-music"></i> Play Queue</h3>
             <div class="play-queue-actions">
-                <button class="btn-icon" onclick="clearQueue()" title="Clear queue"><i data-lucide="trash-2"></i></button>
+                <button class="btn-icon" onclick="clearQueue()" title="Clear queue"><i
+                        data-lucide="trash-2"></i></button>
                 <button class="btn-icon" onclick="toggleQueue()" title="Close queue"><i data-lucide="x"></i></button>
             </div>
         </div>
@@ -202,7 +207,8 @@
             <div class="playlist-selection">
                 <p class="modal-subtitle">Select a playlist:</p>
                 <div id="playlistSelectionList" class="playlist-selection-list"></div>
-                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()"><i data-lucide="plus"></i> Create New
+                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()"><i
+                        data-lucide="plus"></i> Create New
                     Playlist</button>
             </div>
         </div>
@@ -341,7 +347,8 @@
                         <div class="lyrics-empty">
                             <div class="lyrics-empty-icon"><i data-lucide="file-text"></i></div>
                             <p>No lyrics available for this track</p>
-                            <button class="btn btn-primary" onclick="switchLyricsTab('edit')"><i data-lucide="plus"></i> Add Lyrics</button>
+                            <button class="btn btn-primary" onclick="switchLyricsTab('edit')"><i data-lucide="plus"></i>
+                                Add Lyrics</button>
                         </div>
                     </div>
                 </div>
@@ -388,7 +395,8 @@
                             <i data-lucide="trash-2"></i> Delete Lyrics
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="closeLyricsModal()">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="saveLyrics()"><i data-lucide="save"></i> Save Lyrics</button>
+                        <button type="button" class="btn btn-primary" onclick="saveLyrics()"><i data-lucide="save"></i>
+                            Save Lyrics</button>
                     </div>
                 </div>
             </div>

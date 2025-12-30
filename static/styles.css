@@ -507,7 +507,9 @@ header h1 {
     text-overflow: ellipsis;
 }
 
-.track-duration-cell, .track-plays-cell, .track-size-cell {
+.track-duration-cell,
+.track-plays-cell,
+.track-size-cell {
     color: var(--text-light);
     font-family: monospace;
     font-size: 13px;
@@ -953,7 +955,8 @@ header h1 {
 .album-cover-wrapper {
     position: relative;
     width: 100%;
-    padding-top: 100%; /* 1:1 Aspect Ratio */
+    padding-top: 100%;
+    /* 1:1 Aspect Ratio */
     background: #1a2332;
 }
 
@@ -1377,8 +1380,9 @@ header h1 {
 .artist-card.expanded .artist-albums-grid {
     display: grid;
 }
-    border-top: 1px solid #3a3a3a;
-    display: none;
+
+border-top: 1px solid #3a3a3a;
+display: none;
 }
 
 .artist-card.expanded .artist-albums {
@@ -1544,8 +1548,13 @@ header h1 {
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .no-tracks {
