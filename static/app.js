@@ -1423,24 +1423,24 @@ document.addEventListener('keydown', (event) => {
 
 // ========== PLAYLIST MANAGEMENT ==========
 
-// Load playlists from localStorage
-function loadPlaylists() {
-    const saved = localStorage.getItem('music_station_playlists');
-    if (saved) {
-        try {
-            playlists = JSON.parse(saved);
-        } catch (e) {
-            console.error('Failed to parse playlists:', e);
-            playlists = [];
+// Load playlists from server
+async function loadPlaylists() {
+    try {
+        const response = await fetch(`${API_BASE}/playlists`);
+        if (response.ok) {
+            playlists = await response.json();
+            if (currentView === 'playlists') {
+                displayPlaylists();
+            }
         }
-    } else {
-        playlists = [];
+    } catch (e) {
+        console.error('Failed to load playlists:', e);
     }
 }
 
-// Save playlists to localStorage
+// Save playlists - now handled by server
 function savePlaylists() {
-    localStorage.setItem('music_station_playlists', JSON.stringify(playlists));
+    // No longer using localStorage for playlists
 }
 
 // Display all playlists
@@ -1449,9 +1449,9 @@ function displayPlaylists() {
 
     if (playlists.length === 0) {
         playlistList.innerHTML = `
-            <div class="empty-playlist">
-                <div class="empty-playlist-icon"><i data-lucide="list-music"></i></div>
-                <p>No playlists yet. Create your first playlist!</p>
+            <div class="empty-playlist" style="grid-column: 1/-1; text-align: center; padding: 60px; background: var(--card-bg); border-radius: 16px; border: 2px dashed var(--card-border);">
+                <div class="empty-playlist-icon" style="font-size: 64px; color: var(--text-light); margin-bottom: 20px;"><i data-lucide="list-music"></i></div>
+                <p style="color: var(--text-light); font-size: 18px;">No playlists yet. Create your first playlist!</p>
             </div>
         `;
         lucide.createIcons();
@@ -1460,52 +1460,77 @@ function displayPlaylists() {
 
     playlistList.innerHTML = playlists.map(pl => {
         const trackCount = pl.tracks.length;
-        const totalDuration = pl.tracks.reduce((sum, trackId) => {
-            const track = fullTracks.find(t => t.id === trackId);
-            return sum + (track ? track.duration_secs : 0);
-        }, 0);
+        const playlistTracks = pl.tracks.map(id => fullTracks.find(t => t.id === id)).filter(Boolean);
+        const totalDuration = playlistTracks.reduce((sum, t) => sum + (t.duration_secs || 0), 0);
+        
+        // Get up to 4 unique covers for the grid
+        const covers = [];
+        for (const track of playlistTracks) {
+            if (track.has_cover && !covers.includes(track.id)) {
+                covers.push(track.id);
+                if (covers.length >= 4) break;
+            }
+        }
 
         return `
-            <div class="playlist-card" data-playlist-id="${pl.id}">
-                <div class="playlist-card-header">
-                    <div class="playlist-icon"><i data-lucide="music"></i></div>
-                    <div class="playlist-info">
-                        <h3 class="playlist-name">${escapeHtml(pl.name)}</h3>
-                        ${pl.description ? `<p class="playlist-description">${escapeHtml(pl.description)}</p>` : ''}
+            <div class="playlist-card" onclick="togglePlaylist(this)">
+                <div class="playlist-cover-wrapper">
+                    ${covers.length > 0 ? `
+                        <div class="playlist-cover-grid">
+                            ${covers.map(id => `<img src="${API_BASE}/cover/${id}" class="playlist-cover-img" onerror="this.style.display='none';">`).join('')}
+                            ${Array(Math.max(0, 4 - covers.length)).fill(0).map(() => `<div class="playlist-cover-placeholder" style="position: relative; font-size: 24px;"><i data-lucide="music"></i></div>`).join('')}
+                        </div>
+                    ` : `
+                        <div class="playlist-cover-placeholder">
+                            <i data-lucide="list-music"></i>
+                        </div>
+                    `}
+                    <div class="playlist-card-overlay">
+                        <button class="album-overlay-btn" onclick="event.stopPropagation(); playPlaylist('${pl.id}')" title="Play playlist" ${trackCount === 0 ? 'disabled' : ''}>
+                            <i data-lucide="play"></i>
+                        </button>
+                        <button class="album-overlay-btn" onclick="event.stopPropagation(); deletePlaylist('${pl.id}')" title="Delete playlist">
+                            <i data-lucide="trash-2"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="playlist-meta">
-                    <span><i data-lucide="music"></i> ${trackCount} track${trackCount !== 1 ? 's' : ''}</span>
-                    <span><i data-lucide="clock"></i> ${formatDuration(totalDuration)}</span>
-                </div>
-                <div class="playlist-actions">
-                    <button class="btn btn-primary btn-small" onclick="playPlaylist('${pl.id}')" ${trackCount === 0 ? 'disabled' : ''}>
-                        <i data-lucide="play"></i> Play
-                    </button>
-                    <button class="btn btn-secondary btn-small" onclick="togglePlaylistTracks('${pl.id}')">
-                        <i data-lucide="eye"></i> View
-                    </button>
-                    <button class="btn btn-secondary btn-small" onclick="deletePlaylist('${pl.id}')">
-                        <i data-lucide="trash-2"></i> Delete
-                    </button>
-                </div>
-                <div class="playlist-tracks">
-                    ${trackCount === 0 ? '<p style="text-align: center; color: #b8b8b8; padding: 12px;">No tracks in this playlist</p>' : pl.tracks.map(trackId => {
-            const track = fullTracks.find(t => t.id === trackId);
-            if (!track) return '';
-            return `
-                            <div class="playlist-track-item">
-                                <div class="playlist-track-info">
-                                    <div class="playlist-track-title">${escapeHtml(track.title || 'Unknown Title')}</div>
-                                    <div class="playlist-track-artist">${escapeHtml(track.artist || 'Unknown Artist')}</div>
-                                </div>
-                                <div class="playlist-track-actions">
-                                    <button onclick="playTrackFromPlaylist('${pl.id}', '${trackId}')" title="Play"><i data-lucide="play"></i></button>
-                                    <button onclick="removeFromPlaylist('${pl.id}', '${trackId}')" title="Remove"><i data-lucide="x"></i></button>
-                                </div>
+                <div class="playlist-card-content">
+                    <h3>${escapeHtml(pl.name)}</h3>
+                    ${pl.description ? `<p class="playlist-description">${escapeHtml(pl.description)}</p>` : ''}
+                    <div class="playlist-card-meta">
+                        <span><i data-lucide="music" style="width: 12px; height: 12px; vertical-align: middle;"></i> ${trackCount} tracks</span>
+                        <span><i data-lucide="clock" style="width: 12px; height: 12px; vertical-align: middle;"></i> ${formatDuration(totalDuration)}</span>
+                    </div>
+
+                    <div class="playlist-tracks-list">
+                        <div style="min-height: 0;">
+                            <div class="playlist-details-meta">
+                                <span><i data-lucide="calendar"></i> Created: ${new Date(pl.createdAt || Date.now()).toLocaleDateString()}</span>
+                                <span><i data-lucide="clock"></i> Total time: ${formatDuration(totalDuration)}</span>
                             </div>
-                        `;
-        }).join('')}
+                            <div class="tracks-table">
+                                ${playlistTracks.map((track, i) => `
+                                    <div class="playlist-track-row" onclick="event.stopPropagation(); playTrackFromPlaylist('${pl.id}', '${track.id}')">
+                                        <div class="playlist-track-num">${i + 1}</div>
+                                        <div class="playlist-track-info-cell">
+                                            <div class="playlist-track-title-main">${escapeHtml(track.title || 'Unknown Title')}</div>
+                                            <div class="playlist-track-artist-sub">${escapeHtml(track.artist || 'Unknown Artist')} • ${escapeHtml(track.album || 'Unknown Album')}</div>
+                                        </div>
+                                        <div class="playlist-track-duration">${formatDuration(track.duration_secs || 0)}</div>
+                                        <div class="playlist-track-actions">
+                                            <button class="btn-action btn-playlist" onclick="event.stopPropagation(); removeFromPlaylist('${pl.id}', '${track.id}')" title="Remove from playlist">
+                                                <i data-lucide="x"></i>
+                                            </button>
+                                            <button class="btn-action btn-queue" onclick="event.stopPropagation(); addToQueue('${track.id}')" title="Add to queue">
+                                                <i data-lucide="list-plus"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                                ${trackCount === 0 ? '<p style="text-align: center; color: var(--text-light); padding: 20px;">No tracks in this playlist</p>' : ''}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -1513,11 +1538,17 @@ function displayPlaylists() {
     lucide.createIcons();
 }
 
-// Toggle playlist tracks visibility
-function togglePlaylistTracks(playlistId) {
-    const card = document.querySelector(`[data-playlist-id="${playlistId}"]`);
-    if (card) {
-        card.classList.toggle('expanded');
+function togglePlaylist(element) {
+    const isExpanded = element.classList.contains('expanded');
+
+    // Close all other expanded playlists
+    document.querySelectorAll('.playlist-card.expanded').forEach(card => {
+        card.classList.remove('expanded');
+    });
+
+    if (!isExpanded) {
+        element.classList.add('expanded');
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 }
 
@@ -1574,7 +1605,7 @@ function closeCreatePlaylistModal() {
 }
 
 // Handle create playlist form submission
-function handleCreatePlaylist(event) {
+async function handleCreatePlaylist(event) {
     event.preventDefault();
 
     const name = document.getElementById('playlistName').value.trim();
@@ -1585,24 +1616,34 @@ function handleCreatePlaylist(event) {
         return;
     }
 
-    // Create new playlist
-    const newPlaylist = {
-        id: generateId(),
-        name: name,
-        description: description,
-        tracks: [],
-        createdAt: new Date().toISOString()
-    };
+    try {
+        const response = await fetch(`${API_BASE}/playlists`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: name,
+                description: description
+            }),
+        });
 
-    playlists.push(newPlaylist);
-    savePlaylists();
-
-    // Close modal and refresh display
-    closeCreatePlaylistModal();
-    displayPlaylists();
-
-    // Show success message
-    console.log('Playlist created:', newPlaylist);
+        if (response.ok) {
+            const newPlaylist = await response.json();
+            playlists.push(newPlaylist);
+            
+            // Close modal and refresh display
+            closeCreatePlaylistModal();
+            displayPlaylists();
+            console.log('Playlist created:', newPlaylist);
+        } else {
+            const error = await response.text();
+            alert(`Failed to create playlist: ${error}`);
+        }
+    } catch (e) {
+        console.error('Error creating playlist:', e);
+        alert('Error creating playlist. See console for details.');
+    }
 }
 
 // Open add to playlist modal
@@ -1635,7 +1676,7 @@ function closeAddToPlaylistModal() {
 }
 
 // Add track to playlist
-function addTrackToPlaylist(playlistId) {
+async function addTrackToPlaylist(playlistId) {
     if (!trackToAdd) return;
 
     const pl = playlists.find(p => p.id === playlistId);
@@ -1647,45 +1688,76 @@ function addTrackToPlaylist(playlistId) {
         return;
     }
 
-    // Add track
-    pl.tracks.push(trackToAdd);
-    savePlaylists();
+    try {
+        const response = await fetch(`${API_BASE}/playlists/${playlistId}/tracks/${trackToAdd}`, {
+            method: 'POST',
+        });
 
-    // Close modal and refresh if on playlists view
-    closeAddToPlaylistModal();
-    if (currentView === 'playlists') {
-        displayPlaylists();
+        if (response.ok) {
+            // Update local state
+            pl.tracks.push(trackToAdd);
+            
+            // Close modal and refresh if on playlists view
+            closeAddToPlaylistModal();
+            if (currentView === 'playlists') {
+                displayPlaylists();
+            }
+            
+            // Show success message
+            const track = fullTracks.find(t => t.id === trackToAdd);
+            console.log(`Added "${track?.title}" to playlist "${pl.name}"`);
+        } else {
+            const error = await response.text();
+            alert(`Failed to add track to playlist: ${error}`);
+        }
+    } catch (e) {
+        console.error('Error adding track to playlist:', e);
     }
-
-    // Show success message
-    const track = fullTracks.find(t => t.id === trackToAdd);
-    console.log(`Added "${track?.title}" to playlist "${pl.name}"`);
 }
 
 // Remove track from playlist
-function removeFromPlaylist(playlistId, trackId) {
+async function removeFromPlaylist(playlistId, trackId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
 
-    const index = pl.tracks.indexOf(trackId);
-    if (index > -1) {
-        pl.tracks.splice(index, 1);
-        savePlaylists();
-        displayPlaylists();
+    try {
+        const response = await fetch(`${API_BASE}/playlists/${playlistId}/tracks/${trackId}`, {
+            method: 'DELETE',
+        });
+
+        if (response.ok) {
+            // Update local state
+            pl.tracks = pl.tracks.filter(id => id !== trackId);
+            displayPlaylists();
+        } else {
+            const error = await response.text();
+            alert(`Failed to remove track: ${error}`);
+        }
+    } catch (e) {
+        console.error('Error removing track from playlist:', e);
     }
 }
 
 // Delete playlist
-function deletePlaylist(playlistId) {
+async function deletePlaylist(playlistId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
 
     if (confirm(`Are you sure you want to delete the playlist "${pl.name}"?`)) {
-        const index = playlists.findIndex(p => p.id === playlistId);
-        if (index > -1) {
-            playlists.splice(index, 1);
-            savePlaylists();
-            displayPlaylists();
+        try {
+            const response = await fetch(`${API_BASE}/playlists/${playlistId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                playlists = playlists.filter(p => p.id !== playlistId);
+                displayPlaylists();
+            } else {
+                const error = await response.text();
+                alert(`Failed to delete playlist: ${error}`);
+            }
+        } catch (e) {
+            console.error('Error deleting playlist:', e);
         }
     }
 }
@@ -1697,10 +1769,6 @@ function openCreatePlaylistFromAdd() {
 }
 
 // Generate unique ID
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
 // ========== PLAY QUEUE MANAGEMENT ==========
 
 // Add track to queue
