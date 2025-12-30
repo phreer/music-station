@@ -421,23 +421,28 @@ header h1 {
 }
 
 .play-track-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     background: transparent;
-    border: none;
-    font-size: 16px;
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    border-radius: 50%;
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
     transition: all 0.2s ease;
-    line-height: 1;
 }
 
 .play-track-btn:hover {
-    background: rgba(0, 102, 204, 0.1);
-    transform: scale(1.2);
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
 }
 
 .track-row.playing .play-track-btn {
-    color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
 }
 
 .track-info-cell {
@@ -488,14 +493,95 @@ header h1 {
     white-space: nowrap;
 }
 
-.track-actions-cell .btn {
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
     margin-left: 4px;
-    padding: 4px 8px;
-    font-size: 0.9em;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-light);
+    text-decoration: none;
 }
 
-.track-actions-cell .btn:first-child {
+.btn-action:first-child {
     margin-left: 0;
+}
+
+.btn-action i {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-edit {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-edit:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-lyrics {
+    border-color: #6b7280;
+    color: #6b7280;
+}
+
+.btn-lyrics:hover {
+    background: #6b7280;
+    color: white;
+}
+
+.btn-lyrics-active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.btn-lyrics-active:hover {
+    background: var(--primary-hover);
+}
+
+.btn-queue {
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.btn-queue:hover {
+    background: #10b981;
+    color: white;
+}
+
+.btn-playlist {
+    border-color: #8b5cf6;
+    color: #8b5cf6;
+}
+
+.btn-playlist:hover {
+    background: #8b5cf6;
+    color: white;
+}
+
+.btn-download {
+    border-color: #6b7280;
+    color: #6b7280;
+}
+
+.btn-download:hover {
+    background: #6b7280;
+    color: white;
 }
 
 /* Old card styles - keep for backwards compatibility but unused */
@@ -1529,24 +1615,6 @@ header h1 {
     margin-left: auto;
 }
 
-/* Add to playlist button in track rows */
-.btn-add-to-playlist {
-    background: transparent;
-    border: 1px solid #0066cc;
-    color: #0066cc;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-add-to-playlist:hover {
-    background: #0066cc;
-    color: white;
-    transform: scale(1.05);
-}
-
 /* Play Queue Panel */
 .play-queue-panel {
     position: fixed;
@@ -1900,24 +1968,6 @@ body.dark-mode .play-queue-header {
     text-align: center;
     border: 2px solid white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Add to queue button in track rows */
-.btn-add-to-queue {
-    background: transparent;
-    border: 1px solid #28a745;
-    color: #28a745;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-add-to-queue:hover {
-    background: #28a745;
-    color: white;
-    transform: scale(1.05);
 }
 
 /* Mobile responsive for play queue */

@@ -664,19 +664,19 @@ function createTrackRow(track) {
             <td class="track-plays-cell">${track.play_count || 0}</td>
             <td class="track-size-cell">${fileSize}</td>
             <td class="track-actions-cell">
-                <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
+                <button class="btn-action btn-edit" onclick="openEditModal('${track.id}')" title="Edit metadata">
                     <i data-lucide="edit-3"></i>
                 </button>
-                <button class="btn ${track.has_lyrics ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="openLyricsModal('${track.id}')" title="${track.has_lyrics ? 'View/Edit lyrics' : 'Add lyrics'}">
+                <button class="btn-action ${track.has_lyrics ? 'btn-lyrics-active' : 'btn-lyrics'}" onclick="openLyricsModal('${track.id}')" title="${track.has_lyrics ? 'View/Edit lyrics' : 'Add lyrics'}">
                     <i data-lucide="${track.has_lyrics ? 'file-text' : 'file-plus'}"></i>
                 </button>
-                <button class="btn-add-to-queue" onclick="addToQueue('${track.id}')" title="Add to queue">
+                <button class="btn-action btn-queue" onclick="addToQueue('${track.id}')" title="Add to queue">
                     <i data-lucide="list-plus"></i>
                 </button>
-                <button class="btn-add-to-playlist" onclick="openAddToPlaylistModal('${track.id}')" title="Add to playlist">
+                <button class="btn-action btn-playlist" onclick="openAddToPlaylistModal('${track.id}')" title="Add to playlist">
                     <i data-lucide="plus"></i>
                 </button>
-                <a href="${streamUrl}" target="_blank" class="btn btn-secondary btn-small" style="text-decoration: none;" title="Download track" download>
+                <a href="${streamUrl}" target="_blank" class="btn-action btn-download" title="Download track" download>
                     <i data-lucide="download"></i>
                 </a>
             </td>
@@ -1035,8 +1035,8 @@ function displayAlbums(albums) {
                 <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(album.artist)}')" title="Play album" style="margin-right: 8px;">
                     <i data-lucide="play"></i> Play
                 </button>
-                <button class="btn-add-to-queue" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add album to queue" style="margin-right: 8px;">
-                    <i data-lucide="list-plus"></i> Add to Queue
+                <button class="btn-action btn-queue" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add album to queue" style="margin-right: 8px;">
+                    <i data-lucide="list-plus"></i>
                 </button>
                 <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
             </div>
