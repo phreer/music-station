@@ -1248,7 +1248,9 @@ function renderArtistAlbums(index, container) {
                         <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
                     </div>
                     <div id="artist-${index}-album-${albumIndex}-tracks" class="artist-album-tracks-container">
-                        <div class="loading-mini"><i data-lucide="refresh-cw" class="spin"></i> Loading tracks...</div>
+                        <div class="artist-album-tracks-inner">
+                            <div class="loading-mini"><i data-lucide="refresh-cw" class="spin"></i> Loading tracks...</div>
+                        </div>
                     </div>
                 </div>
             `}).join('')}
@@ -1272,7 +1274,7 @@ async function toggleArtistAlbumTracks(artistIndex, albumIndex, element) {
         );
 
         if (albumTracks.length > 0) {
-            tracksContainer.innerHTML = albumTracks.map((track, i) => `
+            tracksContainer.innerHTML = `<div class="artist-album-tracks-inner">` + albumTracks.map((track, i) => `
                 <div class="mini-track-item" onclick="event.stopPropagation(); playTrack('${track.id}')">
                     <div class="mini-track-num">${i + 1}</div>
                     <div class="mini-track-title">${escapeHtml(track.title)}</div>
@@ -1283,9 +1285,9 @@ async function toggleArtistAlbumTracks(artistIndex, albumIndex, element) {
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `).join('') + `</div>`;
         } else {
-            tracksContainer.innerHTML = '<p class="no-tracks">No tracks found in library</p>';
+            tracksContainer.innerHTML = '<div class="artist-album-tracks-inner"><p class="no-tracks">No tracks found in library</p></div>';
         }
     } else {
         element.classList.remove('expanded');
