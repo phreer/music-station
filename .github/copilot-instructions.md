@@ -21,6 +21,7 @@ Music Station is a Rust-based HTTP server that scans a music library folder, ext
 - Write modular, reusable functions with clear responsibilities
 - Document public functions and complex logic with comments, avoid trivial and unnecessary comments
 - Always keep code and documentation in sync
+- Don't write apparent documentation
 
 ## Key Commands
 ```bash
