@@ -1022,35 +1022,45 @@ function displayAlbums(albums) {
 
     albumList.innerHTML = albums.map(album => {
         const albumTrackIds = album.tracks.map(t => t.id);
+        const firstTrack = album.tracks[0];
+        const coverUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
+
         return `
         <div class="album-card" onclick="toggleAlbum(this)">
-            <div class="album-header">
-                <div style="display: flex; align-items: center; flex: 1;">
-                    <div class="album-icon"><i data-lucide="disc"></i></div>
-                    <div class="album-info">
-                        <h3>${escapeHtml(album.name)}</h3>
-                        <div class="artist-name"><i data-lucide="mic-2"></i> ${escapeHtml(album.artist)}</div>
-                    </div>
+            <div class="album-cover-wrapper">
+                ${coverUrl
+                ? `<img src="${coverUrl}" alt="${escapeHtml(album.name)}" class="album-cover-img" onerror="this.style.display='none'; this.parentElement.querySelector('.album-cover-placeholder').style.display='flex';">`
+                : ''}
+                <div class="album-cover-placeholder" ${coverUrl ? 'style="display: none;"' : ''}>
+                    <i data-lucide="disc"></i>
                 </div>
-                <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(album.artist)}')" title="Play album" style="margin-right: 8px;">
-                    <i data-lucide="play"></i> Play
-                </button>
-                <button class="btn-action btn-queue" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add album to queue" style="margin-right: 8px;">
-                    <i data-lucide="list-plus"></i>
-                </button>
-                <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
+                <div class="album-card-overlay">
+                    <button class="album-overlay-btn" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(album.artist)}')" title="Play album">
+                        <i data-lucide="play"></i>
+                    </button>
+                    <button class="album-overlay-btn" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add to queue">
+                        <i data-lucide="list-plus"></i>
+                    </button>
+                </div>
             </div>
-            <div class="album-meta">
-                <span><i data-lucide="music"></i> ${album.track_count} track${album.track_count !== 1 ? 's' : ''}</span>
-                <span><i data-lucide="clock"></i> ${formatDuration(album.total_duration_secs)}</span>
-            </div>
-            <div class="album-tracks">
-                ${album.tracks.map(track => `
-                    <div class="album-track-item">
-                        <span class="track-title-mini">${escapeHtml(track.title)}</span>
-                        <span class="track-duration-mini">${formatDuration(track.duration_secs)}</span>
-                    </div>
-                `).join('')}
+            <div class="album-card-content">
+                <h3>${escapeHtml(album.name)}</h3>
+                <div class="artist-name">${escapeHtml(album.artist)}</div>
+                
+                <div class="album-details-meta">
+                    <span><i data-lucide="music"></i> ${album.track_count} tracks</span>
+                    <span><i data-lucide="clock"></i> ${formatDuration(album.total_duration_secs)}</span>
+                </div>
+
+                <div class="album-tracks-list">
+                    ${album.tracks.map((track, index) => `
+                        <div class="album-track-row" onclick="event.stopPropagation(); playTrack('${track.id}')">
+                            <span class="album-track-number">${index + 1}</span>
+                            <span class="album-track-title">${escapeHtml(track.title)}</span>
+                            <span class="album-track-duration">${formatDuration(track.duration_secs)}</span>
+                        </div>
+                    `).join('')}
+                </div>
             </div>
         </div>
         `;
@@ -1059,7 +1069,17 @@ function displayAlbums(albums) {
 }
 
 function toggleAlbum(element) {
-    element.classList.toggle('expanded');
+    const isExpanded = element.classList.contains('expanded');
+
+    // Close all other expanded albums
+    document.querySelectorAll('.album-card.expanded').forEach(card => {
+        card.classList.remove('expanded');
+    });
+
+    if (!isExpanded) {
+        element.classList.add('expanded');
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 // Play entire album
@@ -1115,28 +1135,29 @@ function displayArtists(artists) {
 
     artistList.innerHTML = artists.map(artist => `
         <div class="artist-card" onclick="toggleArtist(this)">
-            <div class="artist-header">
-                <div class="artist-icon"><i data-lucide="mic-2"></i></div>
-                <div style="flex: 1;">
-                    <div class="artist-info">
-                        <h3>${escapeHtml(artist.name)}</h3>
-                        <div class="artist-meta">
-                            <span><i data-lucide="disc"></i> ${artist.album_count} album${artist.album_count !== 1 ? 's' : ''}</span>
-                            <span><i data-lucide="music"></i> ${artist.track_count} track${artist.track_count !== 1 ? 's' : ''}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
+            <div class="artist-image-wrapper">
+                <div class="artist-icon-large"><i data-lucide="user"></i></div>
             </div>
-            <div class="artist-albums">
-                ${artist.albums.map(album => `
-                    <div class="artist-album-item">
-                        <h4><i data-lucide="disc"></i> ${escapeHtml(album.name)}</h4>
-                        <div class="artist-album-meta">
-                            <i data-lucide="music"></i> ${album.track_count} tracks · <i data-lucide="clock"></i> ${formatDuration(album.total_duration_secs)}
+            <div class="artist-details-content">
+                <h3>${escapeHtml(artist.name)}</h3>
+                <div class="artist-card-meta">
+                    <span>${artist.album_count} albums</span> • 
+                    <span>${artist.track_count} tracks</span>
+                </div>
+                
+                <div class="artist-albums-grid">
+                    ${artist.albums.map(album => `
+                        <div class="artist-album-mini-card" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(artist.name)}')">
+                            <div class="artist-album-mini-icon"><i data-lucide="disc"></i></div>
+                            <div class="artist-album-mini-info">
+                                <h4>${escapeHtml(album.name)}</h4>
+                                <div class="artist-album-mini-meta">
+                                    ${album.track_count} tracks • ${formatDuration(album.total_duration_secs)}
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                `).join('')}
+                    `).join('')}
+                </div>
             </div>
         </div>
     `).join('');
@@ -1144,7 +1165,17 @@ function displayArtists(artists) {
 }
 
 function toggleArtist(element) {
-    element.classList.toggle('expanded');
+    const isExpanded = element.classList.contains('expanded');
+
+    // Close all other expanded artists
+    document.querySelectorAll('.artist-card.expanded').forEach(card => {
+        card.classList.remove('expanded');
+    });
+
+    if (!isExpanded) {
+        element.classList.add('expanded');
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 }
 
 // Load stats
