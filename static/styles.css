@@ -513,7 +513,7 @@ header h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 2000;
 }
 
 .modal-content {
@@ -981,7 +981,7 @@ header h1 {
     background: linear-gradient(135deg, #0f1419 0%, #1e1e1e 100%);
     border-top: 2px solid #0066cc;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    z-index: 1150;
     display: none;
     flex-direction: column;
 }
@@ -1556,7 +1556,7 @@ header h1 {
     width: 350px;
     background: var(--card-bg);
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.2);
-    z-index: 1001;
+    z-index: 1100;
     display: flex;
     flex-direction: column;
     animation: slideInRight 0.3s ease;
@@ -1571,10 +1571,16 @@ header h1 {
     width: 350px;
     background: var(--card-bg);
     box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2);
-    z-index: 1001;
+    z-index: 1100;
     display: flex;
     flex-direction: column;
     animation: slideInLeft 0.3s ease;
+}
+
+/* Adjust sidebars when player is visible to avoid overlap */
+body.player-visible .lyrics-sidebar,
+body.player-visible .play-queue-panel {
+    bottom: 90px;
 }
 
 @keyframes slideInLeft {
@@ -1612,7 +1618,7 @@ header h1 {
     cursor: ew-resize;
     background: transparent;
     transition: background 0.2s;
-    z-index: 1002;
+    z-index: 1101;
 }
 
 .resize-handle-right:hover,

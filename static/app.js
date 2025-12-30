@@ -198,7 +198,8 @@ function playTrack(trackId, skipQueueUpdate = false) {
     // Update UI
     document.getElementById('playerTitle').textContent = track.title || 'Unknown Title';
     document.getElementById('playerArtist').textContent = track.artist || 'Unknown Artist';
-    document.getElementById('musicPlayer').style.display = 'block';
+    document.getElementById('musicPlayer').style.display = 'flex';
+    document.body.classList.add('player-visible');
 
     // Add visual feedback to current track
     highlightCurrentTrack(trackId);
@@ -257,6 +258,7 @@ function stopPlayback() {
     audio.pause();
     audio.currentTime = 0;
     document.getElementById('musicPlayer').style.display = 'none';
+    document.body.classList.remove('player-visible');
     isPlaying = false;
     updatePlayPauseIcon();
     highlightCurrentTrack(null);
