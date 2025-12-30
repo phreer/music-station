@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Station - Web Client</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
@@ -13,31 +14,34 @@
         <header>
             <div class="header-content">
                 <div class="header-title">
-                    <h1>🎵 Music Station</h1>
+                    <h1>Music Station</h1>
                     <p class="subtitle">Your Personal Music Library</p>
                 </div>
                 <button id="themeToggle" class="theme-toggle" title="Toggle theme">
-                    <span class="theme-icon">🌙</span>
+                    <i data-lucide="moon" class="theme-icon"></i>
                 </button>
             </div>
         </header>
 
         <!-- Navigation Tabs -->
         <nav class="tabs">
-            <button class="tab-btn active" data-tab="tracks">📀 Tracks</button>
-            <button class="tab-btn" data-tab="albums">💿 Albums</button>
-            <button class="tab-btn" data-tab="artists">🎤 Artists</button>
-            <button class="tab-btn" data-tab="playlists">🎼 Playlists</button>
-            <button class="tab-btn" data-tab="stats">📊 Stats</button>
+            <button class="tab-btn active" data-tab="tracks"><i data-lucide="music"></i> Tracks</button>
+            <button class="tab-btn" data-tab="albums"><i data-lucide="disc"></i> Albums</button>
+            <button class="tab-btn" data-tab="artists"><i data-lucide="mic-2"></i> Artists</button>
+            <button class="tab-btn" data-tab="playlists"><i data-lucide="list-music"></i> Playlists</button>
+            <button class="tab-btn" data-tab="stats"><i data-lucide="bar-chart-3"></i> Stats</button>
         </nav>
 
         <!-- Tracks View -->
         <div id="tracks-view" class="tab-content active">
             <div class="controls">
-                <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Library</button>
-                <button id="autoFetchLyricsBtn" class="btn btn-secondary">🎵 Auto-Fetch Lyrics</button>
-                <input type="text" id="searchInput" class="search-input"
-                    placeholder="🔍 Search tracks, artists, albums..." />
+                <button id="refreshBtn" class="btn btn-primary"><i data-lucide="refresh-cw"></i> Refresh Library</button>
+                <button id="autoFetchLyricsBtn" class="btn btn-secondary"><i data-lucide="wand-2"></i> Auto-Fetch Lyrics</button>
+                <div class="search-container">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="searchInput" class="search-input"
+                        placeholder="Search tracks, artists, albums..." />
+                </div>
                 <span id="trackCount" class="track-count"></span>
             </div>
 
@@ -65,7 +69,7 @@
         <div id="playlists-view" class="tab-content">
             <div class="playlists-header">
                 <h2>My Playlists</h2>
-                <button id="createPlaylistBtn" class="btn btn-primary">➕ Create Playlist</button>
+                <button id="createPlaylistBtn" class="btn btn-primary"><i data-lucide="plus"></i> Create Playlist</button>
             </div>
             <div id="playlist-list" class="playlist-list"></div>
         </div>
@@ -83,9 +87,9 @@
             <div class="player-info">
                 <button id="lyricsToggleBtn" class="lyrics-toggle-btn-inline" onclick="togglePlayerLyrics()"
                     title="Toggle lyrics" style="display: none;">
-                    📝
+                    <i data-lucide="file-text"></i>
                 </button>
-                <div class="player-cover">🎵</div>
+                <div class="player-cover"><i data-lucide="music"></i></div>
                 <div class="player-track-info">
                     <div id="playerTitle" class="player-title">No track selected</div>
                     <div id="playerArtist" class="player-artist">—</div>
@@ -95,12 +99,12 @@
             <!-- Center: Controls & Progress -->
             <div class="player-center">
                 <div class="player-controls">
-                    <button id="prevBtn" class="control-btn">⏮️</button>
+                    <button id="prevBtn" class="control-btn"><i data-lucide="skip-back"></i></button>
                     <button id="playPauseBtn" class="control-btn play-pause">
-                        <span id="playPauseIcon">▶️</span>
+                        <span id="playPauseIcon"><i data-lucide="play"></i></span>
                     </button>
-                    <button id="nextBtn" class="control-btn">⏭️</button>
-                    <button id="stopBtn" class="control-btn">⏹️</button>
+                    <button id="nextBtn" class="control-btn"><i data-lucide="skip-forward"></i></button>
+                    <button id="stopBtn" class="control-btn"><i data-lucide="square"></i></button>
                 </div>
 
                 <div class="player-progress">
@@ -115,7 +119,7 @@
 
             <!-- Right: Volume -->
             <div class="player-volume">
-                <span>🔊</span>
+                <i data-lucide="volume-2"></i>
                 <input type="range" id="volumeControl" class="volume-slider" min="0" max="100" value="100">
             </div>
         </div>
@@ -126,8 +130,8 @@
     <!-- Lyrics Sidebar -->
     <div id="playerLyricsContainer" class="lyrics-sidebar" style="display: none;">
         <div class="lyrics-sidebar-header">
-            <h3>📝 Lyrics</h3>
-            <button class="btn-icon" onclick="togglePlayerLyrics()" title="Close lyrics">✖️</button>
+            <h3><i data-lucide="file-text"></i> Lyrics</h3>
+            <button class="btn-icon" onclick="togglePlayerLyrics()" title="Close lyrics"><i data-lucide="x"></i></button>
         </div>
         <div id="playerLyricsContent" class="lyrics-sidebar-content"></div>
         <div id="lyricsResizeHandle" class="resize-handle-right"></div>
@@ -136,10 +140,10 @@
     <!-- Play Queue Panel -->
     <div id="playQueuePanel" class="play-queue-panel" style="display: none;">
         <div class="play-queue-header">
-            <h3>🎵 Play Queue</h3>
+            <h3><i data-lucide="list-music"></i> Play Queue</h3>
             <div class="play-queue-actions">
-                <button class="btn-icon" onclick="clearQueue()" title="Clear queue">🗑️</button>
-                <button class="btn-icon" onclick="toggleQueue()" title="Close queue">✖️</button>
+                <button class="btn-icon" onclick="clearQueue()" title="Clear queue"><i data-lucide="trash-2"></i></button>
+                <button class="btn-icon" onclick="toggleQueue()" title="Close queue"><i data-lucide="x"></i></button>
             </div>
         </div>
         <div class="play-queue-info">
@@ -148,7 +152,7 @@
         </div>
         <div id="queueList" class="queue-list">
             <div class="queue-empty">
-                <div class="queue-empty-icon">🎵</div>
+                <div class="queue-empty-icon"><i data-lucide="music"></i></div>
                 <p>Queue is empty</p>
                 <p class="queue-empty-hint">Add tracks to start playing</p>
             </div>
@@ -158,7 +162,7 @@
     <!-- Queue Toggle Button (Fixed Position) -->
     <button id="queueToggleBtn" class="queue-toggle-btn" onclick="toggleQueue()" title="Show/Hide Queue"
         style="display: none;">
-        <span class="queue-icon">📋</span>
+        <i data-lucide="list-music" class="queue-icon"></i>
         <span id="queueBadge" class="queue-badge">0</span>
     </button>
 
@@ -166,7 +170,7 @@
     <div id="createPlaylistModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Create New Playlist</h2>
+                <h2><i data-lucide="list-plus"></i> Create New Playlist</h2>
                 <button class="close-btn" onclick="closeCreatePlaylistModal()">&times;</button>
             </div>
             <form id="createPlaylistForm">
@@ -182,7 +186,7 @@
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeCreatePlaylistModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">✨ Create</button>
+                    <button type="submit" class="btn btn-primary"><i data-lucide="sparkles"></i> Create</button>
                 </div>
             </form>
         </div>
@@ -192,13 +196,13 @@
     <div id="addToPlaylistModal" class="modal" style="display: none;">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Add to Playlist</h2>
+                <h2><i data-lucide="plus-circle"></i> Add to Playlist</h2>
                 <button class="close-btn" onclick="closeAddToPlaylistModal()">&times;</button>
             </div>
             <div class="playlist-selection">
                 <p class="modal-subtitle">Select a playlist:</p>
                 <div id="playlistSelectionList" class="playlist-selection-list"></div>
-                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()">➕ Create New
+                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()"><i data-lucide="plus"></i> Create New
                     Playlist</button>
             </div>
         </div>
@@ -208,7 +212,7 @@
     <div id="editModal" class="modal" style="display: none;">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <h2>Edit Track Metadata</h2>
+                <h2><i data-lucide="edit-3"></i> Edit Track Metadata</h2>
                 <button class="close-btn" onclick="closeEditModal()">&times;</button>
             </div>
             <form id="editForm">
@@ -282,11 +286,11 @@
                         <div class="cover-upload">
                             <input type="file" id="coverImageInput" accept="image/*" style="display: none;">
                             <button type="button" class="btn btn-secondary btn-small" onclick="selectCoverImage()">
-                                📷 Choose Image
+                                <i data-lucide="image"></i> Choose Image
                             </button>
                             <button type="button" class="btn btn-secondary btn-small" id="removeCoverBtn"
                                 onclick="removeCover()" style="display: none;">
-                                🗑️ Remove Cover
+                                <i data-lucide="trash-2"></i> Remove Cover
                             </button>
                         </div>
                     </div>
@@ -296,13 +300,13 @@
                     <h3>Custom Fields</h3>
                     <div id="customFieldsList" class="custom-fields-list"></div>
                     <button type="button" class="btn btn-secondary btn-small" onclick="addCustomField()">
-                        ➕ Add Custom Field
+                        <i data-lucide="plus"></i> Add Custom Field
                     </button>
                 </div>
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+                    <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Changes</button>
                 </div>
             </form>
         </div>
@@ -312,7 +316,7 @@
     <div id="lyricsModal" class="modal" style="display: none;">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <h2>📝 Lyrics</h2>
+                <h2><i data-lucide="file-text"></i> Lyrics</h2>
                 <button class="close-btn" onclick="closeLyricsModal()">&times;</button>
             </div>
 
@@ -324,10 +328,10 @@
 
                 <div class="lyrics-tabs">
                     <button class="lyrics-tab-btn active" data-tab="view" onclick="switchLyricsTab('view')">
-                        👁️ View
+                        <i data-lucide="eye"></i> View
                     </button>
                     <button class="lyrics-tab-btn" data-tab="edit" onclick="switchLyricsTab('edit')">
-                        ✏️ Edit
+                        <i data-lucide="edit-2"></i> Edit
                     </button>
                 </div>
 
@@ -335,9 +339,9 @@
                 <div id="lyricsViewTab" class="lyrics-tab-content active">
                     <div id="lyricsDisplay" class="lyrics-display">
                         <div class="lyrics-empty">
-                            <div class="lyrics-empty-icon">📄</div>
+                            <div class="lyrics-empty-icon"><i data-lucide="file-text"></i></div>
                             <p>No lyrics available for this track</p>
-                            <button class="btn btn-primary" onclick="switchLyricsTab('edit')">➕ Add Lyrics</button>
+                            <button class="btn btn-primary" onclick="switchLyricsTab('edit')"><i data-lucide="plus"></i> Add Lyrics</button>
                         </div>
                     </div>
                 </div>
@@ -377,14 +381,14 @@
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="openLyricsSearchModal()"
                             id="searchLyricsBtn">
-                            🔍 Search Online
+                            <i data-lucide="search"></i> Search Online
                         </button>
                         <button type="button" class="btn btn-danger" onclick="deleteLyrics()" id="deleteLyricsBtn"
                             style="display: none;">
-                            🗑️ Delete Lyrics
+                            <i data-lucide="trash-2"></i> Delete Lyrics
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="closeLyricsModal()">Cancel</button>
-                        <button type="button" class="btn btn-primary" onclick="saveLyrics()">💾 Save Lyrics</button>
+                        <button type="button" class="btn btn-primary" onclick="saveLyrics()"><i data-lucide="save"></i> Save Lyrics</button>
                     </div>
                 </div>
             </div>
@@ -395,7 +399,7 @@
     <div id="lyricsSearchModal" class="modal" style="display: none;">
         <div class="modal-content modal-wide">
             <div class="modal-header">
-                <h2>🔍 Search Lyrics Online</h2>
+                <h2><i data-lucide="search"></i> Search Lyrics Online</h2>
                 <button class="close-btn" onclick="closeLyricsSearchModal()">&times;</button>
             </div>
 
@@ -425,7 +429,7 @@
 
                     <div class="form-actions">
                         <button type="button" class="btn btn-primary" onclick="performLyricsSearch()">
-                            🔍 Search
+                            <i data-lucide="search"></i> Search
                         </button>
                     </div>
                 </div>
@@ -449,7 +453,7 @@
     <div id="autoFetchModal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h2>🎵 Auto-Fetch Lyrics</h2>
+                <h2><i data-lucide="music"></i> Auto-Fetch Lyrics</h2>
                 <button class="close-btn" onclick="closeAutoFetchModal()">&times;</button>
             </div>
 
@@ -479,11 +483,11 @@
 
                 <div class="form-actions">
                     <button id="autoFetchCancelBtn" class="btn btn-secondary" onclick="cancelAutoFetch()">
-                        ⏸️ Cancel
+                        <i data-lucide="pause"></i> Cancel
                     </button>
                     <button id="autoFetchCloseBtn" class="btn btn-primary" onclick="closeAutoFetchModal()"
                         style="display: none;">
-                        ✓ Close
+                        <i data-lucide="check"></i> Close
                     </button>
                 </div>
             </div>

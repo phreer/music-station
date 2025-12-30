@@ -293,7 +293,8 @@ function updateDuration() {
 
 function updatePlayPauseIcon() {
     const icon = document.getElementById('playPauseIcon');
-    icon.textContent = isPlaying ? '⏸️' : '▶️';
+    icon.innerHTML = isPlaying ? '<i data-lucide="pause"></i>' : '<i data-lucide="play"></i>';
+    lucide.createIcons();
 }
 
 function highlightCurrentTrack(trackId) {
@@ -542,6 +543,7 @@ function renderFilteredTracks() {
             </table>
         </div>
     `;
+    lucide.createIcons();
 }
 
 function renderTracks(append = false) {
@@ -586,7 +588,7 @@ function renderTracks(append = false) {
                     <div id="loadMoreIndicator" style="text-align: center; padding: 20px;">
                         <div style="color: #666; margin-bottom: 10px;">Scroll down to load more tracks...</div>
                         <button class="btn btn-secondary btn-small" onclick="loadTracks(true)" style="margin-top: 10px;">
-                            ⬇️ Load More Tracks
+                            <i data-lucide="chevron-down"></i> Load More Tracks
                         </button>
                     </div>
                 ` : ''}
@@ -614,18 +616,19 @@ function renderTracks(append = false) {
             const indicator = document.getElementById('loadMoreIndicator');
             if (indicator) {
                 if (allTracksLoaded) {
-                    indicator.innerHTML = `<div style="color: #999; padding: 20px;">✅ All ${totalTracks} tracks loaded</div>`;
+                    indicator.innerHTML = `<div style="color: #999; padding: 20px;"><i data-lucide="check"></i> All ${totalTracks} tracks loaded</div>`;
                 } else {
                     indicator.innerHTML = `
                         <div style="color: #666; margin-bottom: 10px;">Loaded ${tracks.length} of ${totalTracks} tracks...</div>
                         <button class="btn btn-secondary btn-small" onclick="loadTracks(true)">
-                            ⬇️ Load More Tracks
+                            <i data-lucide="chevron-down"></i> Load More Tracks
                         </button>
                     `;
                 }
             }
         }
     }
+    lucide.createIcons();
 }
 
 function createTrackRow(track) {
@@ -639,8 +642,8 @@ function createTrackRow(track) {
 
     const coverCell = coverUrl
         ? `<img src="${coverUrl}" alt="Cover" class="track-cover-thumb" onerror="this.style.display='none'; this.parentElement.querySelector('.track-cover-placeholder').style.display='flex';">
-           <div class="track-cover-placeholder" style="display: none;">📀</div>`
-        : `<div class="track-cover-placeholder">📀</div>`;
+           <div class="track-cover-placeholder" style="display: none;"><i data-lucide="disc"></i></div>`
+        : `<div class="track-cover-placeholder"><i data-lucide="disc"></i></div>`;
 
     return `
         <tr class="track-row" data-track-id="${track.id}">
@@ -649,7 +652,7 @@ function createTrackRow(track) {
             </td>
             <td class="track-play-cell">
                 <button class="play-track-btn" onclick="playTrack('${track.id}')" title="Play this track">
-                    ▶️
+                    <i data-lucide="play"></i>
                 </button>
             </td>
             <td class="track-title-cell">${escapeHtml(title)}</td>
@@ -660,19 +663,19 @@ function createTrackRow(track) {
             <td class="track-size-cell">${fileSize}</td>
             <td class="track-actions-cell">
                 <button class="btn btn-primary btn-small" onclick="openEditModal('${track.id}')" title="Edit metadata">
-                    ✏️
+                    <i data-lucide="edit-3"></i>
                 </button>
                 <button class="btn ${track.has_lyrics ? 'btn-primary' : 'btn-secondary'} btn-small" onclick="openLyricsModal('${track.id}')" title="${track.has_lyrics ? 'View/Edit lyrics' : 'Add lyrics'}">
-                    ${track.has_lyrics ? '📝' : '📄'}
+                    <i data-lucide="${track.has_lyrics ? 'file-text' : 'file-plus'}"></i>
                 </button>
                 <button class="btn-add-to-queue" onclick="addToQueue('${track.id}')" title="Add to queue">
-                    📋
+                    <i data-lucide="list-plus"></i>
                 </button>
                 <button class="btn-add-to-playlist" onclick="openAddToPlaylistModal('${track.id}')" title="Add to playlist">
-                    ➕
+                    <i data-lucide="plus"></i>
                 </button>
                 <a href="${streamUrl}" target="_blank" class="btn btn-secondary btn-small" style="text-decoration: none;" title="Download track" download>
-                    💾
+                    <i data-lucide="download"></i>
                 </a>
             </td>
         </tr>
@@ -914,11 +917,12 @@ function addCustomField() {
         <div class="custom-field-item" id="${fieldId}">
             <input type="text" class="custom-field-key" placeholder="Field name (e.g., LABEL)">
             <input type="text" class="custom-field-value" placeholder="Field value">
-            <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
+            <button type="button" onclick="removeCustomField('${fieldId}')" title="Remove field"><i data-lucide="x"></i></button>
         </div>
     `;
 
     customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
+    lucide.createIcons();
 }
 
 function addCustomFieldWithData(key, value) {
@@ -929,11 +933,12 @@ function addCustomFieldWithData(key, value) {
         <div class="custom-field-item" id="${fieldId}">
             <input type="text" class="custom-field-key" placeholder="Field name" value="${escapeHtml(key)}">
             <input type="text" class="custom-field-value" placeholder="Field value" value="${escapeHtml(value)}">
-            <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
+            <button type="button" onclick="removeCustomField('${fieldId}')" title="Remove field"><i data-lucide="x"></i></button>
         </div>
     `;
 
     customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
+    lucide.createIcons();
 }
 
 function removeCustomField(fieldId) {
@@ -1019,23 +1024,23 @@ function displayAlbums(albums) {
         <div class="album-card" onclick="toggleAlbum(this)">
             <div class="album-header">
                 <div style="display: flex; align-items: center; flex: 1;">
-                    <div class="album-icon">💿</div>
+                    <div class="album-icon"><i data-lucide="disc"></i></div>
                     <div class="album-info">
                         <h3>${escapeHtml(album.name)}</h3>
-                        <div class="artist-name">🎤 ${escapeHtml(album.artist)}</div>
+                        <div class="artist-name"><i data-lucide="mic-2"></i> ${escapeHtml(album.artist)}</div>
                     </div>
                 </div>
                 <button class="btn btn-primary btn-small" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(album.artist)}')" title="Play album" style="margin-right: 8px;">
-                    ▶️ Play
+                    <i data-lucide="play"></i> Play
                 </button>
                 <button class="btn-add-to-queue" onclick="event.stopPropagation(); addMultipleToQueue(${JSON.stringify(albumTrackIds)})" title="Add album to queue" style="margin-right: 8px;">
-                    📋 Add to Queue
+                    <i data-lucide="list-plus"></i> Add to Queue
                 </button>
-                <div class="expand-indicator">▼</div>
+                <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
             </div>
             <div class="album-meta">
-                <span>📀 ${album.track_count} track${album.track_count !== 1 ? 's' : ''}</span>
-                <span>⏱️ ${formatDuration(album.total_duration_secs)}</span>
+                <span><i data-lucide="music"></i> ${album.track_count} track${album.track_count !== 1 ? 's' : ''}</span>
+                <span><i data-lucide="clock"></i> ${formatDuration(album.total_duration_secs)}</span>
             </div>
             <div class="album-tracks">
                 ${album.tracks.map(track => `
@@ -1048,6 +1053,7 @@ function displayAlbums(albums) {
         </div>
         `;
     }).join('');
+    lucide.createIcons();
 }
 
 function toggleAlbum(element) {
@@ -1108,30 +1114,31 @@ function displayArtists(artists) {
     artistList.innerHTML = artists.map(artist => `
         <div class="artist-card" onclick="toggleArtist(this)">
             <div class="artist-header">
-                <div class="artist-icon">🎤</div>
+                <div class="artist-icon"><i data-lucide="mic-2"></i></div>
                 <div style="flex: 1;">
                     <div class="artist-info">
                         <h3>${escapeHtml(artist.name)}</h3>
                         <div class="artist-meta">
-                            <span>💿 ${artist.album_count} album${artist.album_count !== 1 ? 's' : ''}</span>
-                            <span>📀 ${artist.track_count} track${artist.track_count !== 1 ? 's' : ''}</span>
+                            <span><i data-lucide="disc"></i> ${artist.album_count} album${artist.album_count !== 1 ? 's' : ''}</span>
+                            <span><i data-lucide="music"></i> ${artist.track_count} track${artist.track_count !== 1 ? 's' : ''}</span>
                         </div>
                     </div>
                 </div>
-                <div class="expand-indicator">▼</div>
+                <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
             </div>
             <div class="artist-albums">
                 ${artist.albums.map(album => `
                     <div class="artist-album-item">
-                        <h4>💿 ${escapeHtml(album.name)}</h4>
+                        <h4><i data-lucide="disc"></i> ${escapeHtml(album.name)}</h4>
                         <div class="artist-album-meta">
-                            📀 ${album.track_count} tracks · ⏱️ ${formatDuration(album.total_duration_secs)}
+                            <i data-lucide="music"></i> ${album.track_count} tracks · <i data-lucide="clock"></i> ${formatDuration(album.total_duration_secs)}
                         </div>
                     </div>
                 `).join('')}
             </div>
         </div>
     `).join('');
+    lucide.createIcons();
 }
 
 function toggleArtist(element) {
@@ -1161,42 +1168,43 @@ function displayStats(stats) {
     statsDisplay.innerHTML = `
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-icon">📀</div>
+                <div class="stat-icon"><i data-lucide="music"></i></div>
                 <div class="stat-value">${stats.total_tracks}</div>
                 <div class="stat-label">Tracks</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">💿</div>
+                <div class="stat-icon"><i data-lucide="disc"></i></div>
                 <div class="stat-value">${stats.total_albums}</div>
                 <div class="stat-label">Albums</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">🎤</div>
+                <div class="stat-icon"><i data-lucide="mic-2"></i></div>
                 <div class="stat-value">${stats.total_artists}</div>
                 <div class="stat-label">Artists</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">⏱️</div>
+                <div class="stat-icon"><i data-lucide="clock"></i></div>
                 <div class="stat-value">${totalDuration}</div>
                 <div class="stat-label">Total Duration</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">💾</div>
+                <div class="stat-icon"><i data-lucide="hard-drive"></i></div>
                 <div class="stat-value">${totalSize}</div>
                 <div class="stat-label">Total Size</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">📊</div>
+                <div class="stat-icon"><i data-lucide="bar-chart-3"></i></div>
                 <div class="stat-value">${avgTrackSize}</div>
                 <div class="stat-label">Avg Track Size</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">▶️</div>
+                <div class="stat-icon"><i data-lucide="play-circle"></i></div>
                 <div class="stat-value">${stats.total_plays || 0}</div>
                 <div class="stat-label">Total Plays</div>
             </div>
         </div>
     `;
+    lucide.createIcons();
 }
 
 function formatFileSizeBytes(bytes) {
@@ -1254,10 +1262,11 @@ function displayPlaylists() {
     if (playlists.length === 0) {
         playlistList.innerHTML = `
             <div class="empty-playlist">
-                <div class="empty-playlist-icon">🎵</div>
+                <div class="empty-playlist-icon"><i data-lucide="list-music"></i></div>
                 <p>No playlists yet. Create your first playlist!</p>
             </div>
         `;
+        lucide.createIcons();
         return;
     }
 
@@ -1271,25 +1280,25 @@ function displayPlaylists() {
         return `
             <div class="playlist-card" data-playlist-id="${pl.id}">
                 <div class="playlist-card-header">
-                    <div class="playlist-icon">🎼</div>
+                    <div class="playlist-icon"><i data-lucide="music"></i></div>
                     <div class="playlist-info">
                         <h3 class="playlist-name">${escapeHtml(pl.name)}</h3>
                         ${pl.description ? `<p class="playlist-description">${escapeHtml(pl.description)}</p>` : ''}
                     </div>
                 </div>
                 <div class="playlist-meta">
-                    <span>📀 ${trackCount} track${trackCount !== 1 ? 's' : ''}</span>
-                    <span>⏱️ ${formatDuration(totalDuration)}</span>
+                    <span><i data-lucide="music"></i> ${trackCount} track${trackCount !== 1 ? 's' : ''}</span>
+                    <span><i data-lucide="clock"></i> ${formatDuration(totalDuration)}</span>
                 </div>
                 <div class="playlist-actions">
                     <button class="btn btn-primary btn-small" onclick="playPlaylist('${pl.id}')" ${trackCount === 0 ? 'disabled' : ''}>
-                        ▶️ Play
+                        <i data-lucide="play"></i> Play
                     </button>
                     <button class="btn btn-secondary btn-small" onclick="togglePlaylistTracks('${pl.id}')">
-                        👁️ View
+                        <i data-lucide="eye"></i> View
                     </button>
                     <button class="btn btn-secondary btn-small" onclick="deletePlaylist('${pl.id}')">
-                        🗑️ Delete
+                        <i data-lucide="trash-2"></i> Delete
                     </button>
                 </div>
                 <div class="playlist-tracks">
@@ -1303,8 +1312,8 @@ function displayPlaylists() {
                                     <div class="playlist-track-artist">${escapeHtml(track.artist || 'Unknown Artist')}</div>
                                 </div>
                                 <div class="playlist-track-actions">
-                                    <button onclick="playTrackFromPlaylist('${pl.id}', '${trackId}')" title="Play">▶️</button>
-                                    <button onclick="removeFromPlaylist('${pl.id}', '${trackId}')" title="Remove">❌</button>
+                                    <button onclick="playTrackFromPlaylist('${pl.id}', '${trackId}')" title="Play"><i data-lucide="play"></i></button>
+                                    <button onclick="removeFromPlaylist('${pl.id}', '${trackId}')" title="Remove"><i data-lucide="x"></i></button>
                                 </div>
                             </div>
                         `;
@@ -1313,6 +1322,7 @@ function displayPlaylists() {
             </div>
         `;
     }).join('');
+    lucide.createIcons();
 }
 
 // Toggle playlist tracks visibility
@@ -1419,11 +1429,12 @@ function openAddToPlaylistModal(trackId) {
     } else {
         listContainer.innerHTML = playlists.map(pl => `
             <div class="playlist-selection-item" onclick="addTrackToPlaylist('${pl.id}')">
-                <span class="playlist-icon">🎼</span>
+                <span class="playlist-icon"><i data-lucide="list-music"></i></span>
                 <span class="playlist-name">${escapeHtml(pl.name)}</span>
                 <span class="playlist-track-count">${pl.tracks.length} tracks</span>
             </div>
         `).join('');
+        lucide.createIcons();
     }
 
     modal.style.display = 'flex';
@@ -1603,13 +1614,14 @@ function updateQueueDisplay() {
     if (playQueue.length === 0) {
         queueList.innerHTML = `
             <div class="queue-empty">
-                <div class="queue-empty-icon">🎵</div>
+                <div class="queue-empty-icon"><i data-lucide="music"></i></div>
                 <p>Queue is empty</p>
                 <p class="queue-empty-hint">Add tracks to start playing</p>
             </div>
         `;
         queueCount.textContent = '0 tracks';
         queueDuration.textContent = '0:00';
+        lucide.createIcons();
         return;
     }
 
@@ -1640,7 +1652,7 @@ function updateQueueDisplay() {
                 <div class="queue-item-cover">
                     ${coverUrl
                 ? `<img src="${coverUrl}" alt="Cover" onerror="this.style.display='none';">`
-                : '📀'}
+                : '<i data-lucide="disc"></i>'}
                 </div>
                 <div class="queue-item-info">
                     <div class="queue-item-title">${escapeHtml(track.title || 'Unknown Title')}</div>
@@ -1648,11 +1660,12 @@ function updateQueueDisplay() {
                 </div>
                 <div class="queue-item-duration">${track.duration_secs ? formatDuration(track.duration_secs) : '--:--'}</div>
                 <button class="queue-item-remove" onclick="event.stopPropagation(); removeFromQueue(${index})" title="Remove from queue">
-                    ✖️
+                    <i data-lucide="x"></i>
                 </button>
             </div>
         `;
     }).join('');
+    lucide.createIcons();
 }
 
 // Move track up in queue
@@ -1790,7 +1803,7 @@ function displayLyricsInModal(lyrics) {
         const hasWordTiming = lines.some(l => l.hasWordTiming);
 
         display.innerHTML = `
-            ${hasWordTiming ? '<div class="lyrics-format-badge">🎤 Word-level synchronized lyrics (Karaoke mode)</div>' : ''}
+            ${hasWordTiming ? '<div class="lyrics-format-badge"><i data-lucide="mic"></i> Word-level synchronized lyrics (Karaoke mode)</div>' : ''}
             <div class="lyrics-content lrc-lyrics">
                 ${lines.map((line, lineIndex) => {
             if (line.words && line.words.length > 0) {
@@ -1843,17 +1856,19 @@ function displayLyricsInModal(lyrics) {
             </div>
         `;
     }
+    lucide.createIcons();
 }
 
 // Clear lyrics modal
 function clearLyricsModal() {
     document.getElementById('lyricsDisplay').innerHTML = `
         <div class="lyrics-empty">
-            <div class="lyrics-empty-icon">📄</div>
+            <div class="lyrics-empty-icon"><i data-lucide="file-text"></i></div>
             <p>No lyrics available for this track</p>
-            <button class="btn btn-primary" onclick="switchLyricsTab('edit')">➕ Add Lyrics</button>
+            <button class="btn btn-primary" onclick="switchLyricsTab('edit')"><i data-lucide="plus"></i> Add Lyrics</button>
         </div>
     `;
+    lucide.createIcons();
 }
 
 // Parse LRC lyrics (line-level only)
@@ -2400,10 +2415,10 @@ function displayLyricsSearchResults(results, provider) {
 
         item.innerHTML = `
             <div class="lyrics-search-result-title">${escapeHtml(result.title)}</div>
-            <div class="lyrics-search-result-artist">👤 ${escapeHtml(result.artist)}</div>
+            <div class="lyrics-search-result-artist"><i data-lucide="user"></i> ${escapeHtml(result.artist)}</div>
             <div class="lyrics-search-result-meta">
-                ${result.album ? `<div class="lyrics-search-result-album">💿 ${escapeHtml(result.album)}</div>` : ''}
-                <div class="lyrics-search-result-duration">⏱️ ${duration}</div>
+                ${result.album ? `<div class="lyrics-search-result-album"><i data-lucide="disc"></i> ${escapeHtml(result.album)}</div>` : ''}
+                <div class="lyrics-search-result-duration"><i data-lucide="clock"></i> ${duration}</div>
                 <span class="lyrics-search-result-provider">${provider}</span>
             </div>
         `;
@@ -2412,6 +2427,7 @@ function displayLyricsSearchResults(results, provider) {
     });
 
     document.getElementById('lyricsSearchResults').style.display = 'block';
+    lucide.createIcons();
 }
 
 // Fetch and apply lyrics from selected result
@@ -2494,7 +2510,8 @@ function toggleTheme() {
 function updateThemeIcon(isDarkMode) {
     const themeIcon = document.querySelector('.theme-icon');
     if (themeIcon) {
-        themeIcon.textContent = isDarkMode ? '☀️' : '🌙';
+        themeIcon.innerHTML = isDarkMode ? '<i data-lucide="sun"></i>' : '<i data-lucide="moon"></i>';
+        lucide.createIcons();
     }
 }
 
@@ -2516,7 +2533,7 @@ async function startAutoFetchLyrics() {
     const tracksWithoutLyrics = fullTracks.filter(track => !track.has_lyrics && track.title);
 
     if (tracksWithoutLyrics.length === 0) {
-        alert('All tracks already have lyrics! 🎉');
+        alert('All tracks already have lyrics!');
         return;
     }
 
@@ -2566,7 +2583,7 @@ async function startAutoFetchLyrics() {
     document.getElementById('autoFetchCloseBtn').style.display = 'inline-block';
 
     if (!autoFetchState.isCancelled) {
-        addAutoFetchLog('✅ Auto-fetch completed!', 'success');
+        addAutoFetchLog('Auto-fetch completed!', 'success');
     }
 
     // Refresh tracks to update has_lyrics flags
@@ -2601,7 +2618,7 @@ async function processTrackForAutoFetch(track) {
 
         if (results.length === 0) {
             autoFetchState.skipped++;
-            addAutoFetchLog(`⊘ No results: ${trackTitle}`, 'skip');
+            addAutoFetchLog(`No results: ${trackTitle}`, 'skip');
             return;
         }
 
@@ -2625,7 +2642,7 @@ async function processTrackForAutoFetch(track) {
 
         if (!bestMatch) {
             autoFetchState.skipped++;
-            addAutoFetchLog(`⊘ No match (duration): ${trackTitle}`, 'skip');
+            addAutoFetchLog(`No match (duration): ${trackTitle}`, 'skip');
             return;
         }
 
@@ -2659,11 +2676,11 @@ async function processTrackForAutoFetch(track) {
         // Success
         autoFetchState.succeeded++;
         track.has_lyrics = true; // Update local state
-        addAutoFetchLog(`✓ Success: ${trackTitle}`, 'success');
+        addAutoFetchLog(`Success: ${trackTitle}`, 'success');
 
     } catch (error) {
         autoFetchState.failed++;
-        addAutoFetchLog(`✗ Error: ${trackTitle} - ${error.message}`, 'error');
+        addAutoFetchLog(`Error: ${trackTitle} - ${error.message}`, 'error');
         console.error('Auto-fetch error:', error);
     }
 }
@@ -2695,11 +2712,22 @@ function addAutoFetchLog(message, type = 'info') {
     const log = document.getElementById('autoFetchLog');
     const entry = document.createElement('div');
     entry.className = `log-entry log-${type}`;
-    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+
+    let icon = 'info';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'alert-circle';
+    if (type === 'skip') icon = 'skip-forward';
+
+    entry.innerHTML = `
+        <span class="log-time">[${new Date().toLocaleTimeString()}]</span>
+        <span class="log-icon"><i data-lucide="${icon}"></i></span>
+        <span class="log-message">${message}</span>
+    `;
     log.appendChild(entry);
 
     // Auto-scroll to bottom
     log.scrollTop = log.scrollHeight;
+    lucide.createIcons();
 }
 
 // Open auto-fetch modal
