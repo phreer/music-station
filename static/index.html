@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Station - Web Client</title>
     <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -34,7 +36,8 @@
             <div class="controls">
                 <button id="refreshBtn" class="btn btn-primary">🔄 Refresh Library</button>
                 <button id="autoFetchLyricsBtn" class="btn btn-secondary">🎵 Auto-Fetch Lyrics</button>
-                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search tracks, artists, albums..." />
+                <input type="text" id="searchInput" class="search-input"
+                    placeholder="🔍 Search tracks, artists, albums..." />
                 <span id="trackCount" class="track-count"></span>
             </div>
 
@@ -78,7 +81,8 @@
         <div class="player-main">
             <!-- Left: Track Info -->
             <div class="player-info">
-                <button id="lyricsToggleBtn" class="lyrics-toggle-btn-inline" onclick="togglePlayerLyrics()" title="Toggle lyrics" style="display: none;">
+                <button id="lyricsToggleBtn" class="lyrics-toggle-btn-inline" onclick="togglePlayerLyrics()"
+                    title="Toggle lyrics" style="display: none;">
                     📝
                 </button>
                 <div class="player-cover">🎵</div>
@@ -87,7 +91,7 @@
                     <div id="playerArtist" class="player-artist">—</div>
                 </div>
             </div>
-            
+
             <!-- Center: Controls & Progress -->
             <div class="player-center">
                 <div class="player-controls">
@@ -98,7 +102,7 @@
                     <button id="nextBtn" class="control-btn">⏭️</button>
                     <button id="stopBtn" class="control-btn">⏹️</button>
                 </div>
-                
+
                 <div class="player-progress">
                     <span id="currentTime" class="time-display">0:00</span>
                     <div class="progress-container">
@@ -108,7 +112,7 @@
                     <span id="totalTime" class="time-display">0:00</span>
                 </div>
             </div>
-            
+
             <!-- Right: Volume -->
             <div class="player-volume">
                 <span>🔊</span>
@@ -116,17 +120,20 @@
             </div>
         </div>
 
-        <!-- Integrated Lyrics Display -->
-        <div id="playerLyricsContainer" class="player-lyrics-container" style="display: none;">
-            <div class="player-lyrics-header">
-                <span class="player-lyrics-title">📝 Lyrics</span>
-                <button id="closeLyricsBtn" class="btn-close-lyrics" onclick="togglePlayerLyrics()">✖️</button>
-            </div>
-            <div id="playerLyricsContent" class="player-lyrics-content"></div>
-        </div>
-        
         <audio id="audioPlayer" preload="metadata"></audio>
-    </div>    <!-- Play Queue Panel -->
+    </div>
+
+    <!-- Lyrics Sidebar -->
+    <div id="playerLyricsContainer" class="lyrics-sidebar" style="display: none;">
+        <div class="lyrics-sidebar-header">
+            <h3>📝 Lyrics</h3>
+            <button class="btn-icon" onclick="togglePlayerLyrics()" title="Close lyrics">✖️</button>
+        </div>
+        <div id="playerLyricsContent" class="lyrics-sidebar-content"></div>
+        <div id="lyricsResizeHandle" class="resize-handle-right"></div>
+    </div>
+
+    <!-- Play Queue Panel -->
     <div id="playQueuePanel" class="play-queue-panel" style="display: none;">
         <div class="play-queue-header">
             <h3>🎵 Play Queue</h3>
@@ -149,7 +156,8 @@
     </div>
 
     <!-- Queue Toggle Button (Fixed Position) -->
-    <button id="queueToggleBtn" class="queue-toggle-btn" onclick="toggleQueue()" title="Show/Hide Queue" style="display: none;">
+    <button id="queueToggleBtn" class="queue-toggle-btn" onclick="toggleQueue()" title="Show/Hide Queue"
+        style="display: none;">
         <span class="queue-icon">📋</span>
         <span id="queueBadge" class="queue-badge">0</span>
     </button>
@@ -164,11 +172,13 @@
             <form id="createPlaylistForm">
                 <div class="form-group">
                     <label for="playlistName">Playlist Name</label>
-                    <input type="text" id="playlistName" class="form-control" placeholder="My Awesome Playlist" required>
+                    <input type="text" id="playlistName" class="form-control" placeholder="My Awesome Playlist"
+                        required>
                 </div>
                 <div class="form-group">
                     <label for="playlistDescription">Description (optional)</label>
-                    <textarea id="playlistDescription" class="form-control" placeholder="Description of your playlist" rows="3"></textarea>
+                    <textarea id="playlistDescription" class="form-control" placeholder="Description of your playlist"
+                        rows="3"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn btn-secondary" onclick="closeCreatePlaylistModal()">Cancel</button>
@@ -188,7 +198,8 @@
             <div class="playlist-selection">
                 <p class="modal-subtitle">Select a playlist:</p>
                 <div id="playlistSelectionList" class="playlist-selection-list"></div>
-                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()">➕ Create New Playlist</button>
+                <button class="btn btn-secondary btn-small" onclick="openCreatePlaylistFromAdd()">➕ Create New
+                    Playlist</button>
             </div>
         </div>
     </div>
@@ -202,7 +213,7 @@
             </div>
             <form id="editForm">
                 <input type="hidden" id="editTrackId">
-                
+
                 <div class="form-section">
                     <h3>Basic Information</h3>
                     <div class="form-grid">
@@ -258,7 +269,8 @@
 
                         <div class="form-group">
                             <label for="editComment">Comment</label>
-                            <textarea id="editComment" class="form-control" placeholder="Additional comments" rows="2"></textarea>
+                            <textarea id="editComment" class="form-control" placeholder="Additional comments"
+                                rows="2"></textarea>
                         </div>
                     </div>
                 </div>
@@ -272,7 +284,8 @@
                             <button type="button" class="btn btn-secondary btn-small" onclick="selectCoverImage()">
                                 📷 Choose Image
                             </button>
-                            <button type="button" class="btn btn-secondary btn-small" id="removeCoverBtn" onclick="removeCover()" style="display: none;">
+                            <button type="button" class="btn btn-secondary btn-small" id="removeCoverBtn"
+                                onclick="removeCover()" style="display: none;">
                                 🗑️ Remove Cover
                             </button>
                         </div>
@@ -302,7 +315,7 @@
                 <h2>📝 Lyrics</h2>
                 <button class="close-btn" onclick="closeLyricsModal()">&times;</button>
             </div>
-            
+
             <div class="lyrics-modal-body">
                 <div class="lyrics-track-info">
                     <div class="lyrics-track-title" id="lyricsTrackTitle">Track Title</div>
@@ -333,7 +346,9 @@
                 <div id="lyricsEditTab" class="lyrics-tab-content">
                     <div class="form-group">
                         <label for="lyricsContent">Lyrics Content</label>
-                        <textarea id="lyricsContent" class="form-control lyrics-textarea" placeholder="Enter lyrics here...&#10;&#10;Supported formats:&#10;&#10;Plain text:&#10;First line&#10;Second line&#10;&#10;Standard LRC (line-level):&#10;[00:12.00]First line&#10;[00:16.50]Second line&#10;&#10;Extended LRC (word-level):&#10;[0,5000]First(0,500) line(500,500)&#10;[5000,6000]Second(0,600) line(600,600)" rows="15"></textarea>
+                        <textarea id="lyricsContent" class="form-control lyrics-textarea"
+                            placeholder="Enter lyrics here...&#10;&#10;Supported formats:&#10;&#10;Plain text:&#10;First line&#10;Second line&#10;&#10;Standard LRC (line-level):&#10;[00:12.00]First line&#10;[00:16.50]Second line&#10;&#10;Extended LRC (word-level):&#10;[0,5000]First(0,500) line(500,500)&#10;[5000,6000]Second(0,600) line(600,600)"
+                            rows="15"></textarea>
                     </div>
 
                     <div class="form-grid">
@@ -354,15 +369,18 @@
 
                         <div class="form-group">
                             <label for="lyricsSource">Source (Optional)</label>
-                            <input type="text" id="lyricsSource" class="form-control" placeholder="e.g., Manual, lyrics.com">
+                            <input type="text" id="lyricsSource" class="form-control"
+                                placeholder="e.g., Manual, lyrics.com">
                         </div>
                     </div>
 
                     <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="openLyricsSearchModal()" id="searchLyricsBtn">
+                        <button type="button" class="btn btn-secondary" onclick="openLyricsSearchModal()"
+                            id="searchLyricsBtn">
                             🔍 Search Online
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="deleteLyrics()" id="deleteLyricsBtn" style="display: none;">
+                        <button type="button" class="btn btn-danger" onclick="deleteLyrics()" id="deleteLyricsBtn"
+                            style="display: none;">
                             🗑️ Delete Lyrics
                         </button>
                         <button type="button" class="btn btn-secondary" onclick="closeLyricsModal()">Cancel</button>
@@ -380,20 +398,22 @@
                 <h2>🔍 Search Lyrics Online</h2>
                 <button class="close-btn" onclick="closeLyricsSearchModal()">&times;</button>
             </div>
-            
+
             <div class="lyrics-search-body">
                 <div class="search-form">
                     <div class="form-group">
                         <label for="lyricsSearchQuery">Song Title</label>
-                        <input type="text" id="lyricsSearchQuery" class="form-control" placeholder="Enter song title..." />
+                        <input type="text" id="lyricsSearchQuery" class="form-control"
+                            placeholder="Enter song title..." />
                     </div>
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="lyricsSearchArtist">Artist (Optional)</label>
-                            <input type="text" id="lyricsSearchArtist" class="form-control" placeholder="Enter artist name..." />
+                            <input type="text" id="lyricsSearchArtist" class="form-control"
+                                placeholder="Enter artist name..." />
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="lyricsSearchProvider">Provider</label>
                             <select id="lyricsSearchProvider" class="form-control">
@@ -402,22 +422,22 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="form-actions">
                         <button type="button" class="btn btn-primary" onclick="performLyricsSearch()">
                             🔍 Search
                         </button>
                     </div>
                 </div>
-                
+
                 <div id="lyricsSearchLoading" class="loading" style="display: none;">
                     <div class="spinner"></div>
                     <p>Searching for lyrics...</p>
                 </div>
-                
+
                 <div id="lyricsSearchError" class="error" style="display: none;"></div>
-                
-                                <div id="lyricsSearchResults" class="lyrics-search-results" style="display: none;">
+
+                <div id="lyricsSearchResults" class="lyrics-search-results" style="display: none;">
                     <h3>Search Results</h3>
                     <div id="lyricsSearchResultsList"></div>
                 </div>
@@ -432,7 +452,7 @@
                 <h2>🎵 Auto-Fetch Lyrics</h2>
                 <button class="close-btn" onclick="closeAutoFetchModal()">&times;</button>
             </div>
-            
+
             <div class="modal-body">
                 <div id="autoFetchStatus" class="auto-fetch-status">
                     <div class="progress-container">
@@ -443,7 +463,7 @@
                             <div id="autoFetchProgressBar" class="progress-bar-fill"></div>
                         </div>
                     </div>
-                    
+
                     <div id="autoFetchDetails" class="auto-fetch-details">
                         <p><strong>Total tracks without lyrics:</strong> <span id="autoFetchTotal">0</span></p>
                         <p><strong>Processed:</strong> <span id="autoFetchProcessed">0</span></p>
@@ -451,17 +471,18 @@
                         <p><strong>Failed:</strong> <span id="autoFetchFailed">0</span></p>
                         <p><strong>Skipped:</strong> <span id="autoFetchSkipped">0</span></p>
                     </div>
-                    
+
                     <div id="autoFetchCurrentTrack" class="auto-fetch-current-track"></div>
-                    
+
                     <div id="autoFetchLog" class="auto-fetch-log"></div>
                 </div>
-                
+
                 <div class="form-actions">
                     <button id="autoFetchCancelBtn" class="btn btn-secondary" onclick="cancelAutoFetch()">
                         ⏸️ Cancel
                     </button>
-                    <button id="autoFetchCloseBtn" class="btn btn-primary" onclick="closeAutoFetchModal()" style="display: none;">
+                    <button id="autoFetchCloseBtn" class="btn btn-primary" onclick="closeAutoFetchModal()"
+                        style="display: none;">
                         ✓ Close
                     </button>
                 </div>
@@ -471,12 +492,14 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>
 ```
-            </div>
-        </div>
-    </div>
+</div>
+</div>
+</div>
 
-    <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
+
 </html>

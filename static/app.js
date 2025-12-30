@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPlaylistEventListeners();
     updateQueueDisplay();
     setupInfiniteScroll();
+    setupResizableSidebars();
 });
 
 function setupEventListeners() {
@@ -429,6 +430,52 @@ function setupInfiniteScroll() {
 
     // Also check on resize in case content changes
     window.addEventListener('resize', handleScroll, { passive: true });
+}
+
+function setupResizableSidebars() {
+    const lyricsSidebar = document.getElementById('playerLyricsContainer');
+    const lyricsHandle = document.getElementById('lyricsResizeHandle');
+
+    // Load saved width
+    const savedWidth = localStorage.getItem('lyrics_sidebar_width');
+    if (savedWidth) {
+        lyricsSidebar.style.width = savedWidth;
+    }
+
+    if (lyricsHandle) {
+        let isResizing = false;
+
+        lyricsHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.classList.add('resizing');
+            lyricsHandle.classList.add('resizing');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            let newWidth = e.clientX;
+            // Constraints
+            if (newWidth < 250) newWidth = 250;
+            if (newWidth > 800) newWidth = 800;
+
+            lyricsSidebar.style.width = `${newWidth}px`;
+            if (lyricsVisible) {
+                document.body.style.paddingLeft = `${newWidth}px`;
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isResizing) {
+                isResizing = false;
+                document.body.classList.remove('resizing');
+                lyricsHandle.classList.remove('resizing');
+                // Save preference
+                localStorage.setItem('lyrics_sidebar_width', lyricsSidebar.style.width);
+            }
+        });
+    }
 }
 
 // Filter and render tracks based on search query
@@ -2143,12 +2190,16 @@ function displayLyricsInPlayer(lyrics) {
 
 // Show player lyrics container
 function showPlayerLyrics() {
-    document.getElementById('playerLyricsContainer').style.display = 'flex';
+    const panel = document.getElementById('playerLyricsContainer');
+    panel.style.display = 'flex';
+    document.body.style.paddingLeft = panel.style.width || '350px';
 }
 
 // Hide player lyrics container
 function hidePlayerLyrics() {
-    document.getElementById('playerLyricsContainer').style.display = 'none';
+    const panel = document.getElementById('playerLyricsContainer');
+    panel.style.display = 'none';
+    document.body.style.paddingLeft = '0';
     lyricsLines = [];
     currentLyricsIndex = -1;
 }
@@ -2164,7 +2215,7 @@ function togglePlayerLyrics() {
         showPlayerLyrics();
         toggleBtn.classList.add('active');
     } else {
-        document.getElementById('playerLyricsContainer').style.display = 'none';
+        hidePlayerLyrics();
         toggleBtn.classList.remove('active');
     }
 }
