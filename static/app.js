@@ -1125,16 +1125,19 @@ async function loadArtists() {
     }
 }
 
+let currentArtists = [];
+
 function displayArtists(artists) {
     const artistList = document.getElementById('artist-list');
+    currentArtists = artists;
 
     if (artists.length === 0) {
         artistList.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No artists found</p>';
         return;
     }
 
-    artistList.innerHTML = artists.map(artist => `
-        <div class="artist-card" onclick="toggleArtist(this)">
+    artistList.innerHTML = artists.map((artist, index) => `
+        <div class="artist-card" id="artist-card-${index}" onclick="toggleArtist(this, ${index})">
             <div class="artist-image-wrapper">
                 <div class="artist-icon-large"><i data-lucide="user"></i></div>
             </div>
@@ -1145,18 +1148,13 @@ function displayArtists(artists) {
                     <span>${artist.track_count} tracks</span>
                 </div>
                 
-                <div class="artist-albums-grid">
-                    ${artist.albums.map(album => `
-                        <div class="artist-album-mini-card" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(artist.name)}')">
-                            <div class="artist-album-mini-icon"><i data-lucide="disc"></i></div>
-                            <div class="artist-album-mini-info">
-                                <h4>${escapeHtml(album.name)}</h4>
-                                <div class="artist-album-mini-meta">
-                                    ${album.track_count} tracks • ${formatDuration(album.total_duration_secs)}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
+                <div class="artist-view-selector" style="display: none;">
+                    <button class="view-btn active" onclick="event.stopPropagation(); switchArtistView(${index}, 'albums', this)">Albums</button>
+                    <button class="view-btn" onclick="event.stopPropagation(); switchArtistView(${index}, 'tracks', this)">All Tracks</button>
+                </div>
+
+                <div id="artist-content-${index}" class="artist-expanded-content" style="display: none;">
+                    <!-- Content will be rendered here -->
                 </div>
             </div>
         </div>
@@ -1164,18 +1162,156 @@ function displayArtists(artists) {
     lucide.createIcons();
 }
 
-function toggleArtist(element) {
+function toggleArtist(element, index) {
     const isExpanded = element.classList.contains('expanded');
 
     // Close all other expanded artists
     document.querySelectorAll('.artist-card.expanded').forEach(card => {
-        card.classList.remove('expanded');
+        if (card !== element) {
+            card.classList.remove('expanded');
+            card.querySelector('.artist-view-selector').style.display = 'none';
+            card.querySelector('.artist-expanded-content').style.display = 'none';
+        }
     });
 
     if (!isExpanded) {
         element.classList.add('expanded');
+        element.querySelector('.artist-view-selector').style.display = 'flex';
+        element.querySelector('.artist-expanded-content').style.display = 'block';
+        
+        // Default to albums view
+        const albumsBtn = element.querySelector('.view-btn.active');
+        switchArtistView(index, 'albums', albumsBtn);
+        
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+        element.classList.remove('expanded');
+        element.querySelector('.artist-view-selector').style.display = 'none';
+        element.querySelector('.artist-expanded-content').style.display = 'none';
     }
+}
+
+function switchArtistView(index, mode, btnElement) {
+    const artist = currentArtists[index];
+    const contentContainer = document.getElementById(`artist-content-${index}`);
+    
+    // Update active button
+    const selector = btnElement.parentElement;
+    selector.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    if (mode === 'albums') {
+        renderArtistAlbums(index, contentContainer);
+    } else {
+        renderArtistAllTracks(index, contentContainer);
+    }
+    lucide.createIcons();
+}
+
+function renderArtistAlbums(index, container) {
+    const artist = currentArtists[index];
+    
+    container.innerHTML = `
+        <div class="artist-albums-grid">
+            ${artist.albums.map((album, albumIndex) => `
+                <div class="artist-album-mini-card" onclick="event.stopPropagation(); toggleArtistAlbumTracks(${index}, ${albumIndex}, this)">
+                    <div class="artist-album-mini-header">
+                        <div class="artist-album-mini-icon"><i data-lucide="disc"></i></div>
+                        <div class="artist-album-mini-info">
+                            <h4>${escapeHtml(album.name)}</h4>
+                            <div class="artist-album-mini-meta">
+                                ${album.track_count} tracks • ${formatDuration(album.total_duration_secs)}
+                            </div>
+                        </div>
+                        <div class="artist-album-mini-actions">
+                            <button class="btn-action btn-small" onclick="event.stopPropagation(); playAlbum('${escapeHtml(album.name)}', '${escapeHtml(artist.name)}')" title="Play album">
+                                <i data-lucide="play"></i>
+                            </button>
+                        </div>
+                        <div class="expand-indicator"><i data-lucide="chevron-down"></i></div>
+                    </div>
+                    <div id="artist-${index}-album-${albumIndex}-tracks" class="artist-album-tracks-container">
+                        <div class="loading-mini"><i data-lucide="refresh-cw" class="spin"></i> Loading tracks...</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function toggleArtistAlbumTracks(artistIndex, albumIndex, element) {
+    const isExpanded = element.classList.contains('expanded');
+    const tracksContainer = document.getElementById(`artist-${artistIndex}-album-${albumIndex}-tracks`);
+
+    if (!isExpanded) {
+        element.classList.add('expanded');
+        
+        const artist = currentArtists[artistIndex];
+        const album = artist.albums[albumIndex];
+        
+        // Filter tracks from fullTracks
+        const albumTracks = fullTracks.filter(t => 
+            t.artist === artist.name && t.album === album.name
+        );
+
+        if (albumTracks.length > 0) {
+            tracksContainer.innerHTML = albumTracks.map((track, i) => `
+                <div class="mini-track-item" onclick="event.stopPropagation(); playTrack('${track.id}')">
+                    <div class="mini-track-num">${i + 1}</div>
+                    <div class="mini-track-title">${escapeHtml(track.title)}</div>
+                    <div class="mini-track-duration">${formatDuration(track.duration_secs)}</div>
+                    <div class="mini-track-actions">
+                        <button class="btn-action btn-small" onclick="event.stopPropagation(); addToQueue('${track.id}')" title="Add to queue">
+                            <i data-lucide="list-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            tracksContainer.innerHTML = '<p class="no-tracks">No tracks found in library</p>';
+        }
+    } else {
+        element.classList.remove('expanded');
+    }
+    lucide.createIcons();
+}
+
+function renderArtistAllTracks(index, container) {
+    const artist = currentArtists[index];
+    
+    // Filter all tracks for this artist
+    const artistTracks = fullTracks.filter(t => t.artist === artist.name);
+    
+    if (artistTracks.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No tracks found for this artist</p>';
+        return;
+    }
+
+    // Sort by album then track number if possible
+    artistTracks.sort((a, b) => {
+        if (a.album !== b.album) return a.album.localeCompare(b.album);
+        return (a.track_number || 0) - (b.track_number || 0);
+    });
+
+    container.innerHTML = `
+        <div class="artist-all-tracks-list">
+            ${artistTracks.map((track, i) => `
+                <div class="mini-track-item" onclick="event.stopPropagation(); playTrack('${track.id}')">
+                    <div class="mini-track-num">${i + 1}</div>
+                    <div class="mini-track-title">
+                        ${escapeHtml(track.title)}
+                        <span style="color: var(--text-light); font-size: 0.8em; margin-left: 8px;">• ${escapeHtml(track.album)}</span>
+                    </div>
+                    <div class="mini-track-duration">${formatDuration(track.duration_secs)}</div>
+                    <div class="mini-track-actions">
+                        <button class="btn-action btn-small" onclick="event.stopPropagation(); addToQueue('${track.id}')" title="Add to queue">
+                            <i data-lucide="list-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 // Load stats

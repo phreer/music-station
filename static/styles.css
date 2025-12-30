@@ -1098,56 +1098,156 @@ header h1 {
 }
 
 .artist-details-content h3 {
-    font-size: 32px;
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.artist-view-selector {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.view-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-light);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.view-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+.view-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.artist-expanded-content {
+    margin-top: 20px;
 }
 
 .artist-albums-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
-    margin-top: 30px;
-    display: none;
-}
-
-.artist-card.expanded .artist-albums-grid {
-    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
 }
 
 .artist-album-mini-card {
     background: rgba(255, 255, 255, 0.03);
     border-radius: 10px;
-    padding: 16px;
+    padding: 12px;
     display: flex;
-    align-items: center;
-    gap: 16px;
+    flex-direction: column;
+    gap: 12px;
     transition: background 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
 }
 
 .artist-album-mini-card:hover {
-    background: rgba(0, 102, 204, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.artist-album-mini-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .artist-album-mini-icon {
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border-radius: 6px;
     background: #1a2332;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.artist-album-mini-info {
+    flex: 1;
+    min-width: 0;
 }
 
 .artist-album-mini-info h4 {
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--text-color);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .artist-album-mini-meta {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-light);
-    margin-top: 4px;
+    margin-top: 2px;
+}
+
+.artist-album-tracks-container {
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.artist-album-mini-card.expanded .artist-album-tracks-container {
+    display: block;
+}
+
+.artist-album-mini-card.expanded {
+    background: rgba(255, 255, 255, 0.05);
+    grid-column: 1 / -1;
+}
+
+.mini-track-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    gap: 10px;
+}
+
+.mini-track-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mini-track-num {
+    width: 20px;
+    color: var(--text-light);
+    font-size: 11px;
+}
+
+.mini-track-title {
+    flex: 1;
+    color: var(--text-color);
+}
+
+.mini-track-duration {
+    color: var(--text-light);
+    font-size: 11px;
+}
+
+.artist-all-tracks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.artist-card.expanded .artist-albums-grid {
+    display: grid;
 }
     border-top: 1px solid #3a3a3a;
     display: none;
@@ -1232,6 +1332,64 @@ header h1 {
 .album-card.expanded .expand-indicator,
 .artist-card.expanded .expand-indicator {
     transform: rotate(180deg);
+}
+
+.artist-album-mini-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.artist-album-mini-card:hover .artist-album-mini-actions {
+    opacity: 1;
+}
+
+.artist-album-mini-header .expand-indicator {
+    font-size: 16px;
+    color: var(--text-light);
+    transition: transform 0.3s ease;
+}
+
+.artist-album-mini-card.expanded .artist-album-mini-header .expand-indicator {
+    transform: rotate(180deg);
+}
+
+.loading-mini {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px;
+    color: var(--text-light);
+    font-size: 12px;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.no-tracks {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 12px;
+    padding: 10px;
+}
+
+.mini-track-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.mini-track-item:hover .mini-track-actions {
+    opacity: 1;
 }
 
 /* Music Player Styles */
