@@ -9,41 +9,14 @@ Music Station is a Rust-based HTTP server that scans a music library folder, ext
 - Web Client: Single-page web app with tabbed interface for browsing tracks, albums, artists, and statistics
 - Desktop/Mobile Clients
 
-## Development Environment
-- **Language**: Rust (Edition 2024)
-- **Build Tool**: Cargo
-- **Runtime**: Tokio async runtime
-- **Web Framework**: Axum with tower-http middleware
-
 ## Style Guidelines
+- Design consistent UI/UX for web client (clean, minimal, responsive)
 - Follow Rust's official style guidelines (rustfmt)
 - Use idiomatic Rust patterns (Result, Option, iterators, error handling with anyhow)
 - Write modular, reusable functions with clear responsibilities
 - Document public functions and complex logic with comments, avoid trivial and unnecessary comments
 - Always keep code and documentation in sync
 - Don't write apparent documentation
-
-## Key Commands
-```bash
-# Run the server (requires music library path)
-cargo run -- --library /path/to/music/folder
-# Or set environment variable
-MUSIC_LIBRARY_PATH=/path/to/music cargo run
-
-# Run the CLI client (connects to server on localhost:3000 by default)
-cargo run --bin music-client                    # List all tracks
-cargo run --bin music-client -- list            # List all tracks
-cargo run --bin music-client -- info <track-id> # Show track details
-cargo run --bin music-client -- play <track-id> # Play a specific track
-cargo run --bin music-client -- play-all        # Play all tracks
-
-# Development
-cargo check      # Quick compile check
-cargo clippy     # Linting
-cargo fmt        # Auto-format code
-cargo build      # Build without running
-cargo test       # Run tests
-```
 
 ## Architecture & Data Flow
 
