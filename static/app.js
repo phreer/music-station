@@ -1,6 +1,7 @@
 // API base URL - adjust if server is running on different host/port
 const API_BASE = window.location.origin;
 
+let fullTracks = [];
 let tracks = [];
 let currentEditTrackId = null;
 let currentView = 'tracks';
@@ -51,7 +52,7 @@ function setupEventListeners() {
     document.getElementById('autoFetchLyricsBtn').addEventListener('click', startAutoFetchLyrics);
     document.getElementById('editForm').addEventListener('submit', handleEditSubmit);
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
-    
+
     // Search input with debouncing
     let searchTimeout;
     document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -61,7 +62,7 @@ function setupEventListeners() {
             filterAndRenderTracks();
         }, 300); // 300ms debounce
     });
-    
+
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -84,30 +85,30 @@ function setupMusicPlayer() {
     const stopBtn = document.getElementById('stopBtn');
     const progressBar = document.getElementById('progressBar');
     const volumeControl = document.getElementById('volumeControl');
-    
+
     // Play/Pause
     playPauseBtn.addEventListener('click', togglePlayPause);
-    
+
     // Previous track
     prevBtn.addEventListener('click', playPrevious);
-    
+
     // Next track
     nextBtn.addEventListener('click', playNext);
-    
+
     // Stop
     stopBtn.addEventListener('click', stopPlayback);
-    
+
     // Progress bar
     progressBar.addEventListener('input', (e) => {
         const time = (audio.duration * e.target.value) / 100;
         audio.currentTime = time;
     });
-    
+
     // Volume control
     volumeControl.addEventListener('input', (e) => {
         audio.volume = e.target.value / 100;
     });
-    
+
     // Audio events
     audio.addEventListener('timeupdate', updateProgress);
     audio.addEventListener('ended', playNext);
@@ -123,9 +124,9 @@ function setupMusicPlayer() {
 }
 
 function playTrack(trackId, skipQueueUpdate = false) {
-    const track = tracks.find(t => t.id === trackId);
+    const track = fullTracks.find(t => t.id === trackId);
     if (!track) return;
-    
+
     // Add track to queue if not already there and not skipping queue update
     if (!skipQueueUpdate) {
         const existingQueueIndex = playQueue.indexOf(trackId);
@@ -140,19 +141,20 @@ function playTrack(trackId, skipQueueUpdate = false) {
             document.getElementById('queueToggleBtn').style.display = 'flex';
         }
     }
-    
+
     // Update playlist to match queue if queue exists
     if (playQueue.length > 0) {
         playlist = playQueue.slice();
         currentTrackIndex = queueIndex;
     } else {
-        playlist = tracks.map(t => t.id);
+        const displayTracks = searchQuery ? filteredTracks : tracks;
+        playlist = displayTracks.map(t => t.id);
         currentTrackIndex = playlist.indexOf(trackId);
     }
-    
+
     const audio = document.getElementById('audioPlayer');
     const streamUrl = `${API_BASE}/stream/${trackId}`;
-    
+
     audio.src = streamUrl;
     audio.load();
     audio.play();
@@ -166,28 +168,41 @@ function playTrack(trackId, skipQueueUpdate = false) {
         })
         .then(newCount => {
             if (newCount !== undefined) {
-                // Update local track object
-                const trackIdx = tracks.findIndex(t => t.id === trackId);
-                if (trackIdx !== -1) {
-                    tracks[trackIdx].play_count = newCount;
+                // Update local track object in both arrays
+                const fullIdx = fullTracks.findIndex(t => t.id === trackId);
+                if (fullIdx !== -1) {
+                    fullTracks[fullIdx].play_count = newCount;
+
+                    // Also update in tracks if present
+                    const trackIdx = tracks.findIndex(t => t.id === trackId);
+                    if (trackIdx !== -1) {
+                        tracks[trackIdx].play_count = newCount;
+                    }
+
                     // If we are in stats view, we might want to refresh it
                     if (currentView === 'stats') {
                         loadStats();
+                    }
+
+                    // Update UI if visible
+                    const row = document.querySelector(`tr[data-track-id="${trackId}"] .track-plays-cell`);
+                    if (row) {
+                        row.textContent = newCount;
                     }
                 }
             }
         })
         .catch(err => console.error('Failed to increment play count:', err));
-    
+
     // Update UI
     document.getElementById('playerTitle').textContent = track.title || 'Unknown Title';
     document.getElementById('playerArtist').textContent = track.artist || 'Unknown Artist';
     document.getElementById('musicPlayer').style.display = 'block';
-    
+
     // Add visual feedback to current track
     highlightCurrentTrack(trackId);
     updateQueueDisplay();
-    
+
     // Load lyrics if available
     if (track.has_lyrics) {
         loadLyricsForPlayer(trackId);
@@ -198,7 +213,7 @@ function playTrack(trackId, skipQueueUpdate = false) {
 
 function togglePlayPause() {
     const audio = document.getElementById('audioPlayer');
-    
+
     if (audio.src) {
         if (isPlaying) {
             audio.pause();
@@ -254,13 +269,13 @@ function updateProgress() {
     const progressBar = document.getElementById('progressBar');
     const progressFill = document.getElementById('progressFill');
     const currentTime = document.getElementById('currentTime');
-    
+
     if (audio.duration) {
         const progress = (audio.currentTime / audio.duration) * 100;
         progressBar.value = progress;
         progressFill.style.width = progress + '%';
         currentTime.textContent = formatDuration(Math.floor(audio.currentTime));
-        
+
         // Update synchronized lyrics
         updateSynchronizedLyrics(audio.currentTime);
     }
@@ -269,7 +284,7 @@ function updateProgress() {
 function updateDuration() {
     const audio = document.getElementById('audioPlayer');
     const totalTime = document.getElementById('totalTime');
-    
+
     if (audio.duration) {
         totalTime.textContent = formatDuration(Math.floor(audio.duration));
     }
@@ -285,7 +300,7 @@ function highlightCurrentTrack(trackId) {
     document.querySelectorAll('.track-row').forEach(row => {
         row.classList.remove('playing');
     });
-    
+
     // Add highlight to current track
     if (trackId) {
         const row = document.querySelector(`tr[data-track-id="${trackId}"]`);
@@ -297,20 +312,20 @@ function highlightCurrentTrack(trackId) {
 
 function switchTab(tabName) {
     currentView = tabName;
-    
+
     // Update tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
-    
+
     // Update tab content
     document.querySelectorAll('.tab-content').forEach(content => {
         content.classList.remove('active');
     });
     document.getElementById(`${tabName}-view`).classList.add('active');
-    
+
     // Load content for the selected tab
-    switch(tabName) {
+    switch (tabName) {
         case 'tracks':
             if (tracks.length === 0) {
                 loadTracks(false);
@@ -333,47 +348,55 @@ function switchTab(tabName) {
 
 async function loadTracks(append = false) {
     if (isLoadingMore || (allTracksLoaded && append)) return;
-    
+
     if (!append) {
         showLoading();
         tracks = [];
+        fullTracks = [];
         currentPage = 1;
         allTracksLoaded = false;
     } else {
         isLoadingMore = true;
     }
-    
+
     hideError();
 
     try {
-        const response = await fetch(`${API_BASE}/tracks`);
-        
-        if (!response.ok) {
-            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        let allTracks;
+        if (fullTracks.length === 0) {
+            const response = await fetch(`${API_BASE}/tracks`);
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+            }
+
+            allTracks = await response.json();
+            fullTracks = allTracks;
+        } else {
+            allTracks = fullTracks;
         }
 
-        const allTracks = await response.json();
         totalTracks = allTracks.length;
-        
+
         // Calculate pagination
         const startIndex = (currentPage - 1) * pageSize;
         const endIndex = Math.min(startIndex + pageSize, allTracks.length);
         const newTracks = allTracks.slice(startIndex, endIndex);
-        
+
         if (append) {
             tracks = [...tracks, ...newTracks];
         } else {
             tracks = newTracks;
         }
-        
+
         // Check if all tracks are loaded
         if (tracks.length >= totalTracks) {
             allTracksLoaded = true;
         }
-        
+
         renderTracks(append);
         updateTrackCount();
-        
+
         currentPage++;
     } catch (error) {
         showError(`Failed to load tracks: ${error.message}`);
@@ -389,21 +412,21 @@ function setupInfiniteScroll() {
     // Use window scroll instead of element scroll for better cross-browser compatibility
     const handleScroll = () => {
         if (currentView !== 'tracks' || allTracksLoaded || isLoadingMore || searchQuery) return;
-        
+
         // Get the scroll position relative to the document
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const windowHeight = window.innerHeight;
         const documentHeight = document.documentElement.scrollHeight;
-        
+
         // Load more when scrolled to 80% of the content
         if (scrollTop + windowHeight >= documentHeight * 0.8) {
             loadTracks(true);
         }
     };
-    
+
     // Add scroll listener to window for cross-browser compatibility
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     // Also check on resize in case content changes
     window.addEventListener('resize', handleScroll, { passive: true });
 }
@@ -417,20 +440,20 @@ function filterAndRenderTracks() {
         updateTrackCount();
         return;
     }
-    
+
     // Filter tracks based on search query
-    filteredTracks = tracks.filter(track => {
+    filteredTracks = fullTracks.filter(track => {
         const title = (track.title || '').toLowerCase();
         const artist = (track.artist || '').toLowerCase();
         const album = (track.album || '').toLowerCase();
         const genre = (track.genre || '').toLowerCase();
-        
-        return title.includes(searchQuery) || 
-               artist.includes(searchQuery) || 
-               album.includes(searchQuery) ||
-               genre.includes(searchQuery);
+
+        return title.includes(searchQuery) ||
+            artist.includes(searchQuery) ||
+            album.includes(searchQuery) ||
+            genre.includes(searchQuery);
     });
-    
+
     // Render filtered tracks
     renderFilteredTracks();
     updateTrackCount();
@@ -439,7 +462,7 @@ function filterAndRenderTracks() {
 // Render filtered tracks (for search)
 function renderFilteredTracks() {
     const trackList = document.getElementById('trackList');
-    
+
     if (filteredTracks.length === 0) {
         trackList.innerHTML = `
             <div style="text-align: center; padding: 40px; background: white; border-radius: 8px;">
@@ -449,7 +472,7 @@ function renderFilteredTracks() {
         `;
         return;
     }
-    
+
     trackList.innerHTML = `
         <div class="track-table-container">
             <table class="track-table">
@@ -476,10 +499,10 @@ function renderFilteredTracks() {
 
 function renderTracks(append = false) {
     const trackList = document.getElementById('trackList');
-    
+
     // Use filtered tracks if search is active
     const displayTracks = searchQuery ? filteredTracks : tracks;
-    
+
     if (displayTracks.length === 0 && !append) {
         trackList.innerHTML = `
             <div style="text-align: center; padding: 40px; background: white; border-radius: 8px;">
@@ -528,18 +551,18 @@ function renderTracks(append = false) {
         if (tbody) {
             const startIndex = tracks.length - pageSize;
             const newTracks = tracks.slice(Math.max(0, startIndex));
-            
+
             // Create a temporary tbody element to properly parse <tr> tags
             const tempTbody = document.createElement('tbody');
             tempTbody.innerHTML = newTracks.map(track => createTrackRow(track)).join('');
-            
+
             // Use DocumentFragment for better performance
             const fragment = document.createDocumentFragment();
             while (tempTbody.firstChild) {
                 fragment.appendChild(tempTbody.firstChild);
             }
             tbody.appendChild(fragment);
-            
+
             // Update or remove load more indicator
             const indicator = document.getElementById('loadMoreIndicator');
             if (indicator) {
@@ -567,7 +590,7 @@ function createTrackRow(track) {
     const streamUrl = `${API_BASE}/stream/${track.id}`;
     const coverUrl = track.has_cover ? `${API_BASE}/cover/${track.id}` : null;
 
-    const coverCell = coverUrl 
+    const coverCell = coverUrl
         ? `<img src="${coverUrl}" alt="Cover" class="track-cover-thumb" onerror="this.style.display='none'; this.parentElement.querySelector('.track-cover-placeholder').style.display='flex';">
            <div class="track-cover-placeholder" style="display: none;">📀</div>`
         : `<div class="track-cover-placeholder">📀</div>`;
@@ -613,19 +636,19 @@ let selectedCoverFile = null;
 let customFieldCounter = 0;
 
 function openEditModal(trackId) {
-    const track = tracks.find(t => t.id === trackId);
+    const track = fullTracks.find(t => t.id === trackId);
     if (!track) return;
 
     currentEditTrackId = trackId;
     selectedCoverFile = null;
-    
+
     // Basic fields
     document.getElementById('editTrackId').value = trackId;
     document.getElementById('editTitle').value = track.title || '';
     document.getElementById('editArtist').value = track.artist || '';
     document.getElementById('editAlbum').value = track.album || '';
     document.getElementById('editAlbumArtist').value = track.album_artist || '';
-    
+
     // Additional fields
     document.getElementById('editGenre').value = track.genre || '';
     document.getElementById('editYear').value = track.year || '';
@@ -633,7 +656,7 @@ function openEditModal(trackId) {
     document.getElementById('editDiscNumber').value = track.disc_number || '';
     document.getElementById('editComposer').value = track.composer || '';
     document.getElementById('editComment').value = track.comment || '';
-    
+
     // Cover art
     const currentCover = document.getElementById('currentCover');
     const removeCoverBtn = document.getElementById('removeCoverBtn');
@@ -646,7 +669,7 @@ function openEditModal(trackId) {
         currentCover.classList.add('empty');
         removeCoverBtn.style.display = 'none';
     }
-    
+
     // Custom fields
     const customFieldsList = document.getElementById('customFieldsList');
     customFieldsList.innerHTML = '';
@@ -656,7 +679,7 @@ function openEditModal(trackId) {
             addCustomFieldWithData(key, value);
         }
     }
-    
+
     document.getElementById('editModal').style.display = 'flex';
 }
 
@@ -667,7 +690,7 @@ function closeEditModal() {
 
 async function handleEditSubmit(event) {
     event.preventDefault();
-    
+
     const trackId = document.getElementById('editTrackId').value;
     const title = document.getElementById('editTitle').value.trim();
     const artist = document.getElementById('editArtist').value.trim();
@@ -738,8 +761,13 @@ async function handleEditSubmit(event) {
 
             updatedTrack = await coverResponse.json();
         }
-        
-        // Update local tracks array
+
+        // Update local tracks arrays
+        const fullIndex = fullTracks.findIndex(t => t.id === trackId);
+        if (fullIndex !== -1) {
+            fullTracks[fullIndex] = updatedTrack;
+        }
+
         const index = tracks.findIndex(t => t.id === trackId);
         if (index !== -1) {
             tracks[index] = updatedTrack;
@@ -747,13 +775,13 @@ async function handleEditSubmit(event) {
 
         // Re-render tracks
         renderTracks();
-        
+
         // Close modal
         closeEditModal();
-        
+
         // Show success message (could add a toast notification here)
         console.log('Track updated successfully:', updatedTrack);
-        
+
     } catch (error) {
         showError(`Failed to update track: ${error.message}`);
         console.error('Error updating track:', error);
@@ -767,13 +795,13 @@ function selectCoverImage() {
 
 document.addEventListener('DOMContentLoaded', () => {
     // ... existing code ...
-    
+
     // Cover image input handler
     document.getElementById('coverImageInput').addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file && file.type.startsWith('image/')) {
             selectedCoverFile = file;
-            
+
             // Preview the image
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -789,11 +817,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function removeCover() {
     if (!currentEditTrackId) return;
-    
+
     if (!confirm('Are you sure you want to remove the cover art?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}/cover/${currentEditTrackId}`, {
             method: 'DELETE',
@@ -804,8 +832,13 @@ async function removeCover() {
         }
 
         const updatedTrack = await response.json();
-        
-        // Update local track
+
+        // Update local tracks arrays
+        const fullIndex = fullTracks.findIndex(t => t.id === currentEditTrackId);
+        if (fullIndex !== -1) {
+            fullTracks[fullIndex] = updatedTrack;
+        }
+
         const index = tracks.findIndex(t => t.id === currentEditTrackId);
         if (index !== -1) {
             tracks[index] = updatedTrack;
@@ -829,7 +862,7 @@ async function removeCover() {
 function addCustomField() {
     const customFieldsList = document.getElementById('customFieldsList');
     const fieldId = `custom-field-${customFieldCounter++}`;
-    
+
     const fieldHtml = `
         <div class="custom-field-item" id="${fieldId}">
             <input type="text" class="custom-field-key" placeholder="Field name (e.g., LABEL)">
@@ -837,14 +870,14 @@ function addCustomField() {
             <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
         </div>
     `;
-    
+
     customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
 }
 
 function addCustomFieldWithData(key, value) {
     const customFieldsList = document.getElementById('customFieldsList');
     const fieldId = `custom-field-${customFieldCounter++}`;
-    
+
     const fieldHtml = `
         <div class="custom-field-item" id="${fieldId}">
             <input type="text" class="custom-field-key" placeholder="Field name" value="${escapeHtml(key)}">
@@ -852,7 +885,7 @@ function addCustomFieldWithData(key, value) {
             <button type="button" onclick="removeCustomField('${fieldId}')">❌</button>
         </div>
     `;
-    
+
     customFieldsList.insertAdjacentHTML('beforeend', fieldHtml);
 }
 
@@ -876,7 +909,7 @@ function formatFileSize(bytes) {
 
 function updateTrackCount() {
     const countElement = document.getElementById('trackCount');
-    
+
     if (searchQuery) {
         countElement.textContent = `${filteredTracks.length} of ${totalTracks} track${totalTracks !== 1 ? 's' : ''} match`;
     } else if (allTracksLoaded) {
@@ -920,19 +953,19 @@ async function loadAlbums() {
         displayAlbums(albums);
     } catch (error) {
         console.error('Error loading albums:', error);
-        document.getElementById('album-list').innerHTML = 
+        document.getElementById('album-list').innerHTML =
             '<p style="text-align: center; color: #ff6b6b;">Failed to load albums</p>';
     }
 }
 
 function displayAlbums(albums) {
     const albumList = document.getElementById('album-list');
-    
+
     if (albums.length === 0) {
         albumList.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No albums found</p>';
         return;
     }
-    
+
     albumList.innerHTML = albums.map(album => {
         const albumTrackIds = album.tracks.map(t => t.id);
         return `
@@ -977,21 +1010,21 @@ function toggleAlbum(element) {
 // Play entire album
 function playAlbum(albumName, artistName) {
     // Find all tracks for this album
-    const albumTracks = tracks.filter(t => 
+    const albumTracks = fullTracks.filter(t =>
         t.album === albumName && t.artist === artistName
     );
-    
+
     if (albumTracks.length === 0) return;
-    
+
     // Sort by track number if available
     albumTracks.sort((a, b) => {
         const aNum = parseInt(a.track_number) || 0;
         const bNum = parseInt(b.track_number) || 0;
         return aNum - bNum;
     });
-    
+
     const albumTrackIds = albumTracks.map(t => t.id);
-    
+
     // Add all album tracks to queue
     playQueue = albumTrackIds.slice();
     queueIndex = 0;
@@ -999,7 +1032,7 @@ function playAlbum(albumName, artistName) {
     currentTrackIndex = 0;
     document.getElementById('queueToggleBtn').style.display = 'flex';
     updateQueueDisplay();
-    
+
     // Play first track (skip queue update since we already set it up)
     playTrack(albumTrackIds[0], true);
 }
@@ -1012,19 +1045,19 @@ async function loadArtists() {
         displayArtists(artists);
     } catch (error) {
         console.error('Error loading artists:', error);
-        document.getElementById('artist-list').innerHTML = 
+        document.getElementById('artist-list').innerHTML =
             '<p style="text-align: center; color: #ff6b6b;">Failed to load artists</p>';
     }
 }
 
 function displayArtists(artists) {
     const artistList = document.getElementById('artist-list');
-    
+
     if (artists.length === 0) {
         artistList.innerHTML = '<p style="text-align: center; color: #b8b8b8;">No artists found</p>';
         return;
     }
-    
+
     artistList.innerHTML = artists.map(artist => `
         <div class="artist-card" onclick="toggleArtist(this)">
             <div class="artist-header">
@@ -1066,18 +1099,18 @@ async function loadStats() {
         displayStats(stats);
     } catch (error) {
         console.error('Error loading stats:', error);
-        document.getElementById('stats-display').innerHTML = 
+        document.getElementById('stats-display').innerHTML =
             '<p style="text-align: center; color: #ff6b6b;">Failed to load statistics</p>';
     }
 }
 
 function displayStats(stats) {
     const statsDisplay = document.getElementById('stats-display');
-    
+
     const totalDuration = formatDuration(stats.total_duration_secs);
     const totalSize = formatFileSizeBytes(stats.total_size_bytes);
     const avgTrackSize = formatFileSizeBytes(stats.total_size_bytes / stats.total_tracks);
-    
+
     statsDisplay.innerHTML = `
         <div class="stats-grid">
             <div class="stat-card">
@@ -1170,7 +1203,7 @@ function savePlaylists() {
 // Display all playlists
 function displayPlaylists() {
     const playlistList = document.getElementById('playlist-list');
-    
+
     if (playlists.length === 0) {
         playlistList.innerHTML = `
             <div class="empty-playlist">
@@ -1180,14 +1213,14 @@ function displayPlaylists() {
         `;
         return;
     }
-    
+
     playlistList.innerHTML = playlists.map(pl => {
         const trackCount = pl.tracks.length;
         const totalDuration = pl.tracks.reduce((sum, trackId) => {
-            const track = tracks.find(t => t.id === trackId);
+            const track = fullTracks.find(t => t.id === trackId);
             return sum + (track ? track.duration_secs : 0);
         }, 0);
-        
+
         return `
             <div class="playlist-card" data-playlist-id="${pl.id}">
                 <div class="playlist-card-header">
@@ -1214,9 +1247,9 @@ function displayPlaylists() {
                 </div>
                 <div class="playlist-tracks">
                     ${trackCount === 0 ? '<p style="text-align: center; color: #b8b8b8; padding: 12px;">No tracks in this playlist</p>' : pl.tracks.map(trackId => {
-                        const track = tracks.find(t => t.id === trackId);
-                        if (!track) return '';
-                        return `
+            const track = fullTracks.find(t => t.id === trackId);
+            if (!track) return '';
+            return `
                             <div class="playlist-track-item">
                                 <div class="playlist-track-info">
                                     <div class="playlist-track-title">${escapeHtml(track.title || 'Unknown Title')}</div>
@@ -1228,7 +1261,7 @@ function displayPlaylists() {
                                 </div>
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
             </div>
         `;
@@ -1247,18 +1280,18 @@ function togglePlaylistTracks(playlistId) {
 function playPlaylist(playlistId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl || pl.tracks.length === 0) return;
-    
+
     // Set current playlist
     currentPlaylistId = playlistId;
     playlist = pl.tracks.slice(); // Copy array
     currentTrackIndex = 0;
-    
+
     // Add all playlist tracks to queue
     playQueue = pl.tracks.slice();
     queueIndex = 0;
     document.getElementById('queueToggleBtn').style.display = 'flex';
     updateQueueDisplay();
-    
+
     // Play first track (skip queue update since we already set it up)
     playTrack(playlist[0], true);
 }
@@ -1267,17 +1300,17 @@ function playPlaylist(playlistId) {
 function playTrackFromPlaylist(playlistId, trackId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
-    
+
     currentPlaylistId = playlistId;
     playlist = pl.tracks.slice();
     currentTrackIndex = playlist.indexOf(trackId);
-    
+
     // Add all playlist tracks to queue
     playQueue = pl.tracks.slice();
     queueIndex = playlist.indexOf(trackId);
     document.getElementById('queueToggleBtn').style.display = 'flex';
     updateQueueDisplay();
-    
+
     // Play the selected track (skip queue update since we already set it up)
     playTrack(trackId, true);
 }
@@ -1298,15 +1331,15 @@ function closeCreatePlaylistModal() {
 // Handle create playlist form submission
 function handleCreatePlaylist(event) {
     event.preventDefault();
-    
+
     const name = document.getElementById('playlistName').value.trim();
     const description = document.getElementById('playlistDescription').value.trim();
-    
+
     if (!name) {
         alert('Please enter a playlist name');
         return;
     }
-    
+
     // Create new playlist
     const newPlaylist = {
         id: generateId(),
@@ -1315,14 +1348,14 @@ function handleCreatePlaylist(event) {
         tracks: [],
         createdAt: new Date().toISOString()
     };
-    
+
     playlists.push(newPlaylist);
     savePlaylists();
-    
+
     // Close modal and refresh display
     closeCreatePlaylistModal();
     displayPlaylists();
-    
+
     // Show success message
     console.log('Playlist created:', newPlaylist);
 }
@@ -1330,10 +1363,10 @@ function handleCreatePlaylist(event) {
 // Open add to playlist modal
 function openAddToPlaylistModal(trackId) {
     trackToAdd = trackId;
-    
+
     const modal = document.getElementById('addToPlaylistModal');
     const listContainer = document.getElementById('playlistSelectionList');
-    
+
     if (playlists.length === 0) {
         listContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No playlists available. Create one first!</p>';
     } else {
@@ -1345,7 +1378,7 @@ function openAddToPlaylistModal(trackId) {
             </div>
         `).join('');
     }
-    
+
     modal.style.display = 'flex';
 }
 
@@ -1358,28 +1391,28 @@ function closeAddToPlaylistModal() {
 // Add track to playlist
 function addTrackToPlaylist(playlistId) {
     if (!trackToAdd) return;
-    
+
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
-    
+
     // Check if track already in playlist
     if (pl.tracks.includes(trackToAdd)) {
         alert('Track is already in this playlist');
         return;
     }
-    
+
     // Add track
     pl.tracks.push(trackToAdd);
     savePlaylists();
-    
+
     // Close modal and refresh if on playlists view
     closeAddToPlaylistModal();
     if (currentView === 'playlists') {
         displayPlaylists();
     }
-    
+
     // Show success message
-    const track = tracks.find(t => t.id === trackToAdd);
+    const track = fullTracks.find(t => t.id === trackToAdd);
     console.log(`Added "${track?.title}" to playlist "${pl.name}"`);
 }
 
@@ -1387,7 +1420,7 @@ function addTrackToPlaylist(playlistId) {
 function removeFromPlaylist(playlistId, trackId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
-    
+
     const index = pl.tracks.indexOf(trackId);
     if (index > -1) {
         pl.tracks.splice(index, 1);
@@ -1400,7 +1433,7 @@ function removeFromPlaylist(playlistId, trackId) {
 function deletePlaylist(playlistId) {
     const pl = playlists.find(p => p.id === playlistId);
     if (!pl) return;
-    
+
     if (confirm(`Are you sure you want to delete the playlist "${pl.name}"?`)) {
         const index = playlists.findIndex(p => p.id === playlistId);
         if (index > -1) {
@@ -1426,17 +1459,17 @@ function generateId() {
 
 // Add track to queue
 function addToQueue(trackId) {
-    const track = tracks.find(t => t.id === trackId);
+    const track = fullTracks.find(t => t.id === trackId);
     if (!track) return;
-    
+
     playQueue.push(trackId);
     updateQueueDisplay();
-    
+
     // Show queue button if first item
     if (playQueue.length === 1) {
         document.getElementById('queueToggleBtn').style.display = 'flex';
     }
-    
+
     console.log(`Added "${track.title}" to queue`);
 }
 
@@ -1448,7 +1481,7 @@ function addMultipleToQueue(trackIds) {
         }
     });
     updateQueueDisplay();
-    
+
     if (playQueue.length > 0) {
         document.getElementById('queueToggleBtn').style.display = 'flex';
     }
@@ -1457,7 +1490,7 @@ function addMultipleToQueue(trackIds) {
 // Remove track from queue
 function removeFromQueue(index) {
     if (index < 0 || index >= playQueue.length) return;
-    
+
     // Adjust queue index if needed
     if (index === queueIndex) {
         // Removing currently playing track
@@ -1465,10 +1498,10 @@ function removeFromQueue(index) {
     } else if (index < queueIndex) {
         queueIndex--;
     }
-    
+
     playQueue.splice(index, 1);
     updateQueueDisplay();
-    
+
     // Hide queue button if empty
     if (playQueue.length === 0) {
         document.getElementById('queueToggleBtn').style.display = 'none';
@@ -1479,7 +1512,7 @@ function removeFromQueue(index) {
 // Clear entire queue
 function clearQueue() {
     if (playQueue.length === 0) return;
-    
+
     if (confirm(`Clear all ${playQueue.length} tracks from queue?`)) {
         playQueue = [];
         queueIndex = -1;
@@ -1491,7 +1524,7 @@ function clearQueue() {
 // Play track from queue
 function playFromQueue(index) {
     if (index < 0 || index >= playQueue.length) return;
-    
+
     queueIndex = index;
     playTrack(playQueue[index]);
 }
@@ -1500,7 +1533,7 @@ function playFromQueue(index) {
 function toggleQueue() {
     isQueueVisible = !isQueueVisible;
     const panel = document.getElementById('playQueuePanel');
-    
+
     if (isQueueVisible) {
         panel.style.display = 'flex';
         document.body.style.paddingRight = '350px';
@@ -1516,10 +1549,10 @@ function updateQueueDisplay() {
     const queueCount = document.getElementById('queueCount');
     const queueDuration = document.getElementById('queueDuration');
     const queueBadge = document.getElementById('queueBadge');
-    
+
     // Update badge
     queueBadge.textContent = playQueue.length;
-    
+
     if (playQueue.length === 0) {
         queueList.innerHTML = `
             <div class="queue-empty">
@@ -1532,35 +1565,35 @@ function updateQueueDisplay() {
         queueDuration.textContent = '0:00';
         return;
     }
-    
+
     // Calculate total duration
     let totalDuration = 0;
     playQueue.forEach(trackId => {
-        const track = tracks.find(t => t.id === trackId);
+        const track = fullTracks.find(t => t.id === trackId);
         if (track && track.duration_secs) {
             totalDuration += track.duration_secs;
         }
     });
-    
+
     // Update info
     queueCount.textContent = `${playQueue.length} track${playQueue.length !== 1 ? 's' : ''}`;
     queueDuration.textContent = formatDuration(totalDuration);
-    
+
     // Render queue items
     queueList.innerHTML = playQueue.map((trackId, index) => {
-        const track = tracks.find(t => t.id === trackId);
+        const track = fullTracks.find(t => t.id === trackId);
         if (!track) return '';
-        
+
         const isCurrentTrack = index === queueIndex;
         const coverUrl = track.has_cover ? `${API_BASE}/cover/${trackId}` : null;
-        
+
         return `
             <div class="queue-item ${isCurrentTrack ? 'playing' : ''}" onclick="playFromQueue(${index})">
                 <div class="queue-item-number">${index + 1}</div>
                 <div class="queue-item-cover">
-                    ${coverUrl 
-                        ? `<img src="${coverUrl}" alt="Cover" onerror="this.style.display='none';">` 
-                        : '📀'}
+                    ${coverUrl
+                ? `<img src="${coverUrl}" alt="Cover" onerror="this.style.display='none';">`
+                : '📀'}
                 </div>
                 <div class="queue-item-info">
                     <div class="queue-item-title">${escapeHtml(track.title || 'Unknown Title')}</div>
@@ -1578,32 +1611,32 @@ function updateQueueDisplay() {
 // Move track up in queue
 function moveQueueItemUp(index) {
     if (index <= 0 || index >= playQueue.length) return;
-    
+
     [playQueue[index - 1], playQueue[index]] = [playQueue[index], playQueue[index - 1]];
-    
+
     // Adjust current index if needed
     if (queueIndex === index) {
         queueIndex--;
     } else if (queueIndex === index - 1) {
         queueIndex++;
     }
-    
+
     updateQueueDisplay();
 }
 
 // Move track down in queue
 function moveQueueItemDown(index) {
     if (index < 0 || index >= playQueue.length - 1) return;
-    
+
     [playQueue[index], playQueue[index + 1]] = [playQueue[index + 1], playQueue[index]];
-    
+
     // Adjust current index if needed
     if (queueIndex === index) {
         queueIndex++;
     } else if (queueIndex === index + 1) {
         queueIndex--;
     }
-    
+
     updateQueueDisplay();
 }
 
@@ -1615,15 +1648,15 @@ let isLyricsPanelVisible = false;
 
 // Open lyrics modal
 async function openLyricsModal(trackId) {
-    const track = tracks.find(t => t.id === trackId);
+    const track = fullTracks.find(t => t.id === trackId);
     if (!track) return;
-    
+
     currentLyricsTrackId = trackId;
-    
+
     // Update track info
     document.getElementById('lyricsTrackTitle').textContent = track.title || 'Unknown Title';
     document.getElementById('lyricsTrackArtist').textContent = track.artist || 'Unknown Artist';
-    
+
     // Load lyrics if available
     if (track.has_lyrics) {
         await loadLyricsForModal(trackId);
@@ -1631,7 +1664,7 @@ async function openLyricsModal(trackId) {
         currentLyrics = null;
         clearLyricsModal();
     }
-    
+
     // Show modal
     document.getElementById('lyricsModal').style.display = 'flex';
     switchLyricsTab('view');
@@ -1649,12 +1682,12 @@ function switchLyricsTab(tab) {
     document.querySelectorAll('.lyrics-tab-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
-    
+
     // Update tab content
     document.querySelectorAll('.lyrics-tab-content').forEach(content => {
         content.classList.remove('active');
     });
-    
+
     if (tab === 'view') {
         document.getElementById('lyricsViewTab').classList.add('active');
     } else {
@@ -1680,7 +1713,7 @@ function switchLyricsTab(tab) {
 async function loadLyricsForModal(trackId) {
     try {
         const response = await fetch(`${API_BASE}/lyrics/${trackId}`);
-        
+
         if (response.ok) {
             currentLyrics = await response.json();
             displayLyricsInModal(currentLyrics);
@@ -1699,42 +1732,42 @@ async function loadLyricsForModal(trackId) {
 // Display lyrics in view tab
 function displayLyricsInModal(lyrics) {
     const display = document.getElementById('lyricsDisplay');
-    
+
     if (lyrics.format === 'lrc' || lyrics.format === 'lrc_word') {
         // Parse lyrics based on format
-        const lines = lyrics.format === 'lrc_word' 
+        const lines = lyrics.format === 'lrc_word'
             ? parseWordLevelLrcLyrics(lyrics.content)
             : parseLrcLyrics(lyrics.content);
-        
+
         // Check if any line has word-level timing
         const hasWordTiming = lines.some(l => l.hasWordTiming);
-        
+
         display.innerHTML = `
             ${hasWordTiming ? '<div class="lyrics-format-badge">🎤 Word-level synchronized lyrics (Karaoke mode)</div>' : ''}
             <div class="lyrics-content lrc-lyrics">
                 ${lines.map((line, lineIndex) => {
-                    if (line.words && line.words.length > 0) {
-                        // Word-level lyrics rendering
-                        const wordsHtml = line.words.map((word, wordIndex) => 
-                            `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
-                        ).join('');
-                        
-                        return `
+            if (line.words && line.words.length > 0) {
+                // Word-level lyrics rendering
+                const wordsHtml = line.words.map((word, wordIndex) =>
+                    `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
+                ).join('');
+
+                return `
                             <div class="lyrics-line word-level-line" data-time="${line.time}" data-line="${lineIndex}">
                                 ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
                                 <span class="lyrics-text word-level-text">${wordsHtml}</span>
                             </div>
                         `;
-                    } else {
-                        // Regular line-level lyrics
-                        return `
+            } else {
+                // Regular line-level lyrics
+                return `
                             <div class="lyrics-line" data-time="${line.time}">
                                 ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
                                 <span class="lyrics-text">${escapeHtml(line.text)}</span>
                             </div>
                         `;
-                    }
-                }).join('')}
+            }
+        }).join('')}
             </div>
         `;
     } else {
@@ -1750,13 +1783,13 @@ function displayLyricsInModal(lyrics) {
             </div>
         `;
     }
-    
+
     // Show metadata
     if (lyrics.language || lyrics.source) {
         const metadata = [];
         if (lyrics.language) metadata.push(`Language: ${lyrics.language}`);
         if (lyrics.source) metadata.push(`Source: ${lyrics.source}`);
-        
+
         display.innerHTML += `
             <div class="lyrics-metadata">
                 ${metadata.join(' • ')}
@@ -1782,7 +1815,7 @@ function parseLrcLyrics(content) {
     // Support both standard LRC [mm:ss.xx] and extended format [offset,duration]
     const lrcRegex = /\[(\d+):(\d{2})\.(\d{2,3})\](.*)/;
     const extendedLrcRegex = /\[(\d+),(\d+)\](.*)/;
-    
+
     content.split('\n').forEach(line => {
         // Try standard LRC format first
         let match = line.match(lrcRegex);
@@ -1793,16 +1826,16 @@ function parseLrcLyrics(content) {
             const time = minutes * 60 + seconds + centiseconds / (match[3].length === 3 ? 1000 : 100);
             const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
             let text = match[4].trim();
-            
+
             // Check if this line has word-level timing (extended format)
             // Format: word(offset,duration)word(offset,duration)
             const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
-            
+
             if (hasWordTiming) {
                 // Parse word-level timing and extract clean text
                 text = parseWordLevelLyrics(text);
             }
-            
+
             lines.push({ time, timestamp, text, hasWordTiming });
         } else {
             // Try extended format [offset,duration]
@@ -1813,22 +1846,22 @@ function parseLrcLyrics(content) {
                 const time = offset / 1000; // Convert milliseconds to seconds
                 const timestamp = formatTimestamp(time);
                 let text = match[3].trim();
-                
+
                 // Check for word-level timing
                 const hasWordTiming = /\((\d+),(\d+)\)/.test(text);
                 if (hasWordTiming) {
                     text = parseWordLevelLyrics(text);
                 }
-                
+
                 lines.push({ time, timestamp, text, hasWordTiming });
-            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') && 
-                       !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
+            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') &&
+                !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
                 // Non-LRC line (skip metadata tags)
                 lines.push({ time: -1, timestamp: null, text: line.trim(), hasWordTiming: false });
             }
         }
     });
-    
+
     return lines;
 }
 
@@ -1838,7 +1871,7 @@ function parseWordLevelLrcLyrics(content) {
     // Support both standard LRC [mm:ss.xx] and extended format [offset,duration]
     const lrcRegex = /\[(\d+):(\d{2})\.(\d{2,3})\](.*)/;
     const extendedLrcRegex = /\[(\d+),(\d+)\](.*)/;
-    
+
     content.split('\n').forEach(line => {
         // Try standard LRC format first
         let match = line.match(lrcRegex);
@@ -1849,10 +1882,10 @@ function parseWordLevelLrcLyrics(content) {
             const time = minutes * 60 + seconds + centiseconds / (match[3].length === 3 ? 1000 : 100);
             const timestamp = `${match[1]}:${match[2]}.${match[3]}`;
             const text = match[4].trim();
-            
+
             // Parse word-level timing
             const words = parseWordsWithTiming(text, time);
-            
+
             lines.push({ time, timestamp, text, words, hasWordTiming: words.length > 0 });
         } else {
             // Try extended format [offset,duration]
@@ -1863,19 +1896,19 @@ function parseWordLevelLrcLyrics(content) {
                 const time = offset / 1000; // Convert milliseconds to seconds
                 const timestamp = formatTimestamp(time);
                 const text = match[3].trim();
-                
+
                 // Parse word-level timing
                 const words = parseWordsWithTiming(text, time);
-                
+
                 lines.push({ time, timestamp, text, words, hasWordTiming: words.length > 0 });
-            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') && 
-                       !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
+            } else if (line.trim() && !line.startsWith('[ti:') && !line.startsWith('[ar:') &&
+                !line.startsWith('[al:') && !line.startsWith('[by:') && !line.startsWith('[offset:')) {
                 // Non-LRC line (skip metadata tags)
                 lines.push({ time: -1, timestamp: null, text: line.trim(), words: [], hasWordTiming: false });
             }
         }
     });
-    
+
     return lines;
 }
 
@@ -1885,14 +1918,14 @@ function parseWordsWithTiming(text, lineTime) {
     // Match word(offset,duration) pattern
     const wordRegex = /(.+?)\((\d+),(\d+)\)/g;
     let match;
-    
+
     while ((match = wordRegex.exec(text)) !== null) {
         const word = match[1];
         const time = parseInt(match[2]) / 1000; // Convert to seconds
         const duration = parseInt(match[3]) / 1000; // Convert to seconds
         words.push({ word, time, duration });
     }
-    
+
     return words;
 }
 
@@ -1900,8 +1933,8 @@ function parseWordsWithTiming(text, lineTime) {
 function parseWordLevelLyrics(text) {
     // Remove word-level timing information: word(offset,duration) -> word
     return text.replace(/(\S+?)\((\d+),(\d+)\)/g, '$1')
-               .replace(/\s+/g, ' ')
-               .trim();
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 // Format timestamp from seconds
@@ -1915,18 +1948,18 @@ function formatTimestamp(seconds) {
 // Save lyrics
 async function saveLyrics() {
     if (!currentLyricsTrackId) return;
-    
+
     const content = document.getElementById('lyricsContent').value.trim();
-    
+
     if (!content) {
         alert('Please enter lyrics content');
         return;
     }
-    
+
     const format = document.getElementById('lyricsFormat').value || null;
     const language = document.getElementById('lyricsLanguage').value.trim() || null;
     const source = document.getElementById('lyricsSource').value.trim() || null;
-    
+
     try {
         const response = await fetch(`${API_BASE}/lyrics/${currentLyricsTrackId}`, {
             method: 'PUT',
@@ -1940,25 +1973,29 @@ async function saveLyrics() {
                 source
             })
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to save lyrics');
         }
-        
+
         currentLyrics = await response.json();
-        
-        // Update track's has_lyrics flag
+
+        // Update track's has_lyrics flag in both arrays
+        const fullTrack = fullTracks.find(t => t.id === currentLyricsTrackId);
+        if (fullTrack) {
+            fullTrack.has_lyrics = true;
+        }
         const track = tracks.find(t => t.id === currentLyricsTrackId);
         if (track) {
             track.has_lyrics = true;
         }
-        
+
         // Refresh track list
         renderTracks();
-        
+
         // Switch to view tab
         switchLyricsTab('view');
-        
+
         console.log('Lyrics saved successfully');
     } catch (error) {
         console.error('Error saving lyrics:', error);
@@ -1969,35 +2006,39 @@ async function saveLyrics() {
 // Delete lyrics
 async function deleteLyrics() {
     if (!currentLyricsTrackId) return;
-    
+
     if (!confirm('Are you sure you want to delete the lyrics for this track?')) {
         return;
     }
-    
+
     try {
         const response = await fetch(`${API_BASE}/lyrics/${currentLyricsTrackId}`, {
             method: 'DELETE'
         });
-        
+
         if (response.status !== 204) {
             throw new Error('Failed to delete lyrics');
         }
-        
+
         currentLyrics = null;
-        
-        // Update track's has_lyrics flag
+
+        // Update track's has_lyrics flag in both arrays
+        const fullTrack = fullTracks.find(t => t.id === currentLyricsTrackId);
+        if (fullTrack) {
+            fullTrack.has_lyrics = false;
+        }
         const track = tracks.find(t => t.id === currentLyricsTrackId);
         if (track) {
             track.has_lyrics = false;
         }
-        
+
         // Refresh track list
         renderTracks();
-        
+
         // Clear modal
         clearLyricsModal();
         switchLyricsTab('view');
-        
+
         console.log('Lyrics deleted successfully');
     } catch (error) {
         console.error('Error deleting lyrics:', error);
@@ -2014,16 +2055,16 @@ let lyricsVisible = true; // Default to showing lyrics when available
 async function loadLyricsForPlayer(trackId) {
     try {
         const response = await fetch(`${API_BASE}/lyrics/${trackId}`);
-        
+
         if (response.ok) {
             const lyrics = await response.json();
             displayLyricsInPlayer(lyrics);
             hasLyricsAvailable = true;
-            
+
             // Show toggle button
             const toggleBtn = document.getElementById('lyricsToggleBtn');
             toggleBtn.style.display = 'flex';
-            
+
             // Show lyrics if visibility preference is true
             if (lyricsVisible) {
                 showPlayerLyrics();
@@ -2048,41 +2089,41 @@ async function loadLyricsForPlayer(trackId) {
 // Display lyrics in player
 function displayLyricsInPlayer(lyrics) {
     const content = document.getElementById('playerLyricsContent');
-    
+
     if (lyrics.format === 'lrc' || lyrics.format === 'lrc_word') {
         // Parse lyrics based on format
-        const lines = lyrics.format === 'lrc_word' 
+        const lines = lyrics.format === 'lrc_word'
             ? parseWordLevelLrcLyrics(lyrics.content)
             : parseLrcLyrics(lyrics.content);
-        
+
         content.innerHTML = `
             <div class="lyrics-content lrc-lyrics">
                 ${lines.map((line, lineIndex) => {
-                    if (line.words && line.words.length > 0) {
-                        // Word-level lyrics rendering with karaoke effect
-                        const wordsHtml = line.words.map((word, wordIndex) => 
-                            `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-index="${lineIndex}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
-                        ).join('');
-                        
-                        return `
+            if (line.words && line.words.length > 0) {
+                // Word-level lyrics rendering with karaoke effect
+                const wordsHtml = line.words.map((word, wordIndex) =>
+                    `<span class="lyrics-word" data-time="${word.time}" data-duration="${word.duration}" data-index="${lineIndex}" data-line="${lineIndex}" data-word="${wordIndex}">${escapeHtml(word.word)}</span>`
+                ).join('');
+
+                return `
                             <div class="lyrics-line word-level-line" data-time="${line.time}" data-index="${lineIndex}" data-line="${lineIndex}">
                                 ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
                                 <span class="lyrics-text word-level-text">${wordsHtml}</span>
                             </div>
                         `;
-                    } else {
-                        // Regular line-level lyrics
-                        return `
+            } else {
+                // Regular line-level lyrics
+                return `
                             <div class="lyrics-line" data-time="${line.time}" data-index="${lineIndex}" data-line="${lineIndex}">
                                 ${line.timestamp ? `<span class="lyrics-timestamp">${line.timestamp}</span>` : ''}
                                 <span class="lyrics-text">${escapeHtml(line.text)}</span>
                             </div>
                         `;
-                    }
-                }).join('')}
+            }
+        }).join('')}
             </div>
         `;
-        
+
         // Enable synchronized scrolling with word-level support
         enableLyricsSynchronization(lines);
     } else {
@@ -2115,10 +2156,10 @@ function hidePlayerLyrics() {
 // Toggle player lyrics visibility
 function togglePlayerLyrics() {
     if (!hasLyricsAvailable) return;
-    
+
     lyricsVisible = !lyricsVisible;
     const toggleBtn = document.getElementById('lyricsToggleBtn');
-    
+
     if (lyricsVisible) {
         showPlayerLyrics();
         toggleBtn.classList.add('active');
@@ -2140,7 +2181,7 @@ function enableLyricsSynchronization(lines) {
 // Update synchronized lyrics (call this from audio timeupdate)
 function updateSynchronizedLyrics(currentTime) {
     if (lyricsLines.length === 0) return;
-    
+
     // Find the current line
     let newIndex = -1;
     for (let i = lyricsLines.length - 1; i >= 0; i--) {
@@ -2149,14 +2190,14 @@ function updateSynchronizedLyrics(currentTime) {
             break;
         }
     }
-    
+
     if (newIndex !== currentLyricsIndex) {
         // Remove previous highlight
         const prevLine = document.querySelector('.lyrics-line.active');
         if (prevLine) {
             prevLine.classList.remove('active');
         }
-        
+
         // Highlight current line
         if (newIndex >= 0) {
             const currentLine = document.querySelector(`[data-index="${newIndex}"]`);
@@ -2166,14 +2207,14 @@ function updateSynchronizedLyrics(currentTime) {
                 currentLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
-        
+
         currentLyricsIndex = newIndex;
     }
-    
+
     // Handle word-level highlighting if available
     if (newIndex >= 0 && lyricsLines[newIndex].words && lyricsLines[newIndex].words.length > 0) {
         const currentLineWords = lyricsLines[newIndex].words;
-        
+
         // Find and highlight current word
         for (let i = 0; i < currentLineWords.length; i++) {
             const word = currentLineWords[i];
@@ -2197,7 +2238,7 @@ function updateSynchronizedLyrics(currentTime) {
                 wordElement.classList.remove('active', 'sung');
             }
         }
-        
+
         // Clear highlighting from previous lines
         if (currentLyricsIndex > 0) {
             const prevWords = document.querySelectorAll(`[data-line="${currentLyricsIndex - 1}"] .lyrics-word`);
@@ -2216,22 +2257,22 @@ let currentSearchTrackId = null;
 // Open lyrics search modal
 function openLyricsSearchModal() {
     if (!currentLyricsTrackId) return;
-    
+
     // Store the track ID for search
     currentSearchTrackId = currentLyricsTrackId;
-    
+
     // Get track info to pre-fill search
-    const track = tracks.find(t => t.id === currentLyricsTrackId);
+    const track = fullTracks.find(t => t.id === currentLyricsTrackId);
     if (track) {
         document.getElementById('lyricsSearchQuery').value = track.title || '';
         document.getElementById('lyricsSearchArtist').value = track.artist || '';
     }
-    
+
     // Clear previous results
     document.getElementById('lyricsSearchResults').style.display = 'none';
     document.getElementById('lyricsSearchError').style.display = 'none';
     document.getElementById('lyricsSearchResultsList').innerHTML = '';
-    
+
     // Show modal
     document.getElementById('lyricsSearchModal').style.display = 'flex';
 }
@@ -2247,44 +2288,44 @@ async function performLyricsSearch() {
     const query = document.getElementById('lyricsSearchQuery').value.trim();
     const artist = document.getElementById('lyricsSearchArtist').value.trim();
     const provider = document.getElementById('lyricsSearchProvider').value;
-    
+
     if (!query) {
         alert('Please enter a song title');
         return;
     }
-    
+
     // Show loading
     document.getElementById('lyricsSearchLoading').style.display = 'block';
     document.getElementById('lyricsSearchError').style.display = 'none';
     document.getElementById('lyricsSearchResults').style.display = 'none';
-    
+
     try {
         // Build query params
         let url = `${API_BASE}/lyrics/search?q=${encodeURIComponent(query)}&provider=${provider}`;
         if (artist) {
             url += `&artist=${encodeURIComponent(artist)}`;
         }
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error('Search failed');
         }
-        
+
         const results = await response.json();
-        
+
         // Hide loading
         document.getElementById('lyricsSearchLoading').style.display = 'none';
-        
+
         if (results.length === 0) {
             document.getElementById('lyricsSearchError').textContent = 'No results found. Try different search terms.';
             document.getElementById('lyricsSearchError').style.display = 'block';
             return;
         }
-        
+
         // Display results
         displayLyricsSearchResults(results, provider);
-        
+
     } catch (error) {
         console.error('Error searching lyrics:', error);
         document.getElementById('lyricsSearchLoading').style.display = 'none';
@@ -2297,15 +2338,15 @@ async function performLyricsSearch() {
 function displayLyricsSearchResults(results, provider) {
     const resultsList = document.getElementById('lyricsSearchResultsList');
     resultsList.innerHTML = '';
-    
+
     results.forEach(result => {
         const item = document.createElement('div');
         item.className = 'lyrics-search-result-item';
         item.onclick = () => fetchAndApplyLyrics(result.id, provider);
-        
+
         // Format duration
         const duration = result.duration ? formatDuration(Math.floor(result.duration.secs)) : 'Unknown';
-        
+
         item.innerHTML = `
             <div class="lyrics-search-result-title">${escapeHtml(result.title)}</div>
             <div class="lyrics-search-result-artist">👤 ${escapeHtml(result.artist)}</div>
@@ -2315,45 +2356,45 @@ function displayLyricsSearchResults(results, provider) {
                 <span class="lyrics-search-result-provider">${provider}</span>
             </div>
         `;
-        
+
         resultsList.appendChild(item);
     });
-    
+
     document.getElementById('lyricsSearchResults').style.display = 'block';
 }
 
 // Fetch and apply lyrics from selected result
 async function fetchAndApplyLyrics(songId, provider) {
     if (!currentSearchTrackId) return;
-    
+
     // Show loading in search modal
     document.getElementById('lyricsSearchLoading').style.display = 'block';
     document.getElementById('lyricsSearchError').style.display = 'none';
-    
+
     try {
         const response = await fetch(`${API_BASE}/lyrics/fetch/${provider}/${encodeURIComponent(songId)}`);
-        
+
         if (!response.ok) {
             throw new Error('Failed to fetch lyrics');
         }
-        
+
         const lyricsData = await response.json();
-        
+
         // Apply lyrics to the edit form
         document.getElementById('lyricsContent').value = lyricsData.content;
         document.getElementById('lyricsFormat').value = lyricsData.format || '';
         document.getElementById('lyricsLanguage').value = lyricsData.language || '';
         document.getElementById('lyricsSource').value = lyricsData.source || '';
-        
+
         // Close search modal
         closeLyricsSearchModal();
-        
+
         // Show success message
         console.log('Lyrics fetched successfully from', provider);
-        
+
         // Auto-save the lyrics
         await saveLyrics();
-        
+
     } catch (error) {
         console.error('Error fetching lyrics:', error);
         document.getElementById('lyricsSearchLoading').style.display = 'none';
@@ -2375,7 +2416,7 @@ function formatDuration(seconds) {
 function initTheme() {
     // Check localStorage for saved theme preference
     const savedTheme = localStorage.getItem('music_station_theme');
-    
+
     // Default to light mode if no preference saved
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
@@ -2390,10 +2431,10 @@ function initTheme() {
 // Toggle between light and dark mode
 function toggleTheme() {
     const isDarkMode = document.body.classList.toggle('dark-mode');
-    
+
     // Save preference to localStorage
     localStorage.setItem('music_station_theme', isDarkMode ? 'dark' : 'light');
-    
+
     // Update icon
     updateThemeIcon(isDarkMode);
 }
@@ -2421,22 +2462,22 @@ let autoFetchState = {
 // Start auto-fetch lyrics process
 async function startAutoFetchLyrics() {
     // Get tracks without lyrics
-    const tracksWithoutLyrics = tracks.filter(track => !track.has_lyrics && track.title);
-    
+    const tracksWithoutLyrics = fullTracks.filter(track => !track.has_lyrics && track.title);
+
     if (tracksWithoutLyrics.length === 0) {
         alert('All tracks already have lyrics! 🎉');
         return;
     }
-    
+
     // Confirm with user
     const confirmed = confirm(
         `Found ${tracksWithoutLyrics.length} tracks without lyrics.\n\n` +
         `This will search for lyrics using QQ Music API and automatically apply them.\n\n` +
         `Continue?`
     );
-    
+
     if (!confirmed) return;
-    
+
     // Reset state
     autoFetchState = {
         isRunning: true,
@@ -2447,36 +2488,36 @@ async function startAutoFetchLyrics() {
         failed: 0,
         skipped: 0
     };
-    
+
     // Show modal
     openAutoFetchModal();
     updateAutoFetchUI();
-    
+
     // Process tracks
     for (let i = 0; i < tracksWithoutLyrics.length; i++) {
         if (autoFetchState.isCancelled) {
             addAutoFetchLog('Process cancelled by user', 'info');
             break;
         }
-        
+
         const track = tracksWithoutLyrics[i];
         await processTrackForAutoFetch(track);
-        
+
         // Sleep 1 second between requests (except for last track)
         if (i < tracksWithoutLyrics.length - 1 && !autoFetchState.isCancelled) {
             await sleep(1000);
         }
     }
-    
+
     // Finalize
     autoFetchState.isRunning = false;
     document.getElementById('autoFetchCancelBtn').style.display = 'none';
     document.getElementById('autoFetchCloseBtn').style.display = 'inline-block';
-    
+
     if (!autoFetchState.isCancelled) {
         addAutoFetchLog('✅ Auto-fetch completed!', 'success');
     }
-    
+
     // Refresh tracks to update has_lyrics flags
     await loadTracks(false);
 }
@@ -2485,69 +2526,69 @@ async function startAutoFetchLyrics() {
 async function processTrackForAutoFetch(track) {
     autoFetchState.processed++;
     updateAutoFetchUI();
-    
+
     const trackTitle = track.title || 'Unknown';
     const trackArtist = track.artist || '';
-    
+
     // Update current track display
-    document.getElementById('autoFetchCurrentTrack').innerHTML = 
+    document.getElementById('autoFetchCurrentTrack').innerHTML =
         `<strong>Processing:</strong> ${escapeHtml(trackTitle)} ${trackArtist ? `- ${escapeHtml(trackArtist)}` : ''}`;
-    
+
     try {
         // Search for lyrics
         let url = `${API_BASE}/lyrics/search?q=${encodeURIComponent(trackTitle)}&provider=qqmusic`;
         if (trackArtist) {
             url += `&artist=${encodeURIComponent(trackArtist)}`;
         }
-        
+
         const searchResponse = await fetch(url);
         if (!searchResponse.ok) {
             throw new Error('Search failed');
         }
-        
+
         const results = await searchResponse.json();
-        
+
         if (results.length === 0) {
             autoFetchState.skipped++;
             addAutoFetchLog(`⊘ No results: ${trackTitle}`, 'skip');
             return;
         }
-        
+
         // Find best match based on duration
         let bestMatch = null;
         let minDurationDiff = Infinity;
-        
+
         for (const result of results) {
             if (!result.duration || !result.duration.secs || !track.duration_secs) {
                 continue;
             }
-            
+
             const durationDiff = Math.abs(result.duration.secs - track.duration_secs);
-            
+
             // Check if duration difference is within 10 seconds
             if (durationDiff < 10 && durationDiff < minDurationDiff) {
                 bestMatch = result;
                 minDurationDiff = durationDiff;
             }
         }
-        
+
         if (!bestMatch) {
             autoFetchState.skipped++;
             addAutoFetchLog(`⊘ No match (duration): ${trackTitle}`, 'skip');
             return;
         }
-        
+
         // Fetch lyrics
         const fetchResponse = await fetch(
             `${API_BASE}/lyrics/fetch/qqmusic/${encodeURIComponent(bestMatch.id)}`
         );
-        
+
         if (!fetchResponse.ok) {
             throw new Error('Failed to fetch lyrics');
         }
-        
+
         const lyricsData = await fetchResponse.json();
-        
+
         // Upload lyrics to track
         const uploadResponse = await fetch(`${API_BASE}/lyrics/${track.id}`, {
             method: 'PUT',
@@ -2559,16 +2600,16 @@ async function processTrackForAutoFetch(track) {
                 source: lyricsData.source
             })
         });
-        
+
         if (!uploadResponse.ok) {
             throw new Error('Failed to upload lyrics');
         }
-        
+
         // Success
         autoFetchState.succeeded++;
         track.has_lyrics = true; // Update local state
         addAutoFetchLog(`✓ Success: ${trackTitle}`, 'success');
-        
+
     } catch (error) {
         autoFetchState.failed++;
         addAutoFetchLog(`✗ Error: ${trackTitle} - ${error.message}`, 'error');
@@ -2579,17 +2620,17 @@ async function processTrackForAutoFetch(track) {
 // Update auto-fetch UI
 function updateAutoFetchUI() {
     const { total, processed, succeeded, failed, skipped } = autoFetchState;
-    
+
     // Update progress text
-    document.getElementById('autoFetchProgress').textContent = 
+    document.getElementById('autoFetchProgress').textContent =
         `${processed} / ${total} tracks processed`;
-    
+
     // Update progress bar
     const percentage = total > 0 ? (processed / total) * 100 : 0;
     const progressBar = document.getElementById('autoFetchProgressBar');
     progressBar.style.width = `${percentage}%`;
     progressBar.textContent = `${Math.round(percentage)}%`;
-    
+
     // Update details
     document.getElementById('autoFetchTotal').textContent = total;
     document.getElementById('autoFetchProcessed').textContent = processed;
@@ -2605,7 +2646,7 @@ function addAutoFetchLog(message, type = 'info') {
     entry.className = `log-entry log-${type}`;
     entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
     log.appendChild(entry);
-    
+
     // Auto-scroll to bottom
     log.scrollTop = log.scrollHeight;
 }
