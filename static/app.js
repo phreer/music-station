@@ -528,8 +528,7 @@ function renderFilteredTracks() {
                     <tr>
                         <th style="width: 50px;">Cover</th>
                         <th style="width: 40px;"></th>
-                        <th>Title</th>
-                        <th>Artist</th>
+                        <th>Track</th>
                         <th>Album</th>
                         <th>Duration</th>
                         <th>Plays</th>
@@ -571,8 +570,7 @@ function renderTracks(append = false) {
                         <tr>
                             <th style="width: 50px;">Cover</th>
                             <th style="width: 40px;"></th>
-                            <th>Title</th>
-                            <th>Artist</th>
+                            <th>Track</th>
                             <th>Album</th>
                             <th>Duration</th>
                             <th>Plays</th>
@@ -655,8 +653,10 @@ function createTrackRow(track) {
                     <i data-lucide="play"></i>
                 </button>
             </td>
-            <td class="track-title-cell">${escapeHtml(title)}</td>
-            <td class="track-artist-cell">${escapeHtml(artist)}</td>
+            <td class="track-info-cell">
+                <div class="track-title-main">${escapeHtml(title)}</div>
+                <div class="track-artist-sub">${escapeHtml(artist)}</div>
+            </td>
             <td class="track-album-cell">${escapeHtml(album)}</td>
             <td class="track-duration-cell">${duration}</td>
             <td class="track-plays-cell">${track.play_count || 0}</td>

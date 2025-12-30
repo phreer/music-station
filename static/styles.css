@@ -440,21 +440,26 @@ header h1 {
     color: var(--primary-color);
 }
 
-.track-title-cell {
+.track-info-cell {
+    max-width: 300px;
+    overflow: hidden;
+}
+
+.track-title-main {
     font-weight: 600;
     color: var(--primary-color);
-    max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.track-artist-cell {
-    color: var(--text-color);
-    max-width: 200px;
+.track-artist-sub {
+    font-size: 0.85em;
+    color: var(--text-light);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    margin-top: 2px;
 }
 
 .track-album-cell {
