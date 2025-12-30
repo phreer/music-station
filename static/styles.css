@@ -1340,10 +1340,12 @@ header h1 {
     color: #0066cc;
     font-size: 20px;
     transition: transform 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.album-card.expanded .expand-indicator,
-.artist-card.expanded .expand-indicator {
+.album-card.expanded .expand-indicator {
     transform: rotate(180deg);
 }
 
