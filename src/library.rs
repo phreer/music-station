@@ -144,13 +144,17 @@ impl MusicLibrary {
         let handler = get_audio_file_handler(ext)
             .ok_or_else(|| anyhow::anyhow!("Unsupported file format: {}", ext))?;
 
-        // Parse metadata using the handler
-        let audio_metadata = handler
-            .parse_metadata(path)
-            .context("Failed to parse audio metadata")?;
-
-        // Check for embedded cover art
-        let has_cover = handler.has_cover_art(path).unwrap_or(false);
+        // Parse metadata and check cover art in a blocking task
+        // (audio libraries use synchronous I/O internally)
+        let path_owned = path.to_path_buf();
+        let (audio_metadata, has_cover) = tokio::task::spawn_blocking(move || {
+            let audio_metadata = handler
+                .parse_metadata(&path_owned)
+                .context("Failed to parse audio metadata")?;
+            let has_cover = handler.has_cover_art(&path_owned).unwrap_or(false);
+            Ok::<_, anyhow::Error>((audio_metadata, has_cover))
+        })
+        .await??;
 
         // Generate a unique ID from the relative path (relative to library directory)
         // This ensures consistent IDs regardless of where the library is mounted
@@ -361,6 +365,7 @@ impl MusicLibrary {
 
         // Update the audio file metadata
         self.write_audio_metadata(&track.path, &update)
+            .await
             .context(format!(
                 "Failed to write metadata to file: {}",
                 track.path.display()
@@ -394,7 +399,7 @@ impl MusicLibrary {
     }
 
     /// Write metadata to an audio file (FLAC or MP3)
-    fn write_audio_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
+    async fn write_audio_metadata(&self, path: &Path, update: &TrackMetadataUpdate) -> Result<()> {
         let ext = path
             .extension()
             .and_then(|s| s.to_str())
@@ -405,13 +410,18 @@ impl MusicLibrary {
         let handler = get_audio_file_handler(ext)
             .ok_or_else(|| anyhow::anyhow!("Unsupported file format: {}", ext))?;
 
-        handler
-            .write_metadata(path, update)
-            .context(format!("Failed to write metadata to {}", path.display()))
+        let path_owned = path.to_path_buf();
+        let update_owned = update.clone();
+        tokio::task::spawn_blocking(move || {
+            handler
+                .write_metadata(&path_owned, &update_owned)
+                .context(format!("Failed to write metadata to {}", path_owned.display()))
+        })
+        .await?
     }
 
     /// Get cover art from an audio file (FLAC or MP3)
-    pub fn get_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
+    pub async fn get_cover_art(&self, path: &Path) -> Result<Option<Vec<u8>>> {
         let ext = path
             .extension()
             .and_then(|s| s.to_str())
@@ -420,7 +430,8 @@ impl MusicLibrary {
         let handler = get_audio_file_handler(ext)
             .ok_or_else(|| anyhow::anyhow!("Unsupported file format: {}", ext))?;
 
-        handler.get_cover_art(path)
+        let path_owned = path.to_path_buf();
+        tokio::task::spawn_blocking(move || handler.get_cover_art(&path_owned)).await?
     }
 
     /// Set cover art for an audio file (FLAC or MP3)
@@ -449,7 +460,12 @@ impl MusicLibrary {
         let handler = get_audio_file_handler(ext)
             .ok_or_else(|| anyhow::anyhow!("Unsupported file format: {}", ext))?;
 
-        handler.set_cover_art(&track.path, image_data, mime_type)?;
+        let path_owned = track.path.clone();
+        let mime_type_owned = mime_type.to_string();
+        tokio::task::spawn_blocking(move || {
+            handler.set_cover_art(&path_owned, image_data, &mime_type_owned)
+        })
+        .await??;
 
         // Update in-memory track
         let mut updated_track = self
@@ -493,7 +509,8 @@ impl MusicLibrary {
         let handler = get_audio_file_handler(ext)
             .ok_or_else(|| anyhow::anyhow!("Unsupported file format: {}", ext))?;
 
-        handler.remove_cover_art(&track.path)?;
+        let path_owned = track.path.clone();
+        tokio::task::spawn_blocking(move || handler.remove_cover_art(&path_owned)).await??;
 
         // Update in-memory track
         let mut updated_track = self

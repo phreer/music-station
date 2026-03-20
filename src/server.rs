@@ -457,7 +457,7 @@ async fn get_cover(
         .await
         .ok_or(StatusCode::NOT_FOUND)?;
 
-    match state.library.get_cover_art(&track.path) {
+    match state.library.get_cover_art(&track.path).await {
         Ok(Some(image_data)) => {
             tracing::debug!(
                 "Found cover art for track: {} ({} bytes)",
