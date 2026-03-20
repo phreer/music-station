@@ -148,7 +148,7 @@ impl LyricsProvider for MockLyricsProvider {
 /// A local file-based lyrics provider
 ///
 /// Reads lyrics from a local directory structure:
-/// ```
+/// ```text
 /// lyrics/
 ///   ├── artist1/
 ///   │   ├── song1.lrc

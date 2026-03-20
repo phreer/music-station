@@ -995,3 +995,108 @@ async fn remove_track_from_playlist(
     );
     Ok(Json(playlist))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_range_full_range() {
+        assert_eq!(parse_range("bytes=0-499", 1000), Some((0, 499)));
+    }
+
+    #[test]
+    fn parse_range_middle() {
+        assert_eq!(parse_range("bytes=100-599", 1000), Some((100, 599)));
+    }
+
+    #[test]
+    fn parse_range_end_clamped_to_file_size() {
+        // Requested end exceeds file size — should be clamped
+        assert_eq!(parse_range("bytes=0-9999", 1000), Some((0, 999)));
+    }
+
+    #[test]
+    fn parse_range_open_end() {
+        // "bytes=500-" means from 500 to end of file
+        assert_eq!(parse_range("bytes=500-", 1000), Some((500, 999)));
+    }
+
+    #[test]
+    fn parse_range_open_end_from_zero() {
+        assert_eq!(parse_range("bytes=0-", 1000), Some((0, 999)));
+    }
+
+    #[test]
+    fn parse_range_suffix() {
+        // "bytes=-200" means last 200 bytes
+        assert_eq!(parse_range("bytes=-200", 1000), Some((800, 999)));
+    }
+
+    #[test]
+    fn parse_range_suffix_entire_file() {
+        assert_eq!(parse_range("bytes=-1000", 1000), Some((0, 999)));
+    }
+
+    #[test]
+    fn parse_range_start_equals_end() {
+        // Single byte range
+        assert_eq!(parse_range("bytes=500-500", 1000), Some((500, 500)));
+    }
+
+    #[test]
+    fn parse_range_last_byte() {
+        assert_eq!(parse_range("bytes=999-999", 1000), Some((999, 999)));
+    }
+
+    #[test]
+    fn parse_range_invalid_start_greater_than_end() {
+        assert_eq!(parse_range("bytes=500-100", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_start_at_file_size() {
+        assert_eq!(parse_range("bytes=1000-", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_start_beyond_file_size() {
+        assert_eq!(parse_range("bytes=1500-", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_suffix_zero() {
+        assert_eq!(parse_range("bytes=-0", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_suffix_exceeds_file_size() {
+        assert_eq!(parse_range("bytes=-1001", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_missing_prefix() {
+        assert_eq!(parse_range("0-499", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_wrong_prefix() {
+        assert_eq!(parse_range("chars=0-499", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_both_empty() {
+        assert_eq!(parse_range("bytes=-", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_invalid_non_numeric() {
+        assert_eq!(parse_range("bytes=abc-def", 1000), None);
+    }
+
+    #[test]
+    fn parse_range_zero_size_file() {
+        assert_eq!(parse_range("bytes=0-", 0), None);
+        assert_eq!(parse_range("bytes=-1", 0), None);
+    }
+}

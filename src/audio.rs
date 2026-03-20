@@ -832,3 +832,119 @@ pub fn get_audio_file_handler(extension: &str) -> Option<Box<dyn AudioFile>> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use symphonia::core::meta::StandardTagKey;
+
+    // --- get_audio_file_handler tests ---
+
+    #[test]
+    fn handler_flac() {
+        let h = get_audio_file_handler("flac").unwrap();
+        assert_eq!(h.format_name(), "flac");
+    }
+
+    #[test]
+    fn handler_mp3() {
+        let h = get_audio_file_handler("mp3").unwrap();
+        assert_eq!(h.format_name(), "mp3");
+    }
+
+    #[test]
+    fn handler_ogg() {
+        let h = get_audio_file_handler("ogg").unwrap();
+        assert_eq!(h.format_name(), "ogg");
+    }
+
+    #[test]
+    fn handler_m4a() {
+        let h = get_audio_file_handler("m4a").unwrap();
+        assert_eq!(h.format_name(), "m4a");
+    }
+
+    #[test]
+    fn handler_case_insensitive() {
+        assert!(get_audio_file_handler("FLAC").is_some());
+        assert!(get_audio_file_handler("Mp3").is_some());
+        assert!(get_audio_file_handler("OGG").is_some());
+        assert!(get_audio_file_handler("M4A").is_some());
+    }
+
+    #[test]
+    fn handler_unsupported_returns_none() {
+        assert!(get_audio_file_handler("wav").is_none());
+        assert!(get_audio_file_handler("aac").is_none());
+        assert!(get_audio_file_handler("txt").is_none());
+        assert!(get_audio_file_handler("").is_none());
+    }
+
+    // --- AudioMetadata tests ---
+
+    #[test]
+    fn metadata_new_all_none() {
+        let m = AudioMetadata::new();
+        assert!(m.title.is_none());
+        assert!(m.artist.is_none());
+        assert!(m.album.is_none());
+        assert!(m.album_artist.is_none());
+        assert!(m.genre.is_none());
+        assert!(m.year.is_none());
+        assert!(m.track_number.is_none());
+        assert!(m.disc_number.is_none());
+        assert!(m.composer.is_none());
+        assert!(m.comment.is_none());
+        assert!(m.duration_secs.is_none());
+        assert!(m.custom_fields.is_empty());
+    }
+
+    #[test]
+    fn update_from_std_key_maps_all_known_keys() {
+        let cases: Vec<(
+            StandardTagKey,
+            Box<dyn Fn(&AudioMetadata) -> &Option<String>>,
+        )> = vec![
+            (StandardTagKey::TrackTitle, Box::new(|m| &m.title)),
+            (StandardTagKey::Artist, Box::new(|m| &m.artist)),
+            (StandardTagKey::Album, Box::new(|m| &m.album)),
+            (StandardTagKey::AlbumArtist, Box::new(|m| &m.album_artist)),
+            (StandardTagKey::Genre, Box::new(|m| &m.genre)),
+            (StandardTagKey::Date, Box::new(|m| &m.year)),
+            (StandardTagKey::TrackNumber, Box::new(|m| &m.track_number)),
+            (StandardTagKey::DiscNumber, Box::new(|m| &m.disc_number)),
+            (StandardTagKey::Composer, Box::new(|m| &m.composer)),
+            (StandardTagKey::Comment, Box::new(|m| &m.comment)),
+        ];
+
+        for (key, accessor) in cases {
+            let mut m = AudioMetadata::new();
+            let value = format!("test_{:?}", key);
+            m.update_from_std_key(key, value.clone());
+            assert_eq!(
+                accessor(&m).as_deref(),
+                Some(value.as_str()),
+                "Failed for key {:?}",
+                key
+            );
+        }
+    }
+
+    #[test]
+    fn update_from_std_key_ignores_unknown_keys() {
+        let mut m = AudioMetadata::new();
+        m.update_from_std_key(StandardTagKey::Conductor, "ignored".to_string());
+        // All fields should remain None
+        assert!(m.title.is_none());
+        assert!(m.artist.is_none());
+        assert!(m.album.is_none());
+    }
+
+    #[test]
+    fn update_from_std_key_overwrites_existing() {
+        let mut m = AudioMetadata::new();
+        m.update_from_std_key(StandardTagKey::TrackTitle, "first".to_string());
+        m.update_from_std_key(StandardTagKey::TrackTitle, "second".to_string());
+        assert_eq!(m.title.as_deref(), Some("second"));
+    }
+}
