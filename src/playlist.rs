@@ -414,3 +414,246 @@ impl PlaylistDatabase {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn make_db() -> (PlaylistDatabase, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = PlaylistDatabase::new(&dir.path().join("playlists.db"))
+            .await
+            .unwrap();
+        (db, dir)
+    }
+
+    #[tokio::test]
+    async fn crud_create_get_delete() {
+        let (db, _dir) = make_db().await;
+
+        // Initially empty
+        let all = db.get_playlists().await.unwrap();
+        assert!(all.is_empty());
+
+        // Create
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "My Playlist".into(),
+                description: Some("Test description".into()),
+            })
+            .await
+            .unwrap();
+        assert_eq!(pl.name, "My Playlist");
+        assert_eq!(pl.description.as_deref(), Some("Test description"));
+        assert!(pl.tracks.is_empty());
+
+        // Get by ID
+        let fetched = db.get_playlist(&pl.id).await.unwrap().unwrap();
+        assert_eq!(fetched.name, "My Playlist");
+
+        // List all
+        let all = db.get_playlists().await.unwrap();
+        assert_eq!(all.len(), 1);
+
+        // Delete
+        assert!(db.delete_playlist(&pl.id).await.unwrap());
+        assert!(db.get_playlist(&pl.id).await.unwrap().is_none());
+
+        // Delete non-existent
+        assert!(!db.delete_playlist(&pl.id).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn duplicate_name_rejected() {
+        let (db, _dir) = make_db().await;
+
+        db.create_playlist(PlaylistCreate {
+            name: "Dups".into(),
+            description: None,
+        })
+        .await
+        .unwrap();
+
+        let err = db
+            .create_playlist(PlaylistCreate {
+                name: "Dups".into(),
+                description: None,
+            })
+            .await;
+        assert!(err.is_err());
+        assert!(err
+            .unwrap_err()
+            .to_string()
+            .contains("already exists"));
+    }
+
+    #[tokio::test]
+    async fn update_playlist_metadata() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "Original".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        let updated = db
+            .update_playlist(
+                &pl.id,
+                PlaylistUpdate {
+                    name: Some("Renamed".into()),
+                    description: Some("New desc".into()),
+                    tracks: None,
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.name, "Renamed");
+        assert_eq!(updated.description.as_deref(), Some("New desc"));
+    }
+
+    #[tokio::test]
+    async fn update_nonexistent_returns_none() {
+        let (db, _dir) = make_db().await;
+
+        let result = db
+            .update_playlist(
+                "no-such-id",
+                PlaylistUpdate {
+                    name: Some("X".into()),
+                    description: None,
+                    tracks: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn add_and_remove_tracks() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "Tracks Test".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        // Add tracks
+        db.add_track_to_playlist(&pl.id, "t1").await.unwrap();
+        db.add_track_to_playlist(&pl.id, "t2").await.unwrap();
+        db.add_track_to_playlist(&pl.id, "t3").await.unwrap();
+
+        let fetched = db.get_playlist(&pl.id).await.unwrap().unwrap();
+        assert_eq!(fetched.tracks, vec!["t1", "t2", "t3"]);
+
+        // Remove middle track
+        db.remove_track_from_playlist(&pl.id, "t2").await.unwrap();
+
+        let fetched = db.get_playlist(&pl.id).await.unwrap().unwrap();
+        assert_eq!(fetched.tracks, vec!["t1", "t3"]);
+    }
+
+    #[tokio::test]
+    async fn add_duplicate_track_ignored() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "Dup Track".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        db.add_track_to_playlist(&pl.id, "t1").await.unwrap();
+        db.add_track_to_playlist(&pl.id, "t1").await.unwrap(); // duplicate
+
+        let fetched = db.get_playlist(&pl.id).await.unwrap().unwrap();
+        assert_eq!(fetched.tracks, vec!["t1"]);
+    }
+
+    #[tokio::test]
+    async fn add_track_to_nonexistent_playlist() {
+        let (db, _dir) = make_db().await;
+
+        let result = db.add_track_to_playlist("no-such-id", "t1").await.unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn remove_track_from_nonexistent_returns_none() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "P".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        // Remove a track that was never added
+        let result = db
+            .remove_track_from_playlist(&pl.id, "no-such-track")
+            .await
+            .unwrap();
+        assert!(result.is_none());
+    }
+
+    #[tokio::test]
+    async fn update_playlist_tracks_via_update() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "Bulk Update".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        db.add_track_to_playlist(&pl.id, "old1").await.unwrap();
+
+        // Replace tracks entirely via update
+        let updated = db
+            .update_playlist(
+                &pl.id,
+                PlaylistUpdate {
+                    name: None,
+                    description: None,
+                    tracks: Some(vec!["new1".into(), "new2".into()]),
+                },
+            )
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(updated.tracks, vec!["new1", "new2"]);
+    }
+
+    #[tokio::test]
+    async fn delete_playlist_cascades_tracks() {
+        let (db, _dir) = make_db().await;
+
+        let pl = db
+            .create_playlist(PlaylistCreate {
+                name: "Cascade".into(),
+                description: None,
+            })
+            .await
+            .unwrap();
+
+        db.add_track_to_playlist(&pl.id, "t1").await.unwrap();
+        db.add_track_to_playlist(&pl.id, "t2").await.unwrap();
+
+        // Delete playlist — tracks should be cascade-deleted
+        assert!(db.delete_playlist(&pl.id).await.unwrap());
+        assert!(db.get_playlist(&pl.id).await.unwrap().is_none());
+    }
+}

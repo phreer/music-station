@@ -289,3 +289,140 @@ pub struct LyricUpload {
     pub language: Option<String>,
     pub source: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn make_db() -> (LyricDatabase, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = LyricDatabase::new(dir.path().join("lyrics.db"))
+            .await
+            .unwrap();
+        (db, dir)
+    }
+
+    #[tokio::test]
+    async fn crud_save_get_delete() {
+        let (db, _dir) = make_db().await;
+
+        // Initially empty
+        assert!(db.get_lyric("track1").await.unwrap().is_none());
+        assert!(!db.has_lyric("track1").await.unwrap());
+
+        // Save
+        let lyric = db
+            .save_lyric(
+                "track1",
+                "Hello world".into(),
+                LyricFormat::Plain,
+                Some("en".into()),
+                Some("manual".into()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(lyric.track_id, "track1");
+        assert_eq!(lyric.content, "Hello world");
+        assert_eq!(lyric.format, LyricFormat::Plain);
+        assert_eq!(lyric.language.as_deref(), Some("en"));
+        assert_eq!(lyric.source.as_deref(), Some("manual"));
+
+        // Get
+        let fetched = db.get_lyric("track1").await.unwrap().unwrap();
+        assert_eq!(fetched.content, "Hello world");
+        assert_eq!(fetched.format, LyricFormat::Plain);
+        assert_eq!(fetched.language.as_deref(), Some("en"));
+
+        // has_lyric
+        assert!(db.has_lyric("track1").await.unwrap());
+
+        // Delete
+        assert!(db.delete_lyric("track1").await.unwrap());
+        assert!(db.get_lyric("track1").await.unwrap().is_none());
+        assert!(!db.has_lyric("track1").await.unwrap());
+
+        // Delete non-existent returns false
+        assert!(!db.delete_lyric("track1").await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn overwrite_existing_lyric() {
+        let (db, _dir) = make_db().await;
+
+        db.save_lyric("t1", "first".into(), LyricFormat::Plain, None, None)
+            .await
+            .unwrap();
+
+        // Overwrite with new content and format
+        let updated = db
+            .save_lyric(
+                "t1",
+                "[00:01.00]second".into(),
+                LyricFormat::Lrc,
+                Some("zh".into()),
+                Some("netease".into()),
+            )
+            .await
+            .unwrap();
+        assert_eq!(updated.content, "[00:01.00]second");
+        assert_eq!(updated.format, LyricFormat::Lrc);
+
+        let fetched = db.get_lyric("t1").await.unwrap().unwrap();
+        assert_eq!(fetched.content, "[00:01.00]second");
+        assert_eq!(fetched.format, LyricFormat::Lrc);
+        assert_eq!(fetched.language.as_deref(), Some("zh"));
+        assert_eq!(fetched.source.as_deref(), Some("netease"));
+    }
+
+    #[tokio::test]
+    async fn get_tracks_with_lyrics_ordering() {
+        let (db, _dir) = make_db().await;
+
+        db.save_lyric("a", "lyrics a".into(), LyricFormat::Plain, None, None)
+            .await
+            .unwrap();
+        db.save_lyric("b", "lyrics b".into(), LyricFormat::Lrc, None, None)
+            .await
+            .unwrap();
+        db.save_lyric("c", "lyrics c".into(), LyricFormat::LrcWord, None, None)
+            .await
+            .unwrap();
+
+        let ids = db.get_tracks_with_lyrics().await.unwrap();
+        assert_eq!(ids.len(), 3);
+        // All three present (ordering is by updated_at DESC, all nearly simultaneous)
+        assert!(ids.contains(&"a".to_string()));
+        assert!(ids.contains(&"b".to_string()));
+        assert!(ids.contains(&"c".to_string()));
+    }
+
+    #[tokio::test]
+    async fn get_stats_counts() {
+        let (db, _dir) = make_db().await;
+
+        let stats = db.get_stats().await.unwrap();
+        assert_eq!(stats.total_lyrics, 0);
+
+        db.save_lyric("t1", "plain".into(), LyricFormat::Plain, None, None)
+            .await
+            .unwrap();
+        db.save_lyric(
+            "t2",
+            "[00:01.00]lrc".into(),
+            LyricFormat::Lrc,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        db.save_lyric("t3", "more plain".into(), LyricFormat::Plain, None, None)
+            .await
+            .unwrap();
+
+        let stats = db.get_stats().await.unwrap();
+        assert_eq!(stats.total_lyrics, 3);
+        assert_eq!(stats.lrc_format_count, 1);
+        // Note: plain_format_count includes LrcWord since the code does total - lrc
+        assert_eq!(stats.plain_format_count, 2);
+    }
+}

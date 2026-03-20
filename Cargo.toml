@@ -51,6 +51,9 @@ music-search-rs = { path = "music-search-rs" }
 rodio = "0.19"
 regex = "1.12.2"
 
+[dev-dependencies]
+tempfile = "3"
+
 [[bin]]
 name = "music-station"
 path = "src/main.rs"

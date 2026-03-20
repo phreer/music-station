@@ -100,3 +100,71 @@ impl StatsDatabase {
         Ok(counts)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn make_db() -> (StatsDatabase, tempfile::TempDir) {
+        let dir = tempfile::tempdir().unwrap();
+        let db = StatsDatabase::new(&dir.path().join("stats.db"))
+            .await
+            .unwrap();
+        (db, dir)
+    }
+
+    #[tokio::test]
+    async fn initial_play_count_is_zero() {
+        let (db, _dir) = make_db().await;
+        assert_eq!(db.get_play_count("nonexistent").await.unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn increment_from_zero() {
+        let (db, _dir) = make_db().await;
+        let count = db.increment_play_count("track1").await.unwrap();
+        assert_eq!(count, 1);
+        assert_eq!(db.get_play_count("track1").await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn increment_multiple_times() {
+        let (db, _dir) = make_db().await;
+
+        for expected in 1..=5 {
+            let count = db.increment_play_count("track1").await.unwrap();
+            assert_eq!(count, expected);
+        }
+        assert_eq!(db.get_play_count("track1").await.unwrap(), 5);
+    }
+
+    #[tokio::test]
+    async fn multiple_tracks_independent() {
+        let (db, _dir) = make_db().await;
+
+        db.increment_play_count("a").await.unwrap();
+        db.increment_play_count("a").await.unwrap();
+        db.increment_play_count("b").await.unwrap();
+
+        assert_eq!(db.get_play_count("a").await.unwrap(), 2);
+        assert_eq!(db.get_play_count("b").await.unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn get_all_play_counts() {
+        let (db, _dir) = make_db().await;
+
+        // Initially empty
+        let counts = db.get_all_play_counts().await.unwrap();
+        assert!(counts.is_empty());
+
+        db.increment_play_count("x").await.unwrap();
+        db.increment_play_count("x").await.unwrap();
+        db.increment_play_count("y").await.unwrap();
+
+        let counts = db.get_all_play_counts().await.unwrap();
+        assert_eq!(counts.len(), 2);
+        assert_eq!(*counts.get("x").unwrap(), 2);
+        assert_eq!(*counts.get("y").unwrap(), 1);
+    }
+}

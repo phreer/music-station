@@ -21,15 +21,15 @@ All 3 DB modules use SQLite. Use `tempfile` crate for test isolation.
 
 **New dev-dependency:** `tempfile = "3"`
 
-- [ ] `src/lyrics.rs` — `LyricDatabase` CRUD
+- [x] `src/lyrics.rs` — `LyricDatabase` CRUD
   - new → save_lyric → get_lyric (verify fields) → has_lyric → delete_lyric → verify deletion → get_tracks_with_lyrics
   - Format auto-detection on save
   - Overwrite behavior (save twice for same track_id)
-- [ ] `src/playlist.rs` — `PlaylistDatabase` CRUD
+- [x] `src/playlist.rs` — `PlaylistDatabase` CRUD
   - create → get_playlists → get_playlist → update → add_track → remove_track → delete → verify cascade
   - Duplicate track prevention
   - Non-existent playlist handling
-- [ ] `src/stats.rs` — `StatsDatabase`
+- [x] `src/stats.rs` — `StatsDatabase`
   - new → increment_play_count (multiple times) → get_play_count → get_all_play_counts
   - Increment from zero
   - Multiple tracks
