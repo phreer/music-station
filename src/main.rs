@@ -24,31 +24,32 @@ struct Cli {
     /// Port to listen on
     #[arg(short, long, default_value = "3000")]
     port: u16,
+
+    /// Log level (ignored when RUST_LOG is set)
+    #[arg(long, default_value = "info")]
+    log_level: String,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing with debug level
-    // Enable debug logging for symphonia to see audio parsing details
+    let cli = Cli::parse();
+
+    // Initialize tracing: RUST_LOG takes priority; otherwise use --log-level
     use tracing_subscriber::EnvFilter;
 
+    let env_filter = if std::env::var("RUST_LOG").is_ok() {
+        EnvFilter::from_default_env()
+    } else {
+        EnvFilter::new(&cli.log_level)
+    };
+
     tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
         .with_target(true)
         .with_thread_ids(true)
         .with_file(true)
         .with_line_number(true)
-        .with_env_filter(
-            EnvFilter::from_default_env()
-                .add_directive(tracing::Level::DEBUG.into())
-                .add_directive("symphonia=debug".parse().unwrap())
-                .add_directive("symphonia_core=debug".parse().unwrap())
-                .add_directive("symphonia_format_isomp4=debug".parse().unwrap())
-                .add_directive("symphonia_codec_mp3=debug".parse().unwrap()),
-        )
+        .with_env_filter(env_filter)
         .init();
-
-    let cli = Cli::parse();
 
     // Validate library path
     if !cli.library.exists() {

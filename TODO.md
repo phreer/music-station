@@ -19,7 +19,7 @@
 - [ ] **OGG 元数据写入未实现** — `src/audio.rs` 中 OGG 的 `write_metadata()`、`set_cover()`、`remove_cover()` 标记为 TODO
 - [ ] **Cover 上传无 MIME 类型校验** — 仅信任客户端发送的 content-type header，应做服务端校验
 - [ ] **CORS 过于宽松** — `src/server.rs` 使用 `CorsLayer::permissive()` 允许所有来源，生产环境应收紧
-- [ ] **日志级别不可配** — 当前日志级别硬编码，应通过环境变量 `RUST_LOG` 或 CLI 参数控制
+- [x] **日志级别不可配** — 已支持 `--log-level` CLI 参数（默认 `info`）和 `RUST_LOG` 环境变量（优先级更高）
 - [ ] **Web 客户端无障碍** — `static/app.js` 缺少 ARIA 标签、键盘导航支持、alt 文字等
 
 ## 🟢 Low Priority（代码质量 / 文档）
