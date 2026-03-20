@@ -38,20 +38,21 @@ All 3 DB modules use SQLite. Use `tempfile` crate for test isolation.
 
 Use axum's test pattern (`tower::ServiceExt` + `oneshot`). No real TCP listener needed.
 
-**New dev-dependencies:** `tower = { version = "0.5", features = ["util"] }`, `hyper = "1"`
+**New dev-dependencies:** `tower = { version = "0.5", features = ["util"] }`, `http-body-util = "0.1"`
 
 **Test infrastructure:**
-- `tests/api_tests.rs` (or `tests/api/` directory split by module)
-- `setup()` helper: temp dir → `MusicLibrary` + 3 DBs → `create_router()` → `Router`
+- `tests/api_tests.rs` with `setup()` helper: temp dir → `MusicLibrary` + 3 DBs → `create_router()` → `Router`
+- `send()` and `send_json()` helpers for concise request/response handling
 
 **Endpoint groups to test:**
 
-- [ ] **Root** — GET `/` → 200 + version string
-- [ ] **Tracks** — GET `/tracks` empty → `[]`; GET `/tracks/:id` missing → 404
-- [ ] **Playlists CRUD** — POST create → GET verify → PUT update → POST add_track → DELETE remove_track → DELETE playlist
-- [ ] **Lyrics CRUD** — PUT upload (verify auto-detection) → GET retrieve → DELETE → 404
-- [ ] **Stats** — GET `/stats` empty library; POST `/tracks/:id/play` → verify count increment
-- [ ] **Albums/Artists** — GET empty → `[]`
+- [x] **Root** — GET `/` → 200 + version string
+- [x] **Tracks** — GET `/tracks` empty → `[]`; GET `/tracks/:id` missing → 404
+- [x] **Playlists CRUD** — POST create → GET verify → PUT update → attempt add_track (404 w/o library track) → DELETE playlist → verify 404
+- [x] **Lyrics CRUD** — PUT/GET/DELETE all return 404 when track not in library
+- [x] **Stats** — GET `/stats` empty library; POST `/tracks/:id/play` → 404 for missing track
+- [x] **Albums/Artists** — GET empty → `[]`
+- [x] **Playlists not found** — GET/DELETE non-existent → 404
 - [ ] **Streaming** — Requires test fixture audio files (deferred)
 - [ ] **Cover art** — Requires test fixture audio files (deferred)
 
@@ -66,10 +67,10 @@ For `src/audio.rs` format-specific tests:
 
 ## Expected Coverage After Full Implementation
 
-| Metric               | Before | After  |
-|----------------------|--------|--------|
-| Test functions       | 20     | ~80    |
-| server.rs coverage   | 0/27   | ~12/27 |
-| DB layer coverage    | 0/19   | ~19/19 |
-| audio.rs coverage    | 0/31   | ~5/31  |
-| library.rs coverage  | 0/16   | ~5/16  |
+| Metric               | Before | After Layer 1-3 | Target |
+|----------------------|--------|------------------|--------|
+| Test functions       | 20     | ~73              | ~80    |
+| server.rs coverage   | 0/27   | ~12/27           | ~12/27 |
+| DB layer coverage    | 0/19   | ~19/19           | ~19/19 |
+| audio.rs coverage    | 0/31   | ~5/31            | ~5/31  |
+| library.rs coverage  | 0/16   | ~2/16            | ~5/16  |
