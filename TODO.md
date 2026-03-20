@@ -10,7 +10,7 @@
 ## 🟠 High Priority（功能完善）
 
 - [ ] **`/tracks` 端点缺少分页** — 当前返回所有 track，万级曲库下性能会有问题。需要 `?page=&limit=` 支持
-- [ ] **Album/Artist 集合无缓存** — `get_albums()` 和 `get_artists()` 每次请求都从 tracks 重建 HashMap，需缓存
+- [x] **Album/Artist 集合无缓存** — `get_albums()` 和 `get_artists()` 结果已缓存在 `MusicLibrary` 中，track 变更时自动失效
 - [ ] **API 缺少排序和过滤** — 无 `?sort=title`、`?genre=rock` 等查询参数支持
 - [ ] **API handler 零测试** — `src/server.rs` 无任何测试；`src/audio.rs`、`src/library.rs`、`src/playlist.rs`、`src/stats.rs` 同样缺失
 

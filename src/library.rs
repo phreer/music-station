@@ -63,6 +63,8 @@ pub struct LibraryStats {
 pub struct MusicLibrary {
     library_path: PathBuf,
     tracks: Arc<RwLock<Vec<Track>>>,
+    albums_cache: Arc<RwLock<Option<Vec<Album>>>>,
+    artists_cache: Arc<RwLock<Option<Vec<Artist>>>>,
 }
 
 impl MusicLibrary {
@@ -70,7 +72,16 @@ impl MusicLibrary {
         Self {
             library_path,
             tracks: Arc::new(RwLock::new(Vec::new())),
+            albums_cache: Arc::new(RwLock::new(None)),
+            artists_cache: Arc::new(RwLock::new(None)),
         }
+    }
+
+    /// Invalidate the cached album and artist collections.
+    /// Must be called whenever the track list is mutated.
+    async fn invalidate_cache(&self) {
+        *self.albums_cache.write().await = None;
+        *self.artists_cache.write().await = None;
     }
 
     /// Scan the library folder for audio files (FLAC and MP3)
@@ -82,8 +93,11 @@ impl MusicLibrary {
 
         let mut library_tracks = self.tracks.write().await;
         *library_tracks = tracks;
+        drop(library_tracks);
+        self.invalidate_cache().await;
 
-        tracing::info!("Scan complete. Found {} tracks", library_tracks.len());
+        let track_count = self.tracks.read().await.len();
+        tracing::info!("Scan complete. Found {} tracks", track_count);
         Ok(())
     }
 
@@ -213,6 +227,8 @@ impl MusicLibrary {
         if let Some(track) = tracks.iter_mut().find(|t| t.id == track_id) {
             track.has_lyrics = has_lyrics;
         }
+        drop(tracks);
+        self.invalidate_cache().await;
     }
 
     /// Update the play count for a track
@@ -221,16 +237,14 @@ impl MusicLibrary {
         if let Some(track) = tracks.iter_mut().find(|t| t.id == track_id) {
             track.play_count = play_count;
         }
+        drop(tracks);
+        self.invalidate_cache().await;
     }
 
-    /// Get all albums in the library
-    pub async fn get_albums(&self) -> Vec<Album> {
-        use std::collections::HashMap;
-
-        let tracks = self.tracks.read().await;
+    /// Build the album list from tracks (uncached computation).
+    fn build_albums(tracks: &[Track]) -> Vec<Album> {
         let mut albums_map: HashMap<String, Vec<Track>> = HashMap::new();
 
-        // Group tracks by album
         for track in tracks.iter() {
             let album_name = track
                 .album
@@ -238,11 +252,10 @@ impl MusicLibrary {
                 .unwrap_or_else(|| "Unknown Album".to_string());
             albums_map
                 .entry(album_name)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(track.clone());
         }
 
-        // Convert to Album structs
         let mut albums: Vec<Album> = albums_map
             .into_iter()
             .map(|(name, tracks)| {
@@ -260,31 +273,25 @@ impl MusicLibrary {
             })
             .collect();
 
-        // Sort by album name
         albums.sort_by(|a, b| a.name.cmp(&b.name));
         albums
     }
 
-    /// Get all artists with their albums
-    pub async fn get_artists(&self) -> Vec<Artist> {
-        use std::collections::HashMap;
-
-        let albums = self.get_albums().await;
+    /// Build the artist list from albums (uncached computation).
+    fn build_artists(albums: &[Album]) -> Vec<Artist> {
         let mut artists_map: HashMap<String, Vec<Album>> = HashMap::new();
 
-        // Group albums by artist
-        for album in albums {
+        for album in albums.iter() {
             let artist_name = album
                 .artist
                 .clone()
                 .unwrap_or_else(|| "Unknown Artist".to_string());
             artists_map
                 .entry(artist_name)
-                .or_insert_with(Vec::new)
-                .push(album);
+                .or_default()
+                .push(album.clone());
         }
 
-        // Convert to Artist structs
         let mut artists: Vec<Artist> = artists_map
             .into_iter()
             .map(|(name, albums)| {
@@ -300,8 +307,37 @@ impl MusicLibrary {
             })
             .collect();
 
-        // Sort by artist name
         artists.sort_by(|a, b| a.name.cmp(&b.name));
+        artists
+    }
+
+    /// Get all albums in the library (cached).
+    pub async fn get_albums(&self) -> Vec<Album> {
+        {
+            let cache = self.albums_cache.read().await;
+            if let Some(ref albums) = *cache {
+                return albums.clone();
+            }
+        }
+
+        let tracks = self.tracks.read().await;
+        let albums = Self::build_albums(&tracks);
+        *self.albums_cache.write().await = Some(albums.clone());
+        albums
+    }
+
+    /// Get all artists with their albums (cached).
+    pub async fn get_artists(&self) -> Vec<Artist> {
+        {
+            let cache = self.artists_cache.read().await;
+            if let Some(ref artists) = *cache {
+                return artists.clone();
+            }
+        }
+
+        let albums = self.get_albums().await;
+        let artists = Self::build_artists(&albums);
+        *self.artists_cache.write().await = Some(artists.clone());
         artists
     }
 
@@ -388,6 +424,7 @@ impl MusicLibrary {
                 tracks[pos] = updated_track.clone();
             }
         }
+        self.invalidate_cache().await;
 
         tracing::info!(
             "Updated metadata for track: {} ({})",
@@ -482,6 +519,7 @@ impl MusicLibrary {
                 tracks[pos] = updated_track;
             }
         }
+        self.invalidate_cache().await;
 
         tracing::info!("Updated cover art for track: {}", id);
 
@@ -527,6 +565,7 @@ impl MusicLibrary {
                 tracks[pos] = updated_track;
             }
         }
+        self.invalidate_cache().await;
 
         tracing::info!("Removed cover art for track: {}", id);
 
