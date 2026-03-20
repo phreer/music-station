@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use futures::stream::{self, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -84,12 +85,44 @@ impl MusicLibrary {
         *self.artists_cache.write().await = None;
     }
 
-    /// Scan the library folder for audio files (FLAC and MP3)
+    /// Scan the library folder for audio files
     pub async fn scan(&self) -> Result<()> {
         tracing::info!("Scanning library at: {}", self.library_path.display());
 
-        let mut tracks = Vec::new();
-        Box::pin(self.scan_directory(&self.library_path.clone(), &mut tracks)).await?;
+        // Phase 1: Recursively collect all audio file paths (lightweight I/O)
+        let mut paths = Vec::new();
+        Self::collect_audio_paths(&self.library_path, &mut paths).await?;
+        tracing::info!("Found {} audio files, parsing metadata...", paths.len());
+
+        // Phase 2: Parse metadata concurrently with bounded parallelism
+        let concurrency = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(4);
+        let library_path = self.library_path.clone();
+        let tracks: Vec<Track> = stream::iter(paths)
+            .map(|path| {
+                let library_path = library_path.clone();
+                async move { Self::parse_audio_file(&library_path, &path).await }
+            })
+            .buffer_unordered(concurrency)
+            .filter_map(|result| async {
+                match result {
+                    Ok(track) => {
+                        tracing::info!(
+                            "Parsed track: {} - {}",
+                            track.artist.as_deref().unwrap_or("Unknown Artist"),
+                            track.title.as_deref().unwrap_or("Unknown"),
+                        );
+                        Some(track)
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to parse audio file: {}", e);
+                        None
+                    }
+                }
+            })
+            .collect()
+            .await;
 
         let mut library_tracks = self.tracks.write().await;
         *library_tracks = tracks;
@@ -101,11 +134,10 @@ impl MusicLibrary {
         Ok(())
     }
 
-    /// Recursively scan a directory for audio files
-    fn scan_directory<'a>(
-        &'a self,
+    /// Recursively collect audio file paths from a directory.
+    fn collect_audio_paths<'a>(
         dir: &'a Path,
-        tracks: &'a mut Vec<Track>,
+        paths: &'a mut Vec<PathBuf>,
     ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + 'a>> {
         Box::pin(async move {
             let mut entries = tokio::fs::read_dir(dir)
@@ -117,24 +149,12 @@ impl MusicLibrary {
                 let metadata = tokio::fs::metadata(&path).await?;
 
                 if metadata.is_dir() {
-                    // Recursively scan subdirectories
                     tracing::debug!("Scanning subdirectory: {}", path.display());
-                    self.scan_directory(&path, tracks).await?;
+                    Self::collect_audio_paths(&path, paths).await?;
                 } else if metadata.is_file() {
-                    // Process audio files
                     if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-                        match self.parse_audio_file(&path).await {
-                            Ok(track) => {
-                                tracing::info!(
-                                    "Found track: {} - {}",
-                                    track.artist.as_deref().unwrap_or("Unknown Artist"),
-                                    track.title.as_deref().unwrap_or("Unknown")
-                                );
-                                tracks.push(track);
-                            }
-                            Err(e) => {
-                                tracing::warn!("Failed to parse {}: {}", path.display(), e);
-                            }
+                        if get_audio_file_handler(ext).is_some() {
+                            paths.push(path);
                         }
                     }
                 }
@@ -144,8 +164,8 @@ impl MusicLibrary {
         })
     }
 
-    /// Parse an audio file (FLAC or MP3) and extract metadata
-    async fn parse_audio_file(&self, path: &Path) -> Result<Track> {
+    /// Parse an audio file and extract metadata
+    async fn parse_audio_file(library_path: &Path, path: &Path) -> Result<Track> {
         let metadata = tokio::fs::metadata(path).await?;
         let file_size = metadata.len();
 
@@ -173,7 +193,7 @@ impl MusicLibrary {
         // Generate a unique ID from the relative path (relative to library directory)
         // This ensures consistent IDs regardless of where the library is mounted
         let relative_path = path
-            .strip_prefix(&self.library_path)
+            .strip_prefix(library_path)
             .unwrap_or(path)
             .to_string_lossy();
         let id = format!("{:x}", md5::compute(relative_path.as_bytes()));
@@ -408,8 +428,7 @@ impl MusicLibrary {
             ))?;
 
         // Re-parse the file to get updated metadata
-        let mut updated_track = self
-            .parse_audio_file(&track.path)
+        let mut updated_track = Self::parse_audio_file(&self.library_path, &track.path)
             .await
             .context("Failed to re-parse file after update")?;
 
@@ -505,8 +524,7 @@ impl MusicLibrary {
         .await??;
 
         // Update in-memory track
-        let mut updated_track = self
-            .parse_audio_file(&track.path)
+        let mut updated_track = Self::parse_audio_file(&self.library_path, &track.path)
             .await
             .context("Failed to re-parse file after cover update")?;
 
@@ -551,8 +569,7 @@ impl MusicLibrary {
         tokio::task::spawn_blocking(move || handler.remove_cover_art(&path_owned)).await??;
 
         // Update in-memory track
-        let mut updated_track = self
-            .parse_audio_file(&track.path)
+        let mut updated_track = Self::parse_audio_file(&self.library_path, &track.path)
             .await
             .context("Failed to re-parse file after cover removal")?;
 

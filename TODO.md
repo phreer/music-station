@@ -5,7 +5,7 @@
 - [x] **音频元数据操作使用了阻塞 I/O** — `src/library.rs` 中所有阻塞的音频 I/O 操作已用 `tokio::task::spawn_blocking()` 包装
 - [x] **文件上传无大小限制** — `src/server.rs` 的 `upload_cover()` 和 `upload_lyrics()` 已添加 `DefaultBodyLimit` 路由层限制及 handler 内大小校验（封面 10MB，歌词 1MB）
 - [x] **流式传输将整个文件读入内存** — `stream_track()` 和 `stream_range()` 已改为使用 `ReaderStream` + `Body::from_stream()` 流式响应，不再将整个文件读入内存
-- [ ] **库扫描未并行化** — `src/library.rs` 的 `scan_directory()` 顺序处理每个文件，大型音乐库启动很慢
+- [x] **库扫描未并行化** — `scan()` 已重构为两阶段：先递归收集文件路径，再用 `buffer_unordered` 并发解析元数据（并发度 = CPU 核数）
 
 ## 🟠 High Priority（功能完善）
 
