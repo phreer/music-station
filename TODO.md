@@ -3,7 +3,7 @@
 ## 🔴 Critical（性能 / 安全）
 
 - [x] **音频元数据操作使用了阻塞 I/O** — `src/library.rs` 中所有阻塞的音频 I/O 操作已用 `tokio::task::spawn_blocking()` 包装
-- [ ] **文件上传无大小限制** — `src/server.rs` 的 `upload_cover()` 和 `upload_lyrics()` 未校验上传大小，可被恶意上传超大文件
+- [x] **文件上传无大小限制** — `src/server.rs` 的 `upload_cover()` 和 `upload_lyrics()` 已添加 `DefaultBodyLimit` 路由层限制及 handler 内大小校验（封面 10MB，歌词 1MB）
 - [ ] **流式传输将整个文件读入内存** — `stream_track()` 使用 `file.read_to_end(&mut buffer)` 加载完整音频文件到内存，大文件可能达数百 MB。应改为流式 response
 - [ ] **库扫描未并行化** — `src/library.rs` 的 `scan_directory()` 顺序处理每个文件，大型音乐库启动很慢
 

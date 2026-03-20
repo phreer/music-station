@@ -1,10 +1,15 @@
 use axum::{
     Json, Router,
-    extract::{Multipart, Path, State},
+    extract::{DefaultBodyLimit, Multipart, Path, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
 };
+
+/// Maximum upload size for cover art (10 MB)
+const MAX_COVER_SIZE: usize = 10 * 1024 * 1024;
+/// Maximum upload size for lyrics (1 MB)
+const MAX_LYRICS_SIZE: usize = 1024 * 1024;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
@@ -74,11 +79,17 @@ pub fn create_router(
         .route("/stream/:id", get(stream_track))
         .route(
             "/cover/:id",
-            get(get_cover).post(upload_cover).delete(delete_cover),
+            get(get_cover)
+                .post(upload_cover)
+                .delete(delete_cover)
+                .layer(DefaultBodyLimit::max(MAX_COVER_SIZE)),
         )
         .route(
             "/lyrics/:id",
-            get(get_lyrics).put(upload_lyrics).delete(delete_lyrics),
+            get(get_lyrics)
+                .put(upload_lyrics)
+                .delete(delete_lyrics)
+                .layer(DefaultBodyLimit::max(MAX_LYRICS_SIZE)),
         )
         .route("/lyrics/search", get(search_lyrics))
         .route(
@@ -533,6 +544,16 @@ async fn upload_cover(
         StatusCode::BAD_REQUEST
     })?;
 
+    if image_data.len() > MAX_COVER_SIZE {
+        tracing::warn!(
+            "Cover art upload too large for track {}: {} bytes (max {})",
+            id,
+            image_data.len(),
+            MAX_COVER_SIZE
+        );
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
     // Set the cover art
     state
         .library
@@ -618,6 +639,16 @@ async fn upload_lyrics(
     Json(upload): Json<LyricUpload>,
 ) -> Result<Json<Lyric>, StatusCode> {
     tracing::debug!("Uploading lyrics for track: {}", id);
+
+    if upload.content.len() > MAX_LYRICS_SIZE {
+        tracing::warn!(
+            "Lyrics upload too large for track {}: {} bytes (max {})",
+            id,
+            upload.content.len(),
+            MAX_LYRICS_SIZE
+        );
+        return Err(StatusCode::PAYLOAD_TOO_LARGE);
+    }
 
     // Check if track exists
     state
