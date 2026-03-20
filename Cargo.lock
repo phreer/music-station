@@ -1754,6 +1754,7 @@ dependencies = [
  "sqlx",
  "symphonia",
  "tokio",
+ "tokio-util",
  "tower",
  "tower-http",
  "tracing",

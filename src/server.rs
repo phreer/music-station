@@ -1,16 +1,18 @@
 use axum::{
     Json, Router,
+    body::Body,
     extract::{DefaultBodyLimit, Multipart, Path, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
 };
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
+use tokio_util::io::ReaderStream;
 
 /// Maximum upload size for cover art (10 MB)
 const MAX_COVER_SIZE: usize = 10 * 1024 * 1024;
 /// Maximum upload size for lyrics (1 MB)
 const MAX_LYRICS_SIZE: usize = 1024 * 1024;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -223,33 +225,31 @@ async fn stream_track(
     }
 
     // No range or invalid range - stream entire file
-    let mut file = tokio::fs::File::open(&track.path)
+    let file = tokio::fs::File::open(&track.path)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let stream = ReaderStream::new(file);
+    let body = Body::from_stream(stream);
 
-    tracing::debug!("Streaming {} bytes for track {}", buffer.len(), id);
+    tracing::debug!("Streaming {} bytes for track {}", file_size, id);
 
-    // Return the file with proper headers
+    // Return the file as a streaming response
     Ok((
         StatusCode::OK,
         [
-            (header::CONTENT_TYPE, content_type),
-            (header::CONTENT_LENGTH, file_size.to_string().as_str()),
-            (header::ACCEPT_RANGES, "bytes"),
+            (header::CONTENT_TYPE, content_type.to_string()),
+            (header::CONTENT_LENGTH, file_size.to_string()),
+            (header::ACCEPT_RANGES, "bytes".to_string()),
             (
                 header::CONTENT_DISPOSITION,
-                &format!(
+                format!(
                     "inline; filename=\"{}\"",
                     track.path.file_name().unwrap().to_string_lossy()
                 ),
             ),
         ],
-        buffer,
+        body,
     )
         .into_response())
 }
@@ -319,12 +319,7 @@ async fn stream_range(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // Read the requested range
-    let range_length = (end - start + 1) as usize;
-    let mut buffer = vec![0u8; range_length];
-    file.read_exact(&mut buffer)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let range_length = end - start + 1;
 
     tracing::debug!(
         "Streaming range {}-{}/{} ({} bytes)",
@@ -333,6 +328,11 @@ async fn stream_range(
         total_size,
         range_length
     );
+
+    // Wrap in a take adapter to limit to the requested range, then stream
+    let limited = file.take(range_length);
+    let stream = ReaderStream::new(limited);
+    let body = Body::from_stream(stream);
 
     // Return 206 Partial Content
     Ok((
@@ -346,7 +346,7 @@ async fn stream_range(
                 format!("bytes {}-{}/{}", start, end, total_size),
             ),
         ],
-        buffer,
+        body,
     )
         .into_response())
 }
