@@ -1,10 +1,23 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { NInput, NSpin, NAlert, NButton } from 'naive-ui'
 import { Search, RefreshCw } from 'lucide-vue-next'
 import { useLibraryStore } from '@/stores/library'
 import TrackList from '@/components/tracks/TrackList.vue'
 
 const library = useLibraryStore()
+
+// Local input value, debounced before updating the store's searchQuery.
+// This avoids re-filtering the full track list on every keystroke.
+const localSearchQuery = ref(library.searchQuery)
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+watch(localSearchQuery, (val) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    library.searchQuery = val
+  }, 300)
+})
 
 function refresh() {
   library.loadTracks()
@@ -15,7 +28,7 @@ function refresh() {
   <div :class="$style.container">
     <div :class="$style.toolbar">
       <NInput
-        v-model:value="library.searchQuery"
+        v-model:value="localSearchQuery"
         placeholder="Search tracks..."
         clearable
         :class="$style.searchInput"

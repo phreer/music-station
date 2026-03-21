@@ -5,6 +5,7 @@ import { fetchTracks } from '@/api/tracks'
 
 export const useLibraryStore = defineStore('library', () => {
   const allTracks = ref<Track[]>([])
+  const trackMap = ref(new Map<string, Track>())
   const searchQuery = ref('')
   const isLoading = ref(false)
   const error = ref<string | null>(null)
@@ -23,11 +24,11 @@ export const useLibraryStore = defineStore('library', () => {
   const totalTracks = computed(() => allTracks.value.length)
 
   function findTrack(id: string): Track | undefined {
-    return allTracks.value.find((t) => t.id === id)
+    return trackMap.value.get(id)
   }
 
   function updateTrackLocally(id: string, updates: Partial<Track>) {
-    const track = allTracks.value.find((t) => t.id === id)
+    const track = trackMap.value.get(id)
     if (track) {
       Object.assign(track, updates)
     }
@@ -37,7 +38,11 @@ export const useLibraryStore = defineStore('library', () => {
     isLoading.value = true
     error.value = null
     try {
-      allTracks.value = await fetchTracks()
+      const tracks = await fetchTracks()
+      allTracks.value = tracks
+      const map = new Map<string, Track>()
+      for (const t of tracks) map.set(t.id, t)
+      trackMap.value = map
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load tracks'
     } finally {
