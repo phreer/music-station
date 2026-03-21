@@ -160,8 +160,8 @@ function close() {
   white-space: nowrap;
 }
 
-.iconDone { color: #18a058; flex-shrink: 0; }
-.iconFail { color: #d03050; flex-shrink: 0; }
+.iconDone { color: var(--app-success); flex-shrink: 0; }
+.iconFail { color: var(--app-error); flex-shrink: 0; }
 .iconSpin {
   flex-shrink: 0;
   animation: spin 1s linear infinite;
@@ -170,7 +170,7 @@ function close() {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 2px solid var(--n-border-color, #ccc);
+  border: 2px solid var(--app-border);
   flex-shrink: 0;
 }
 

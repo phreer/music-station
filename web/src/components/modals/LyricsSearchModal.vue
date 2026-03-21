@@ -150,7 +150,7 @@ async function handleSelect(result: LyricsSearchResult) {
 }
 
 .result:hover {
-  background: var(--n-merged-color, rgba(0,0,0,0.05));
+  background: var(--app-hover);
 }
 
 .resultInfo {

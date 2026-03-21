@@ -82,10 +82,10 @@ function remove(index: number) {
   width: 350px;
   display: flex;
   flex-direction: column;
-  background: var(--n-color, #fff);
-  border-left: 1px solid var(--n-border-color, #e0e0e0);
+  background: var(--app-surface);
+  border-left: 1px solid var(--app-border);
   z-index: 90;
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+  box-shadow: -4px 0 20px var(--app-shadow);
 }
 
 .header {
@@ -93,7 +93,7 @@ function remove(index: number) {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--n-border-color, #e0e0e0);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .title {
@@ -159,7 +159,7 @@ function remove(index: number) {
   padding: 8px 16px;
   font-size: 12px;
   opacity: 0.6;
-  border-bottom: 1px solid var(--n-border-color, #e0e0e0);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .list {

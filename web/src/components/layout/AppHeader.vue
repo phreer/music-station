@@ -28,7 +28,7 @@ const ui = useUiStore()
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  border-bottom: 1px solid var(--n-border-color, #e0e0e0);
+  border-bottom: 1px solid var(--app-border);
 }
 
 .titleGroup {

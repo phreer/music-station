@@ -75,7 +75,7 @@ const columns: DataTableColumns<Track> = [
             width: '36px',
             height: '36px',
             borderRadius: '4px',
-            background: 'var(--n-merged-color, #f0f0f0)',
+            background: 'var(--app-placeholder-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

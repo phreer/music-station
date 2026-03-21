@@ -115,7 +115,7 @@ async function togglePlaylist(playlistId: string) {
 }
 
 .item:hover {
-  background: var(--n-merged-color, rgba(0,0,0,0.05));
+  background: var(--app-hover);
 }
 
 .playlistName {

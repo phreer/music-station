@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { NSlider, NButton } from 'naive-ui'
+import { NSlider, NButton, NConfigProvider, darkTheme } from 'naive-ui'
 import {
   Play,
   Pause,
@@ -60,6 +60,7 @@ function handleSeek(value: number) {
 </script>
 
 <template>
+  <NConfigProvider :theme="darkTheme">
   <div v-show="player.currentTrack" :class="$style.player">
     <!-- Track Info -->
     <div :class="$style.info">
@@ -161,6 +162,7 @@ function handleSeek(value: number) {
 
     <audio ref="audioRef" />
   </div>
+  </NConfigProvider>
 
   <!-- Lyrics Modal -->
   <LyricsModal v-model:show="showLyricsModal" :track="player.currentTrack" />
@@ -182,7 +184,7 @@ function handleSeek(value: number) {
   background: linear-gradient(135deg, #1a2332, #0f1419);
   color: #e8f4f8;
   z-index: 100;
-  border-top: 2px solid #0066cc;
+  border-top: 2px solid var(--n-primary-color, #0066cc);
 }
 
 .info {

@@ -171,20 +171,20 @@ async function handleRemoveTrack(trackId: string) {
   font-size: 12px; padding: 4px 8px; border-radius: 4px;
   opacity: 0.4; transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.deleteBtn:hover { opacity: 1; background: rgba(220, 38, 38, 0.08); color: #dc2626; }
+.deleteBtn:hover { opacity: 1; background: var(--app-danger-bg); color: var(--app-danger); }
 
 .expandToggle { cursor: pointer; opacity: 0.4; padding: 4px; }
 .expandToggle:hover { opacity: 0.8; }
 .chevron { transition: transform 0.2s; }
 .chevronOpen { transform: rotate(180deg); }
 
-.trackList { border-top: 1px solid var(--n-border-color, #e0e0e0); margin-top: 8px; }
+.trackList { border-top: 1px solid var(--app-border); margin-top: 8px; }
 .emptyTracks { padding: 12px 4px; font-size: 13px; opacity: 0.4; }
 .trackRow {
   display: flex; align-items: center; gap: 8px; padding: 6px 4px;
   cursor: pointer; border-radius: 4px; font-size: 13px; transition: background 0.15s;
 }
-.trackRow:hover { background: var(--n-merged-color, rgba(0,0,0,0.04)); }
+.trackRow:hover { background: var(--app-hover); }
 .trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackArtist { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }
@@ -197,5 +197,5 @@ async function handleRemoveTrack(trackId: string) {
   opacity: 0; transition: opacity 0.15s, background 0.15s;
 }
 .trackRow:hover .trackRemoveBtn { opacity: 0.5; }
-.trackRemoveBtn:hover { opacity: 1 !important; background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+.trackRemoveBtn:hover { opacity: 1 !important; background: var(--app-danger-bg); color: var(--app-danger); }
 </style>

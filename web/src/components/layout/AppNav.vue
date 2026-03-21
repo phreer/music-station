@@ -40,6 +40,6 @@ function handleSelect(key: string) {
 
 <style module>
 .nav {
-  border-bottom: 1px solid var(--n-border-color, #e0e0e0);
+  border-bottom: 1px solid var(--app-border);
 }
 </style>

@@ -156,11 +156,11 @@ function playAlbum(albumName: string) {
 .chevron { transition: transform 0.2s; opacity: 0.4; }
 .chevronOpen { transform: rotate(180deg); }
 
-.content { border-top: 1px solid var(--n-border-color, #e0e0e0); margin-top: 12px; padding-top: 8px; }
+.content { border-top: 1px solid var(--app-border); margin-top: 12px; padding-top: 8px; }
 .tabs { margin-bottom: 8px; }
 
 .albumRow { display: flex; align-items: center; gap: 8px; padding: 6px 4px; border-radius: 4px; }
-.albumRow:hover { background: var(--n-merged-color, rgba(0,0,0,0.04)); }
+.albumRow:hover { background: var(--app-hover); }
 .albumInfo { flex: 1; min-width: 0; }
 .albumName { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .albumMeta { font-size: 11px; opacity: 0.5; }
@@ -175,7 +175,7 @@ function playAlbum(albumName: string) {
 .albumPlayBtn:hover { opacity: 1 !important; background: rgba(128,128,128,0.15); }
 
 .trackRow { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
-.trackRow:hover { background: var(--n-merged-color, rgba(0,0,0,0.04)); }
+.trackRow:hover { background: var(--app-hover); }
 .trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackAlbum { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }

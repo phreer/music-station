@@ -147,13 +147,13 @@ function playTrack(track: Track) {
 .chevron { transition: transform 0.2s; }
 .chevronOpen { transform: rotate(180deg); }
 
-.trackList { border-top: 1px solid var(--n-border-color, #e0e0e0); margin-top: 8px; }
+.trackList { border-top: 1px solid var(--app-border); margin-top: 8px; }
 .trackRow {
   display: flex; align-items: center; gap: 8px;
   padding: 6px 4px; cursor: pointer; border-radius: 4px;
   font-size: 13px; transition: background 0.15s;
 }
-.trackRow:hover { background: var(--n-merged-color, rgba(0,0,0,0.04)); }
+.trackRow:hover { background: var(--app-hover); }
 .trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
 .trackNum { width: 20px; text-align: right; opacity: 0.4; font-size: 11px; flex-shrink: 0; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

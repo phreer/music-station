@@ -63,11 +63,11 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 }
 
 .item:hover {
-  background: var(--n-merged-color, rgba(0, 0, 0, 0.04));
+  background: var(--app-hover);
 }
 
 .itemActive {
-  background: rgba(0, 102, 204, 0.08);
+  background: var(--app-active-bg);
   border-left: 3px solid var(--n-primary-color, #0066cc);
 }
 
@@ -91,7 +91,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--n-merged-color, #f0f0f0);
+  background: var(--app-placeholder-bg);
   font-size: 14px;
   opacity: 0.3;
 }

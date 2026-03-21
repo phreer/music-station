@@ -103,8 +103,8 @@ watch(
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border-left: 1px solid var(--n-border-color, #e0e0e0);
-  background: var(--n-color, #fff);
+  border-left: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 
 .header {
@@ -112,7 +112,7 @@ watch(
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-bottom: 1px solid var(--n-border-color, #e0e0e0);
+  border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
 }
 
@@ -175,7 +175,7 @@ watch(
   font-size: 16px;
   font-weight: 600;
   color: var(--n-primary-color, #0066cc);
-  background: rgba(0, 102, 204, 0.06);
+  background: var(--app-active-bg);
 }
 
 .word {
