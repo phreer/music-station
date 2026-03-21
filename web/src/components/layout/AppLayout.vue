@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
-import { NScrollbar } from 'naive-ui'
 import AppHeader from './AppHeader.vue'
 import AppNav from './AppNav.vue'
 import MusicPlayer from '@/components/player/MusicPlayer.vue'
@@ -37,13 +36,9 @@ const activeViewComponent = computed(() => viewComponents[ui.currentView])
     <AppNav />
     <div :class="$style.body">
       <main :class="$style.main">
-        <NScrollbar :class="$style.scrollArea">
-          <div :class="$style.mainContent">
-            <KeepAlive :max="5">
-              <component :is="activeViewComponent" :key="ui.currentView" />
-            </KeepAlive>
-          </div>
-        </NScrollbar>
+        <KeepAlive :max="5">
+          <component :is="activeViewComponent" :key="ui.currentView" />
+        </KeepAlive>
       </main>
       <!-- Lyrics sidebar: shown when something is playing and sidebar is toggled on -->
       <Transition name="sidebar">
@@ -78,12 +73,13 @@ const activeViewComponent = computed(() => viewComponents[ui.currentView])
 
 .main {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   padding-bottom: 90px; /* space for player bar */
+  scrollbar-width: none; /* Firefox */
 }
 
-.scrollArea {
-  height: 100%;
+.main::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
 }
 
 .lyricsSidebar {
