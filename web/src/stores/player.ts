@@ -31,7 +31,13 @@ export const usePlayerStore = defineStore('player', () => {
     audioElement.value = el
     el.volume = volume.value
 
+    // Throttle timeupdate to ~4 Hz (250ms) to reduce reactivity propagation
+    // during playback (the native event fires at 4-15 Hz).
+    let lastTimeUpdate = 0
     el.addEventListener('timeupdate', () => {
+      const now = performance.now()
+      if (now - lastTimeUpdate < 250) return
+      lastTimeUpdate = now
       currentTime.value = el.currentTime
     })
     el.addEventListener('loadedmetadata', () => {

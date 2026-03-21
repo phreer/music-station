@@ -1,8 +1,8 @@
 import { get, put, del } from './client'
 import type { Lyrics, LyricsSearchResult } from '@/types'
 
-export async function fetchLyrics(trackId: string): Promise<Lyrics> {
-  return get<Lyrics>(`/lyrics/${trackId}`)
+export async function fetchLyrics(trackId: string, signal?: AbortSignal): Promise<Lyrics> {
+  return get<Lyrics>(`/lyrics/${trackId}`, signal)
 }
 
 export async function uploadLyrics(
@@ -26,10 +26,11 @@ export async function searchLyrics(
   query: string,
   provider: string,
   artist?: string,
+  signal?: AbortSignal,
 ): Promise<LyricsSearchResult[]> {
   const params = new URLSearchParams({ q: query, provider })
   if (artist) params.set('artist', artist)
-  return get<LyricsSearchResult[]>(`/lyrics/search?${params}`)
+  return get<LyricsSearchResult[]>(`/lyrics/search?${params}`, signal)
 }
 
 export async function fetchLyricsFromProvider(

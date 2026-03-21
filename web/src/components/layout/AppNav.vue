@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { NMenu } from 'naive-ui'
 import { computed, h } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { Music, Disc3, Users, ListMusic, BarChart3 } from 'lucide-vue-next'
-import { useUiStore, type ViewName } from '@/stores/ui'
 
-const ui = useUiStore()
+const route = useRoute()
+const router = useRouter()
 
 const menuOptions = [
-  { label: 'Tracks', key: 'tracks' as ViewName, icon: Music },
-  { label: 'Albums', key: 'albums' as ViewName, icon: Disc3 },
-  { label: 'Artists', key: 'artists' as ViewName, icon: Users },
-  { label: 'Playlists', key: 'playlists' as ViewName, icon: ListMusic },
-  { label: 'Stats', key: 'stats' as ViewName, icon: BarChart3 },
+  { label: 'Tracks', key: 'tracks', icon: Music },
+  { label: 'Albums', key: 'albums', icon: Disc3 },
+  { label: 'Artists', key: 'artists', icon: Users },
+  { label: 'Playlists', key: 'playlists', icon: ListMusic },
+  { label: 'Stats', key: 'stats', icon: BarChart3 },
 ]
 
 const naiveMenuOptions = computed(() =>
@@ -22,8 +23,13 @@ const naiveMenuOptions = computed(() =>
   })),
 )
 
+const activeKey = computed(() => {
+  const name = route.name as string | undefined
+  return name ?? 'tracks'
+})
+
 function handleSelect(key: string) {
-  ui.switchView(key as ViewName)
+  router.push({ name: key })
 }
 </script>
 
@@ -31,7 +37,7 @@ function handleSelect(key: string) {
   <nav :class="$style.nav">
     <NMenu
       mode="horizontal"
-      :value="ui.currentView"
+      :value="activeKey"
       :options="naiveMenuOptions"
       @update:value="handleSelect"
     />

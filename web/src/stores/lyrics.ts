@@ -13,22 +13,26 @@ export const useLyricsStore = defineStore('lyrics', () => {
   const currentWordIndex = ref(-1)
   const sidebarVisible = ref(true)
   const hasLyrics = ref(false)
+  let loadController: AbortController | null = null
 
   const { parseLrc, parseWordLevel } = useLrcParser()
 
   const hasParsedLines = computed(() => parsedLines.value.length > 0)
 
   async function loadForTrack(trackId: string) {
+    loadController?.abort()
+    loadController = new AbortController()
     isLoading.value = true
     currentLyrics.value = null
     parsedLines.value = []
     currentLineIndex.value = -1
     try {
-      const lyrics = await fetchLyrics(trackId)
+      const lyrics = await fetchLyrics(trackId, loadController.signal)
       currentLyrics.value = lyrics
       hasLyrics.value = true
       parseContent(lyrics)
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       hasLyrics.value = false
       currentLyrics.value = null
     } finally {
@@ -51,18 +55,41 @@ export const useLyricsStore = defineStore('lyrics', () => {
   }
 
   function updateCurrentTime(time: number) {
-    if (parsedLines.value.length === 0) return
-    // Find the last line whose timestamp <= current time
+    const lines = parsedLines.value
+    if (lines.length === 0) return
+
+    const prevIdx = currentLineIndex.value
+
+    // Incremental forward scan: during normal playback the active line is
+    // almost always the current or next line, so start from prevIdx.
     let idx = -1
-    for (let i = 0; i < parsedLines.value.length; i++) {
-      const line = parsedLines.value[i]!
-      if (line.time >= 0 && line.time <= time) {
-        idx = i
-      } else if (line.time > time) {
-        break
+    if (prevIdx >= 0 && prevIdx < lines.length && lines[prevIdx]!.time <= time) {
+      // Scan forward from the previous position
+      idx = prevIdx
+      for (let i = prevIdx + 1; i < lines.length; i++) {
+        if (lines[i]!.time >= 0 && lines[i]!.time <= time) {
+          idx = i
+        } else {
+          break
+        }
       }
+    } else {
+      // Seek / jump: use binary search to find the last line with time <= current
+      let lo = 0
+      let hi = lines.length - 1
+      while (lo <= hi) {
+        const mid = (lo + hi) >>> 1
+        if (lines[mid]!.time <= time) {
+          idx = mid
+          lo = mid + 1
+        } else {
+          hi = mid - 1
+        }
+      }
+      // Skip lines without timestamps (time < 0)
+      if (idx >= 0 && lines[idx]!.time < 0) idx = -1
     }
-    // Only write reactive refs when values actually change
+
     if (currentLineIndex.value !== idx) {
       currentLineIndex.value = idx
     }

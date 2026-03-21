@@ -9,6 +9,7 @@ export const useLibraryStore = defineStore('library', () => {
   const searchQuery = ref('')
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  let loadController: AbortController | null = null
 
   const filteredTracks = computed(() => {
     if (!searchQuery.value) return allTracks.value
@@ -78,15 +79,18 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   async function loadTracks() {
+    loadController?.abort()
+    loadController = new AbortController()
     isLoading.value = true
     error.value = null
     try {
-      const tracks = await fetchTracks()
+      const tracks = await fetchTracks(loadController.signal)
       allTracks.value = tracks
       const map = new Map<string, Track>()
       for (const t of tracks) map.set(t.id, t)
       trackMap.value = map
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       error.value = e instanceof Error ? e.message : 'Failed to load tracks'
     } finally {
       isLoading.value = false

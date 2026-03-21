@@ -1,12 +1,12 @@
 import { get, put, post } from './client'
 import type { Track } from '@/types'
 
-export async function fetchTracks(): Promise<Track[]> {
-  return get<Track[]>('/tracks')
+export async function fetchTracks(signal?: AbortSignal): Promise<Track[]> {
+  return get<Track[]>('/tracks', signal)
 }
 
-export async function fetchTrack(id: string): Promise<Track> {
-  return get<Track>(`/tracks/${id}`)
+export async function fetchTrack(id: string, signal?: AbortSignal): Promise<Track> {
+  return get<Track>(`/tracks/${id}`, signal)
 }
 
 export async function updateTrack(id: string, data: Partial<Track>): Promise<Track> {

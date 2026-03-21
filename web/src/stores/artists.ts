@@ -7,6 +7,7 @@ export const useArtistsStore = defineStore('artists', () => {
   const allArtists = ref<Artist[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  let loadController: AbortController | null = null
 
   async function loadArtists() {
     if (allArtists.value.length > 0) return
@@ -18,11 +19,14 @@ export const useArtistsStore = defineStore('artists', () => {
   }
 
   async function _fetch() {
+    loadController?.abort()
+    loadController = new AbortController()
     isLoading.value = true
     error.value = null
     try {
-      allArtists.value = await fetchArtists()
+      allArtists.value = await fetchArtists(loadController.signal)
     } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
       error.value = e instanceof Error ? e.message : 'Failed to load artists'
     } finally {
       isLoading.value = false

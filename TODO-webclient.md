@@ -262,14 +262,14 @@ Replaces the original 33 global mutable variables with 6 typed stores:
 - **文件**: `web/src/stores/player.ts:34-36`、`web/src/components/player/MusicPlayer.vue:48-55`
 - **问题**: `timeupdate` 事件以 4-15 Hz 频率触发，每次都更新 `player.currentTime`，进而触发 watch → `lyrics.updateCurrentTime()` → Vue reactivity 传播链。播放期间每秒最多触发 15 次。
 - **方案**: 在 `player.ts` 的 `initAudio()` 中对 `timeupdate` 处理函数添加节流（250ms / 4 Hz）。
-- [ ] 在 `player.ts` 的 `timeupdate` 事件处理中添加节流
+- [x] 在 `player.ts` 的 `timeupdate` 事件处理中添加节流
 
 #### P2 — 歌词时间查找改用增量查找 + 二分搜索
 
 - **文件**: `web/src/stores/lyrics.ts:51-63`
 - **问题**: `updateCurrentTime()` 每次从头线性扫描 `parsedLines` 数组。正常顺序播放时，当前行几乎总是上一行的下一行，完整线性扫描是冗余操作。
 - **方案**: 正常播放从 `currentLineIndex` 开始增量前向查找；seek 跳转时使用二分搜索。
-- [ ] 优化 `lyrics.ts` 中的 `updateCurrentTime()` 实现
+- [x] 优化 `lyrics.ts` 中的 `updateCurrentTime()` 实现
 
 ---
 
@@ -283,15 +283,15 @@ Replaces the original 33 global mutable variables with 6 typed stores:
   - 为 `request()` 添加可选 `signal: AbortSignal` 参数
   - Store 的 `loadXxx()` 方法在新请求发起时 abort 上一次未完成的请求
   - 网络错误（非 4xx/5xx）自动重试 1-2 次（指数退避）
-- [ ] 修改 `api/client.ts` 支持 `AbortSignal`
-- [ ] 在各 store 的加载方法中管理 AbortController 生命周期
+- [x] 修改 `api/client.ts` 支持 `AbortSignal`
+- [x] 在各 store 的加载方法中管理 AbortController 生命周期
 
 #### P3 — 视图组件懒加载
 
 - **文件**: `web/src/components/layout/AppLayout.vue`
 - **问题**: `AppLayout.vue` 静态 import 所有 5 个视图，全部被打包进初始 chunk，增加首屏加载时间。
 - **方案**: 改用 `defineAsyncComponent(() => import('./views/Xxx.vue'))` 实现懒加载，非首屏视图在首次访问时才下载。
-- [ ] 修改 `AppLayout.vue` 将各视图改为 `defineAsyncComponent` 懒加载
+- [x] 修改 `AppLayout.vue` 将各视图改为 `defineAsyncComponent` 懒加载
 
 ---
 
@@ -301,15 +301,15 @@ Replaces the original 33 global mutable variables with 6 typed stores:
 
 - **问题**: 当前用 Pinia store + `v-if` 手动管理视图切换，无 URL 深度链接、无浏览器前进/后退、无法书签收藏特定视图、所有视图代码强制同步加载。
 - **方案**: 引入 `vue-router`，每个视图对应一个路由，天然支持路由级懒加载，并可配合 `<RouterView>` + `<KeepAlive>` 作为第二阶段 P0 方案的标准替代。
-- [ ] 安装 `vue-router`，创建 `web/src/router/index.ts`
-- [ ] 迁移视图切换逻辑（AppNav、AppLayout、ui store）
+- [x] 安装 `vue-router`，创建 `web/src/router/index.ts`
+- [x] 迁移视图切换逻辑（AppNav、AppLayout、ui store）
 
 #### P3 — Naive UI bundle 体积分析与优化
 
 - **文件**: `web/vite.config.ts`
 - **问题**: 需确认 naive-ui 的 tree-shaking 是否有效。若 naive-ui chunk 超过 500KB（gzip），应考虑 `unplugin-auto-import` + `unplugin-vue-components` 实现真正的按需导入。
-- [ ] 运行 `npm run build` 并分析 bundle 体积（`npx vite-bundle-visualizer`）
-- [ ] 若 naive-ui chunk 过大，集成 `unplugin-vue-components`
+- [x] 运行 `npm run build` 并分析 bundle 体积（`npx vite-bundle-visualizer`）
+- [x] ~~若 naive-ui chunk 过大，集成 `unplugin-vue-components`~~ naive-ui chunk 180KB gzip，远低于 500KB 阈值，无需额外优化
 
 ---
 

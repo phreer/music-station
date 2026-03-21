@@ -6,11 +6,16 @@ import * as api from '@/api/playlists'
 export const usePlaylistStore = defineStore('playlists', () => {
   const playlists = ref<Playlist[]>([])
   const isLoading = ref(false)
+  let loadController: AbortController | null = null
 
   async function loadPlaylists() {
+    loadController?.abort()
+    loadController = new AbortController()
     isLoading.value = true
     try {
-      playlists.value = await api.fetchPlaylists()
+      playlists.value = await api.fetchPlaylists(loadController.signal)
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return
     } finally {
       isLoading.value = false
     }

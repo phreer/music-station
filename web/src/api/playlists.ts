@@ -1,12 +1,12 @@
 import { get, post, put, del } from './client'
 import type { Playlist } from '@/types'
 
-export async function fetchPlaylists(): Promise<Playlist[]> {
-  return get<Playlist[]>('/playlists')
+export async function fetchPlaylists(signal?: AbortSignal): Promise<Playlist[]> {
+  return get<Playlist[]>('/playlists', signal)
 }
 
-export async function fetchPlaylist(id: string): Promise<Playlist> {
-  return get<Playlist>(`/playlists/${id}`)
+export async function fetchPlaylist(id: string, signal?: AbortSignal): Promise<Playlist> {
+  return get<Playlist>(`/playlists/${id}`, signal)
 }
 
 export async function createPlaylist(name: string, description?: string): Promise<Playlist> {
