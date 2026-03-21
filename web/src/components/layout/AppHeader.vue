@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Music } from 'lucide-vue-next'
 import { NButton } from 'naive-ui'
 import { Sun, Moon } from 'lucide-vue-next'
 import { useUiStore } from '@/stores/ui'
@@ -10,8 +9,8 @@ const ui = useUiStore()
 <template>
   <header :class="$style.header">
     <div :class="$style.titleGroup">
-      <Music :size="28" :class="$style.logo" />
-      <h1 :class="$style.title">Music Station</h1>
+      <img src="/favicon.png" :class="$style.logo" alt="FL Music" />
+      <h1 :class="$style.title">FL Music</h1>
     </div>
     <NButton quaternary circle @click="ui.toggleTheme">
       <template #icon>
@@ -38,7 +37,9 @@ const ui = useUiStore()
 }
 
 .logo {
-  color: var(--n-primary-color, #0066cc);
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .title {
