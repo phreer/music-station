@@ -21,9 +21,9 @@ const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 
 function handlePlay(track: Track) {
-  // Add only this track to the queue and play it, rather than replacing the
-  // entire queue with all visible tracks.
-  queue.addToQueue(track.id)
+  // Add track to queue (if absent) and update currentIndex before playing,
+  // so the queue panel highlights the correct track immediately.
+  queue.playInQueue(track.id)
   player.playTrack(track.id)
 }
 

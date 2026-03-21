@@ -31,6 +31,17 @@ export const useQueueStore = defineStore('queue', () => {
     }
   }
 
+  /**
+   * Add a track to the queue (if not already present) and update currentIndex
+   * to point at it, so the queue panel reflects the correct playing track.
+   */
+  function playInQueue(trackId: string) {
+    if (!queue.value.includes(trackId)) {
+      queue.value.push(trackId)
+    }
+    currentIndex.value = queue.value.indexOf(trackId)
+  }
+
   function addMultiple(trackIds: string[]) {
     const existing = new Set(queue.value)
     const toAdd = trackIds.filter((id) => !existing.has(id))
@@ -110,6 +121,7 @@ export const useQueueStore = defineStore('queue', () => {
     queueTracks,
     isEmpty,
     addToQueue,
+    playInQueue,
     addMultiple,
     removeFromQueue,
     clear,
