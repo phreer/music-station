@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NSpin, NEmpty, NButton } from 'naive-ui'
 import { ArrowLeft } from 'lucide-vue-next'
@@ -77,6 +77,7 @@ function playTrack(track: Track) {
 }
 
 onMounted(load)
+watch(() => route.params.name, load)
 onUnmounted(() => abortController?.abort())
 </script>
 
