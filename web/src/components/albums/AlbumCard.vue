@@ -20,9 +20,17 @@ const expanded = ref(false)
 
 // Use tracks from album directly (already populated by /albums endpoint)
 const tracks = computed<Track[]>(() => {
-  if (props.album.tracks && props.album.tracks.length > 0) return props.album.tracks
-  // Fallback: use pre-computed index instead of scanning allTracks
-  return library.getTracksByAlbum(props.album.name, props.album.artist)
+  const raw = props.album.tracks && props.album.tracks.length > 0
+    ? props.album.tracks
+    : library.getTracksByAlbum(props.album.name, props.album.artist)
+  return [...raw].sort((a, b) => {
+    const na = a.track_number != null ? parseInt(a.track_number, 10) : null
+    const nb = b.track_number != null ? parseInt(b.track_number, 10) : null
+    if (na == null && nb == null) return 0
+    if (na == null) return 1
+    if (nb == null) return -1
+    return na - nb
+  })
 })
 
 const coverTrack = computed(() => tracks.value.find((t) => t.has_cover))

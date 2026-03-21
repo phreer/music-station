@@ -24,10 +24,21 @@ let abortController: AbortController | null = null
 
 const artistName = computed(() => decodeURIComponent(route.params.name as string))
 
-// All tracks across all albums, in album order
+// All tracks across all albums, in album order with tracks sorted by track number
 const allTracks = computed<Track[]>(() =>
-  artist.value?.albums.flatMap((a) => a.tracks) ?? [],
+  artist.value?.albums.flatMap((a) => sortAlbumTracks(a.tracks)) ?? [],
 )
+
+function sortAlbumTracks(tracks: Track[]): Track[] {
+  return [...tracks].sort((a, b) => {
+    const na = a.track_number != null ? parseInt(a.track_number, 10) : null
+    const nb = b.track_number != null ? parseInt(b.track_number, 10) : null
+    if (na == null && nb == null) return 0
+    if (na == null) return 1
+    if (nb == null) return -1
+    return na - nb
+  })
+}
 
 // Cover: first track with cover art across all albums
 const coverTrack = computed(() => allTracks.value.find((t) => t.has_cover) ?? null)
@@ -68,7 +79,8 @@ function addAllToQueue() {
 }
 
 function playAlbum(albumName: string) {
-  const tracks = artist.value?.albums.find((a) => a.name === albumName)?.tracks ?? []
+  const rawTracks = artist.value?.albums.find((a) => a.name === albumName)?.tracks ?? []
+  const tracks = sortAlbumTracks(rawTracks)
   const ids = tracks.map((t) => t.id)
   if (!ids.length) return
   queue.setQueue(ids, 0)
@@ -76,7 +88,8 @@ function playAlbum(albumName: string) {
 }
 
 function playTrack(track: Track, albumName: string) {
-  const tracks = artist.value?.albums.find((a) => a.name === albumName)?.tracks ?? []
+  const rawTracks = artist.value?.albums.find((a) => a.name === albumName)?.tracks ?? []
+  const tracks = sortAlbumTracks(rawTracks)
   const ids = tracks.map((t) => t.id)
   const idx = ids.indexOf(track.id)
   queue.setQueue(ids, Math.max(idx, 0))
@@ -174,7 +187,7 @@ onUnmounted(() => abortController?.abort())
 
             <div :class="$style.trackList">
               <div
-                v-for="track in album.tracks"
+                v-for="track in sortAlbumTracks(album.tracks)"
                 :key="track.id"
                 :class="[$style.trackRow, track.id === player.currentTrackId && $style.trackRowActive]"
                 @click="playTrack(track, album.name)"

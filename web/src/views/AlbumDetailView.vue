@@ -31,6 +31,19 @@ const albumYear = computed(() => {
   return year ?? null
 })
 
+// Sort tracks by track number; tracks without a number go to the end
+const sortedTracks = computed<Track[]>(() => {
+  if (!album.value) return []
+  return [...album.value.tracks].sort((a, b) => {
+    const na = a.track_number != null ? parseInt(a.track_number, 10) : null
+    const nb = b.track_number != null ? parseInt(b.track_number, 10) : null
+    if (na == null && nb == null) return 0
+    if (na == null) return 1
+    if (nb == null) return -1
+    return na - nb
+  })
+})
+
 async function load() {
   if (route.name !== 'album-detail') return
   const name = albumName.value
@@ -58,7 +71,7 @@ async function load() {
 
 function playAlbum() {
   if (!album.value) return
-  const ids = album.value.tracks.map((t) => t.id)
+  const ids = sortedTracks.value.map((t) => t.id)
   if (ids.length === 0) return
   queue.setQueue(ids, 0)
   player.playTrack(ids[0]!)
@@ -66,12 +79,11 @@ function playAlbum() {
 
 function addAlbumToQueue() {
   if (!album.value) return
-  queue.addMultiple(album.value.tracks.map((t) => t.id))
+  queue.addMultiple(sortedTracks.value.map((t) => t.id))
 }
 
 function playTrack(track: Track) {
-  if (!album.value) return
-  const ids = album.value.tracks.map((t) => t.id)
+  const ids = sortedTracks.value.map((t) => t.id)
   const idx = ids.indexOf(track.id)
   queue.setQueue(ids, idx)
   player.playTrack(track.id)
@@ -150,7 +162,7 @@ onUnmounted(() => abortController?.abort())
             <span :class="$style.colDur">Duration</span>
           </div>
           <div
-            v-for="track in album.tracks"
+            v-for="track in sortedTracks"
             :key="track.id"
             :class="[$style.trackRow, track.id === player.currentTrackId && $style.trackRowActive]"
             @click="playTrack(track)"
