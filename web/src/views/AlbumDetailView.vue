@@ -177,8 +177,9 @@ onUnmounted(() => abortController?.abort())
 
 <style module>
 .container {
-  padding: 24px;
+  padding: 32px 48px;
   max-width: 960px;
+  margin: 0 auto;
 }
 
 .toolbar {
@@ -388,6 +389,10 @@ onUnmounted(() => abortController?.abort())
 
 /* Responsive: stack vertically on narrow screens */
 @media (max-width: 600px) {
+  .container {
+    padding: 16px 20px;
+  }
+
   .header {
     flex-direction: column;
     align-items: flex-start;
