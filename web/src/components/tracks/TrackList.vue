@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
-import { h, computed, ref } from 'vue'
+import { h, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -9,7 +9,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import AddToPlaylistModal from '@/components/modals/AddToPlaylistModal.vue'
 
-const props = defineProps<{
+const { tracks } = defineProps<{
   tracks: Track[]
 }>()
 
@@ -20,19 +20,10 @@ const router = useRouter()
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 
-// Cached ID list and ID-to-index map — recomputed only when props.tracks changes
-const trackIds = computed(() => props.tracks.map((t) => t.id))
-const trackIdIndexMap = computed(() => {
-  const map = new Map<string, number>()
-  for (let i = 0; i < props.tracks.length; i++) {
-    map.set(props.tracks[i]!.id, i)
-  }
-  return map
-})
-
 function handlePlay(track: Track) {
-  const idx = trackIdIndexMap.value.get(track.id) ?? 0
-  queue.setQueue(trackIds.value, idx)
+  // Add only this track to the queue and play it, rather than replacing the
+  // entire queue with all visible tracks.
+  queue.addToQueue(track.id)
   player.playTrack(track.id)
 }
 
