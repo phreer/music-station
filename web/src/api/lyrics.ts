@@ -1,4 +1,4 @@
-import { get, putFormData, del } from './client'
+import { get, put, del } from './client'
 import type { Lyrics, LyricsSearchResult } from '@/types'
 
 export async function fetchLyrics(trackId: string): Promise<Lyrics> {
@@ -9,15 +9,13 @@ export async function uploadLyrics(
   trackId: string,
   content: string,
   format: string,
-  language: string,
-  source: string,
+  language?: string,
+  source?: string,
 ): Promise<void> {
-  const formData = new FormData()
-  formData.append('content', content)
-  formData.append('format', format)
-  if (language) formData.append('language', language)
-  if (source) formData.append('source', source)
-  await putFormData<void>(`/lyrics/${trackId}`, formData)
+  const body: Record<string, string> = { content, format }
+  if (language) body.language = language
+  if (source) body.source = source
+  await put<void>(`/lyrics/${trackId}`, body)
 }
 
 export async function deleteLyrics(trackId: string): Promise<void> {

@@ -163,6 +163,7 @@ pub struct AppState {
 
 ### Lyrics System
 - **Formats**: `Plain` (raw text), `Lrc` (line-level `[mm:ss.xx]`), `LrcWord` (word-level `word(offset,duration)`)
+- **Timestamp variants**: Standard LRC uses `[mm:ss.xx]`; offset LRC uses `[offset_ms,duration_ms]` (common from NetEase/QQ Music). See [`LYRICS_GUIDE.md`](./LYRICS_GUIDE.md) for format details and examples.
 - **Auto-detection** via regex pattern matching on content
 - **Providers**: `LyricsProvider` async trait with `NetEaseLyricsProvider` and `QQMusicLyricsProvider`
 - **Aggregation**: `LyricsAggregator` tries multiple providers with fallback

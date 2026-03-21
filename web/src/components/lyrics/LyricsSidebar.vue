@@ -58,7 +58,7 @@ watch(
       </div>
 
       <!-- Synced LRC lyrics -->
-      <div v-else ref="listRef" :class="$style.lineList">
+      <div v-else-if="lyrics.parsedLines.length > 0" ref="listRef" :class="$style.lineList">
         <div
           v-for="(line, idx) in lyrics.parsedLines"
           :key="idx"
@@ -77,13 +77,21 @@ watch(
               :class="[
                 $style.word,
                 idx === lyrics.currentLineIndex &&
-                  player.currentTime >= line.time + word.offset &&
+                  player.currentTime >= word.offset &&
                   $style.wordActive,
               ]"
             >{{ word.text }}</span>
           </template>
           <template v-else>{{ line.text }}</template>
         </div>
+      </div>
+
+      <!-- Fallback: lyrics exist but parsing produced no lines -->
+      <div
+        v-else-if="lyrics.hasLyrics && lyrics.currentLyrics"
+        :class="$style.plainText"
+      >
+        {{ lyrics.currentLyrics.content }}
       </div>
     </div>
   </div>

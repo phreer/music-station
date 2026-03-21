@@ -7,7 +7,7 @@ Music Station now supports lyrics storage and management for your music library.
 ## Features
 
 - **Persistent Storage**: Lyrics are stored in a SQLite database at `.music-station/lyrics.db` in your library folder
-- **Multiple Formats**: Supports both plain text and LRC (synchronized lyrics) formats
+- **Multiple Formats**: Supports plain text, LRC (line-synchronized), and LRC-Word (word-level synchronized) formats
 - **Metadata Support**: Store language, source, and timestamps with lyrics
 - **Track Integration**: The `has_lyrics` flag is automatically updated on tracks
 - **Auto-format Detection**: Automatically detects LRC format based on content
@@ -20,7 +20,7 @@ The lyrics database contains a single table:
 CREATE TABLE lyrics (
     track_id TEXT PRIMARY KEY,
     content TEXT NOT NULL,
-    format TEXT NOT NULL,       -- 'plain' or 'lrc'
+    format TEXT NOT NULL,       -- 'plain', 'lrc', or 'lrc_word'
     language TEXT,               -- Optional: e.g., 'en', 'es', 'ja'
     source TEXT,                 -- Optional: source/origin of lyrics
     created_at TEXT NOT NULL,
@@ -63,7 +63,7 @@ Content-Type: application/json
 ```json
 {
   "content": "[00:12.00]First line\n[00:16.50]Second line",
-  "format": "lrc",       // Optional: "plain" or "lrc" (auto-detected if omitted)
+  "format": "lrc",       // Optional: "plain", "lrc", or "lrc_word" (auto-detected if omitted)
   "language": "en",      // Optional
   "source": "Manual"     // Optional
 }
@@ -98,7 +98,9 @@ DELETE /lyrics/:id
 
 ## Lyric Formats
 
-### Plain Text
+The system supports three formats, stored in the `format` field as a string enum.
+
+### 1. Plain Text (`plain`)
 
 Simple line-by-line lyrics without timestamps:
 
@@ -108,28 +110,72 @@ Second line of the song
 Chorus begins here
 ```
 
-### LRC Format
+### 2. LRC Format (`lrc`)
 
-Synchronized lyrics with timestamps in `[mm:ss.xx]` format:
+Synchronized lyrics with line-level timestamps. Two timestamp syntaxes are supported:
+
+**Standard LRC** — `[mm:ss.xx]` where mm=minutes, ss=seconds, xx=centiseconds or milliseconds:
 
 ```
 [00:12.00]First line of the song
 [00:16.50]Second line of the song
 [00:21.00]Chorus begins here
-[00:25.30]Chorus continues
-[00:30.00]
-[00:35.50]Next verse
 ```
 
-**LRC Format Details**:
-- Timestamps: `[mm:ss.xx]` where mm=minutes, ss=seconds, xx=centiseconds
-- Multiple timestamps per line supported: `[00:12.00][01:12.00]Same line repeated`
-- Metadata tags supported (optional):
-  - `[ti:Song Title]`
-  - `[ar:Artist Name]`
-  - `[al:Album Name]`
-  - `[by:Creator]`
-  - `[offset:+/-ms]` - Timing offset
+**Offset LRC** — `[offset,duration]` where both values are in milliseconds. Common in lyrics fetched from NetEase/QQ Music providers:
+
+```
+[0,12210]First line of the song
+[12210,5000]Second line of the song
+[48853,2103]Third line of the song
+```
+
+In offset format, the first number is the absolute start time in ms, and the second is the line duration in ms.
+
+**LRC metadata tags** (optional, skipped during parsing):
+- `[ti:Song Title]`
+- `[ar:Artist Name]`
+- `[al:Album Name]`
+- `[by:Creator]`
+- `[offset:+/-ms]` — Timing offset
+
+### 3. LRC-Word Format (`lrc_word`)
+
+Word-level synchronized lyrics. Each line has a line-level timestamp (either standard or offset format), and within each line, individual words have their own timing annotation:
+
+```
+word(absolute_offset_ms,duration_ms)
+```
+
+**Example with offset line timestamps** (most common from providers):
+
+```
+[ti:双刀]
+[ar:周杰伦]
+[al:叶惠美]
+[by:]
+[offset:0]
+[0,12210]双(0,872)刀(872,872) (1744,872)-(2616,872) (3488,872)周(4360,872)杰(5232,872)伦(6104,872)
+[48853,2103]透(48853,155)过(49008,338)镜(49346,152)头(49498,230)
+```
+
+**Example with standard line timestamps**:
+
+```
+[00:48.85]透(48853,155)过(49008,338)镜(49346,152)头(49498,230)
+```
+
+**Word timing semantics**:
+- `word(offset,duration)` — `offset` is the absolute start time in milliseconds from the beginning of the track, `duration` is how long the word is sung in milliseconds
+- Clients convert to seconds by dividing by 1000
+- Words within a line are concatenated (no implicit spaces) — whitespace characters appear as literal text between word groups
+
+### Auto-Detection Logic
+
+The server auto-detects format when none is specified (see `src/lyrics.rs`):
+1. If content matches word-level timing pattern `word(offset,duration)` → `lrc_word`
+2. If content contains standard LRC timestamps `[mm:ss.xx]` or offset timestamps `[offset,duration]` → `lrc`
+3. Otherwise → `plain`
 
 ## Usage Examples
 
@@ -234,9 +280,7 @@ For example, if your library is at `/music`, the database will be at:
 
 ### Auto-format Detection
 
-If you don't specify a format, the system automatically detects it:
-- If content contains `[00:` or `[01:` patterns → LRC format
-- Otherwise → Plain text format
+See the "Auto-Detection Logic" section under "Lyric Formats" above for details on how format is determined when not explicitly specified.
 
 ### Timestamps
 
