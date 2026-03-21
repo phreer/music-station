@@ -112,7 +112,11 @@ onUnmounted(() => abortController?.abort())
             <div :class="$style.albumLabel">Album</div>
             <h1 :class="$style.albumName">{{ album.name }}</h1>
             <div :class="$style.albumMeta">
-              <span v-if="album.artist" :class="$style.artistName">{{ album.artist }}</span>
+              <span
+                v-if="album.artist"
+                :class="[$style.artistName, $style.artistLink]"
+                @click="router.push({ name: 'artist-detail', params: { name: album.artist } })"
+              >{{ album.artist }}</span>
               <span v-if="albumYear" :class="$style.metaSep">·</span>
               <span v-if="albumYear">{{ albumYear }}</span>
               <span :class="$style.metaSep">·</span>
@@ -259,6 +263,14 @@ onUnmounted(() => abortController?.abort())
 .artistName {
   font-weight: 600;
   opacity: 1;
+}
+
+.artistLink {
+  cursor: pointer;
+}
+
+.artistLink:hover {
+  text-decoration: underline;
 }
 
 .metaSep {

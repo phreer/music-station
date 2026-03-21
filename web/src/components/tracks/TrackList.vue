@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
 import { h, computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
@@ -14,6 +15,7 @@ const props = defineProps<{
 
 const player = usePlayerStore()
 const queue = useQueueStore()
+const router = useRouter()
 
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
@@ -92,9 +94,18 @@ const columns: DataTableColumns<Track> = [
     title: 'Title',
     minWidth: 200,
     render(row) {
+      const artistEl = row.artist
+        ? h('span', {
+            class: 'track-artist-text track-nav-link',
+            onClick: (e: Event) => {
+              e.stopPropagation()
+              router.push({ name: 'artist-detail', params: { name: row.artist } })
+            },
+          }, row.artist)
+        : h('span', { class: 'track-artist-text' }, 'Unknown Artist')
       return h('div', { class: 'track-title-cell' }, [
         h('div', { class: 'track-title-text' }, row.title || 'Unknown Title'),
-        h('div', { class: 'track-artist-text' }, row.artist || 'Unknown Artist'),
+        artistEl,
       ])
     },
   },
@@ -103,7 +114,14 @@ const columns: DataTableColumns<Track> = [
     title: 'Album',
     width: 200,
     render(row) {
-      return h('span', { class: 'track-album-text' }, row.album || '-')
+      if (!row.album) return h('span', { class: 'track-album-text' }, '-')
+      return h('span', {
+        class: 'track-album-text track-nav-link',
+        onClick: (e: Event) => {
+          e.stopPropagation()
+          router.push({ name: 'album-detail', params: { name: row.album } })
+        },
+      }, row.album)
     },
   },
   {
@@ -211,6 +229,16 @@ const rowProps = (row: Track) => ({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Clickable artist/album navigation links */
+.track-nav-link {
+  cursor: pointer;
+}
+
+.track-nav-link:hover {
+  text-decoration: underline;
+  opacity: 0.9;
 }
 
 /* Lightweight native action buttons — replaces NButton + Lucide component instances */

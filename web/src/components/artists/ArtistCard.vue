@@ -96,15 +96,17 @@ function playAlbum(albumName: string) {
           </NTab>
         </NTabs>
 
-        <!-- Albums tab -->
-        <div v-if="activeTab === 'albums'">
+          <div v-if="activeTab === 'albums'">
           <div
             v-for="album in artist.albums"
             :key="album.name"
             :class="$style.albumRow"
           >
             <div :class="$style.albumInfo">
-              <div :class="$style.albumName">{{ album.name }}</div>
+              <div
+                :class="[$style.albumName, $style.albumNameLink]"
+                @click.stop="router.push({ name: 'album-detail', params: { name: album.name } })"
+              >{{ album.name }}</div>
               <div :class="$style.albumMeta">{{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}</div>
             </div>
             <button :class="$style.albumPlayBtn" title="Play album" @click="playAlbum(album.name)">
@@ -170,6 +172,8 @@ function playAlbum(albumName: string) {
 .albumRow:hover { background: var(--app-hover); }
 .albumInfo { flex: 1; min-width: 0; }
 .albumName { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumNameLink { cursor: pointer; }
+.albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
 .albumMeta { font-size: 11px; opacity: 0.5; }
 
 .albumPlayBtn {

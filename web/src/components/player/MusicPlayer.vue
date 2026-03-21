@@ -12,6 +12,7 @@ import {
   Music2,
   Pencil,
 } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useLyricsStore } from '@/stores/lyrics'
 import { coverUrl } from '@/api/client'
@@ -21,6 +22,7 @@ import EditTrackModal from '@/components/modals/EditTrackModal.vue'
 
 const player = usePlayerStore()
 const lyrics = useLyricsStore()
+const router = useRouter()
 const audioRef = ref<HTMLAudioElement | null>(null)
 
 const showLyricsModal = ref(false)
@@ -77,7 +79,18 @@ function handleSeek(value: number) {
           {{ player.currentTrack?.title || 'Unknown Title' }}
         </div>
         <div :class="$style.trackArtist">
-          {{ player.currentTrack?.artist || 'Unknown Artist' }}
+          <span
+            v-if="player.currentTrack?.artist"
+            :class="$style.trackLink"
+            @click="router.push({ name: 'artist-detail', params: { name: player.currentTrack.artist } })"
+          >{{ player.currentTrack.artist }}</span>
+          <span v-if="player.currentTrack?.artist && player.currentTrack?.album" :class="$style.trackSep"> · </span>
+          <span
+            v-if="player.currentTrack?.album"
+            :class="$style.trackLink"
+            @click="router.push({ name: 'album-detail', params: { name: player.currentTrack.album } })"
+          >{{ player.currentTrack.album }}</span>
+          <span v-if="!player.currentTrack?.artist && !player.currentTrack?.album">Unknown Artist</span>
         </div>
       </div>
       <!-- Per-track actions -->
@@ -245,6 +258,19 @@ function handleSeek(value: number) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.trackLink {
+  cursor: pointer;
+}
+
+.trackLink:hover {
+  text-decoration: underline;
+  opacity: 1;
+}
+
+.trackSep {
+  opacity: 0.5;
 }
 
 .center {

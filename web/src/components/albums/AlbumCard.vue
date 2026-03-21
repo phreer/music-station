@@ -71,7 +71,11 @@ function playTrack(track: Track) {
         :title="album.name"
         @click.stop="router.push({ name: 'album-detail', params: { name: album.name } })"
       >{{ album.name }}</div>
-      <div :class="$style.albumMeta">{{ album.artist }}</div>
+      <div
+        v-if="album.artist"
+        :class="[$style.albumMeta, $style.albumMetaLink]"
+        @click.stop="router.push({ name: 'artist-detail', params: { name: album.artist } })"
+      >{{ album.artist }}</div>
       <div :class="$style.albumMeta">
         {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
       </div>
@@ -146,6 +150,8 @@ function playTrack(track: Track) {
 .albumNameLink { cursor: pointer; }
 .albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
 .albumMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumMetaLink { cursor: pointer; }
+.albumMetaLink:hover { text-decoration: underline; opacity: 0.8; }
 
 .expandToggle {
   display: flex; justify-content: center; padding: 6px 0 0;
