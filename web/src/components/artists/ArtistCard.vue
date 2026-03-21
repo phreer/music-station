@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { NCard, NTabs, NTab } from 'naive-ui'
 import type { Artist } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -10,6 +11,7 @@ import { useLibraryStore } from '@/stores/library'
 
 const props = defineProps<{ artist: Artist }>()
 
+const router = useRouter()
 const player = usePlayerStore()
 const queue = useQueueStore()
 const library = useLibraryStore()
@@ -55,8 +57,11 @@ function playAlbum(albumName: string) {
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
         </div>
       </div>
-      <div :class="$style.info">
-        <div :class="$style.name">{{ artist.name }}</div>
+        <div :class="$style.info">
+          <div
+            :class="[$style.name, $style.nameLink]"
+            @click.stop="router.push({ name: 'artist-detail', params: { name: artist.name } })"
+          >{{ artist.name }}</div>
         <div :class="$style.meta">
           {{ artist.album_count }} albums · {{ artist.track_count }} tracks
         </div>
@@ -140,6 +145,8 @@ function playAlbum(albumName: string) {
 
 .info { flex: 1; min-width: 0; }
 .name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nameLink { cursor: pointer; }
+.nameLink:hover { text-decoration: underline; opacity: 0.8; }
 .meta { font-size: 12px; opacity: 0.6; margin-top: 2px; }
 
 .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
