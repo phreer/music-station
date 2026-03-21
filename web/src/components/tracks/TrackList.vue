@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { NDataTable, NButton, type DataTableColumns } from 'naive-ui'
+import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
 import { h, computed, ref } from 'vue'
-import { Play, ListPlus, ListMusic } from 'lucide-vue-next'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
@@ -19,10 +18,18 @@ const queue = useQueueStore()
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 
+// Cached ID-to-index map — avoids O(n) indexOf on every play click
+const trackIdIndexMap = computed(() => {
+  const map = new Map<string, number>()
+  for (let i = 0; i < props.tracks.length; i++) {
+    map.set(props.tracks[i]!.id, i)
+  }
+  return map
+})
+
 function handlePlay(track: Track) {
-  // Build queue from current track list, start at this track
   const ids = props.tracks.map((t) => t.id)
-  const idx = ids.indexOf(track.id)
+  const idx = trackIdIndexMap.value.get(track.id) ?? 0
   queue.setQueue(ids, idx)
   player.playTrack(track.id)
 }
@@ -36,7 +43,14 @@ function handleAddToPlaylist(track: Track) {
   showAddToPlaylist.value = true
 }
 
-const columns = computed<DataTableColumns<Track>>(() => [
+// Inline SVG strings — avoids 6 component instances (3 NButton + 3 Lucide) per visible row
+const playIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>'
+const addQueueIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>'
+const playlistIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"></path><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path><path d="M12 12H3"></path><path d="M16 6H3"></path><path d="M12 18H3"></path></svg>'
+
+// Column definitions — NO reactive dependency on player state.
+// Current track highlighting is handled via row-class-name instead.
+const columns: DataTableColumns<Track> = [
   {
     key: 'cover',
     title: '',
@@ -77,24 +91,10 @@ const columns = computed<DataTableColumns<Track>>(() => [
     key: 'title',
     title: 'Title',
     minWidth: 200,
-    ellipsis: { tooltip: true },
     render(row) {
-      return h('div', {}, [
-        h(
-          'div',
-          {
-            style: {
-              fontWeight: row.id === player.currentTrackId ? '600' : '400',
-              color: row.id === player.currentTrackId ? 'var(--n-primary-color)' : undefined,
-            },
-          },
-          row.title || 'Unknown Title',
-        ),
-        h(
-          'div',
-          { style: { fontSize: '12px', opacity: 0.6 } },
-          row.artist || 'Unknown Artist',
-        ),
+      return h('div', { class: 'track-title-cell' }, [
+        h('div', { class: 'track-title-text' }, row.title || 'Unknown Title'),
+        h('div', { class: 'track-artist-text' }, row.artist || 'Unknown Artist'),
       ])
     },
   },
@@ -102,9 +102,8 @@ const columns = computed<DataTableColumns<Track>>(() => [
     key: 'album',
     title: 'Album',
     width: 200,
-    ellipsis: { tooltip: true },
     render(row) {
-      return row.album || '-'
+      return h('span', { class: 'track-album-text' }, row.album || '-')
     },
   },
   {
@@ -122,66 +121,55 @@ const columns = computed<DataTableColumns<Track>>(() => [
     width: 60,
     align: 'right',
   },
-    {
-      key: 'actions',
-      title: '',
-      width: 112,
-      render(row) {
-        return h('div', { style: { display: 'flex', gap: '4px' } }, [
-          h(
-            NButton,
-            {
-              quaternary: true,
-              circle: true,
-              size: 'small',
-              onClick: (e: Event) => {
-                e.stopPropagation()
-                handlePlay(row)
-              },
-            },
-            { icon: () => h(Play, { size: 14 }) },
-          ),
-          h(
-            NButton,
-            {
-              quaternary: true,
-              circle: true,
-              size: 'small',
-              onClick: (e: Event) => {
-                e.stopPropagation()
-                handleAddToQueue(row)
-              },
-            },
-            { icon: () => h(ListPlus, { size: 14 }) },
-          ),
-          h(
-            NButton,
-            {
-              quaternary: true,
-              circle: true,
-              size: 'small',
-              title: 'Add to playlist',
-              onClick: (e: Event) => {
-                e.stopPropagation()
-                handleAddToPlaylist(row)
-              },
-            },
-            { icon: () => h(ListMusic, { size: 14 }) },
-          ),
-        ])
-      },
+  {
+    key: 'actions',
+    title: '',
+    width: 112,
+    render(row) {
+      return h('div', { class: 'track-actions' }, [
+        h('button', {
+          class: 'track-action-btn',
+          title: 'Play',
+          innerHTML: playIcon,
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handlePlay(row)
+          },
+        }),
+        h('button', {
+          class: 'track-action-btn',
+          title: 'Add to queue',
+          innerHTML: addQueueIcon,
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handleAddToQueue(row)
+          },
+        }),
+        h('button', {
+          class: 'track-action-btn',
+          title: 'Add to playlist',
+          innerHTML: playlistIcon,
+          onClick: (e: Event) => {
+            e.stopPropagation()
+            handleAddToPlaylist(row)
+          },
+        }),
+      ])
     },
-  ])
+  },
+]
 
-function handleRowClick(row: Track) {
-  handlePlay(row)
+// Stable row key for efficient virtual-list DOM diffing
+const rowKey = (row: Track): DataTableRowKey => row.id
+
+// Current-track highlighting via row class — decoupled from columns definition
+const rowClassName = (row: Track): string => {
+  return row.id === player.currentTrackId ? 'track-row-playing' : ''
 }
 
 const rowProps = (row: Track) => ({
-  style: {
-    cursor: 'pointer',
-  },
-  onClick: () => handleRowClick(row),
+  style: { cursor: 'pointer' },
+  onClick: () => handlePlay(row),
 })
 </script>
 
@@ -190,7 +178,9 @@ const rowProps = (row: Track) => ({
     <NDataTable
       :columns="columns"
       :data="tracks"
+      :row-key="rowKey"
       :row-props="rowProps"
+      :row-class-name="rowClassName"
       :max-height="'calc(100vh - 250px)'"
       virtual-scroll
       size="small"
@@ -199,3 +189,58 @@ const rowProps = (row: Track) => ({
     <AddToPlaylistModal v-model:show="showAddToPlaylist" :track="addToPlaylistTrack" />
   </div>
 </template>
+
+<style>
+/* Current-track highlighting via row class (decoupled from columns computed) */
+.track-row-playing .track-title-text {
+  font-weight: 600;
+  color: var(--n-primary-color);
+}
+
+/* CSS-based ellipsis — replaces NEllipsis + NTooltip component instances */
+.track-title-text,
+.track-album-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-artist-text {
+  font-size: 12px;
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Lightweight native action buttons — replaces NButton + Lucide component instances */
+.track-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.track-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.track-action-btn:hover {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.15);
+}
+
+.track-action-btn:active {
+  background: rgba(128, 128, 128, 0.25);
+}
+</style>
