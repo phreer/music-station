@@ -33,6 +33,7 @@ const allTracks = computed<Track[]>(() =>
 const coverTrack = computed(() => allTracks.value.find((t) => t.has_cover) ?? null)
 
 async function load() {
+  if (route.name !== 'artist-detail') return
   const name = artistName.value
 
   const cached = artistsStore.allArtists.find((a) => a.name === name)

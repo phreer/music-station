@@ -32,6 +32,7 @@ const albumYear = computed(() => {
 })
 
 async function load() {
+  if (route.name !== 'album-detail') return
   const name = albumName.value
 
   // Use cached data from store if available
