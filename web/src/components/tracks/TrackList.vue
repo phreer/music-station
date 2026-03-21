@@ -18,7 +18,8 @@ const queue = useQueueStore()
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 
-// Cached ID-to-index map — avoids O(n) indexOf on every play click
+// Cached ID list and ID-to-index map — recomputed only when props.tracks changes
+const trackIds = computed(() => props.tracks.map((t) => t.id))
 const trackIdIndexMap = computed(() => {
   const map = new Map<string, number>()
   for (let i = 0; i < props.tracks.length; i++) {
@@ -28,9 +29,8 @@ const trackIdIndexMap = computed(() => {
 })
 
 function handlePlay(track: Track) {
-  const ids = props.tracks.map((t) => t.id)
   const idx = trackIdIndexMap.value.get(track.id) ?? 0
-  queue.setQueue(ids, idx)
+  queue.setQueue(trackIds.value, idx)
   player.playTrack(track.id)
 }
 

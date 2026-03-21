@@ -207,22 +207,22 @@ Replaces the original 33 global mutable variables with 6 typed stores:
 - **文件**: `web/src/stores/library.ts:25-26`
 - **问题**: `findTrack(id)` 使用 `Array.find()` 线性扫描，被 player store、queue store 的 `queueTracks` computed 属性频繁调用。大型曲库下每次调用代价线性增长。
 - **方案**: 维护 `trackMap: Map<string, Track>`，在 `loadTracks()` 和 `updateTrackLocally()` 时同步更新，`findTrack()` 改为 `trackMap.get(id)`。
-- [ ] 在 `library.ts` 中添加 `trackMap`，修改 `loadTracks()`、`findTrack()`、`updateTrackLocally()`
+- [x] 在 `library.ts` 中添加 `trackMap`，修改 `loadTracks()`、`findTrack()`、`updateTrackLocally()`
 
 #### P1 — Album / Artist 数据缓存到 Pinia Store
 
 - **文件**: `web/src/views/AlbumsView.vue:12-21`、`web/src/views/ArtistsView.vue:11-18`
 - **问题**: 两个视图在 `onMounted` 时各自 fetch 数据。当前 `AppLayout.vue` 使用 `v-if` 切换视图，每次切换 tab 都会卸载/重挂组件，触发完整的 fetch + re-render 周期。
 - **方案**: 创建 `albumsStore` 和 `artistsStore`，首次加载后缓存数据，视图组件判断 store 是否已有数据，有则直接使用，提供手动刷新入口。
-- [ ] 新建 `web/src/stores/albums.ts` 和 `web/src/stores/artists.ts`
-- [ ] 修改 `AlbumsView.vue`、`ArtistsView.vue` 改用 store 数据
+- [x] 新建 `web/src/stores/albums.ts` 和 `web/src/stores/artists.ts`
+- [x] 修改 `AlbumsView.vue`、`ArtistsView.vue` 改用 store 数据
 
 #### P1 — 搜索输入防抖
 
 - **文件**: `web/src/views/TracksView.vue:17-22`、`web/src/stores/library.ts:12-21`
 - **问题**: `NInput` 直接 `v-model` 绑定 `library.searchQuery`，每次按键都触发 `filteredTracks` computed 对全部 track 执行 3 个 `toLowerCase().includes()` 操作，并传递给虚拟列表触发重绘。
 - **方案**: 添加本地 input ref，通过 200-300ms 防抖后再更新 `searchQuery`。
-- [ ] 在 `TracksView.vue` 中实现搜索防抖
+- [x] 在 `TracksView.vue` 中实现搜索防抖
 
 ---
 
@@ -233,7 +233,7 @@ Replaces the original 33 global mutable variables with 6 typed stores:
 - **文件**: `web/src/components/layout/AppLayout.vue`
 - **问题**: 使用 `v-if/v-else-if` 链切换视图，每次切换 tab 完全销毁并重建整个组件树（触发 `onMounted` → 重新 fetch 数据 → 完整 re-render）。
 - **方案**: 用 Vue 内置的 `<KeepAlive>` 包裹动态组件 `<component :is="...">`，设置 `max="5"` 缓存全部视图。
-- [ ] 修改 `AppLayout.vue` 使用 `<KeepAlive>` + 动态组件
+- [x] 修改 `AppLayout.vue` 使用 `<KeepAlive>` + 动态组件
 
 #### P1 — Album / Artist Grid 虚拟化或分页
 
@@ -243,15 +243,15 @@ Replaces the original 33 global mutable variables with 6 typed stores:
   - 方案 A（推荐）：使用 Intersection Observer 实现 infinite scroll，每批渲染 50 个
   - 方案 B：使用 `NVirtualList` 做一维虚拟化（需将 grid 行转换为列表项）
   - 方案 C：简单分页（每页 48 个）
-- [ ] 实现 `AlbumGrid.vue` 的分批/虚拟渲染
-- [ ] 实现 `ArtistGrid.vue` 的分批/虚拟渲染
+- [x] 实现 `AlbumGrid.vue` 的分批/虚拟渲染
+- [x] 实现 `ArtistGrid.vue` 的分批/虚拟渲染
 
 #### P2 — 缓存 handlePlay 中的 track ID 列表
 
 - **文件**: `web/src/components/tracks/TrackList.vue:23-28`
 - **问题**: `handlePlay()` 每次点击时执行 `props.tracks.map(t => t.id)` 构建完整 ID 数组，并用 `ids.indexOf(track.id)` 做线性定位，对数千首曲目的列表是一次完整 O(n) 操作。
 - **方案**: 将 ID 数组和 ID→index 映射提升为 `computed`，仅在 `props.tracks` 变化时重新计算。
-- [ ] 在 `TrackList.vue` 中用 `computed` 缓存 `trackIds` 和 `trackIdIndexMap`
+- [x] 在 `TrackList.vue` 中用 `computed` 缓存 `trackIds` 和 `trackIdIndexMap`
 
 ---
 
