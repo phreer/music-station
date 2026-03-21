@@ -67,8 +67,9 @@ pub fn create_router(
         qqmusic_provider,
     };
 
-    // Serve static files from ./static directory
+    // Serve static files
     let static_service = ServeDir::new("static");
+    let legacy_static_service = ServeDir::new("static-legacy");
 
     Router::new()
         .route("/", get(root))
@@ -115,6 +116,7 @@ pub fn create_router(
             axum::routing::post(add_track_to_playlist).delete(remove_track_from_playlist),
         )
         .nest_service("/web", static_service)
+        .nest_service("/web-legacy", legacy_static_service)
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)
