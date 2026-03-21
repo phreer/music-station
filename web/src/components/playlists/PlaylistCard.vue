@@ -31,7 +31,7 @@ const coverTrackIds = computed(() =>
 )
 
 const totalDuration = computed(() =>
-  tracks.value.reduce((sum, t) => sum + t.duration, 0),
+  tracks.value.reduce((sum, t) => sum + (t.duration_secs ?? 0), 0),
 )
 
 function playPlaylist() {
@@ -115,7 +115,7 @@ async function handleRemoveTrack(trackId: string) {
         >
           <span :class="$style.trackTitle">{{ track.title }}</span>
           <span :class="$style.trackArtist">{{ track.artist }}</span>
-          <span :class="$style.trackDur">{{ formatDuration(track.duration) }}</span>
+          <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
           <NButton quaternary circle size="tiny" @click.stop="handleRemoveTrack(track.id)">
             <template #icon><Trash2 :size="10" /></template>
           </NButton>

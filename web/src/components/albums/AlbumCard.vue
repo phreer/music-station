@@ -70,7 +70,7 @@ function playTrack(track: Track) {
       <div :class="$style.albumName" :title="album.name">{{ album.name }}</div>
       <div :class="$style.albumMeta">{{ album.artist }}</div>
       <div :class="$style.albumMeta">
-        {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration) }}
+        {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
       </div>
     </div>
 
@@ -88,7 +88,7 @@ function playTrack(track: Track) {
         >
           <span :class="$style.trackNum">{{ track.track_number ?? '—' }}</span>
           <span :class="$style.trackTitle">{{ track.title }}</span>
-          <span :class="$style.trackDur">{{ formatDuration(track.duration) }}</span>
+          <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
           <NButton
             quaternary circle size="tiny"
             @click.stop="queue.addToQueue(track.id)"

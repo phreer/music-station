@@ -2,31 +2,29 @@
 
 export interface Track {
   id: string
-  title: string
-  artist: string
-  album: string
-  album_artist: string
-  genre: string
-  year: number | null
-  track_number: number | null
-  disc_number: number | null
-  duration: number
+  title: string | null
+  artist: string | null
+  album: string | null
+  album_artist: string | null
+  genre: string | null
+  year: string | null
+  track_number: string | null
+  disc_number: string | null
+  duration_secs: number | null
   file_size: number
-  file_path: string
-  format: string
   has_cover: boolean
   has_lyrics: boolean
   play_count: number
-  composer: string
-  comment: string
+  composer: string | null
+  comment: string | null
   custom_fields: Record<string, string>
 }
 
 export interface Album {
   name: string
-  artist: string
+  artist: string | null
   track_count: number
-  total_duration: number
+  total_duration_secs: number
   tracks: Track[]
 }
 
@@ -69,9 +67,9 @@ export interface LibraryStats {
   total_tracks: number
   total_albums: number
   total_artists: number
-  total_duration: number
-  total_size: number
-  total_play_count: number
+  total_duration_secs: number
+  total_size_bytes: number
+  total_plays: number
 }
 
 export interface ParsedLyricsLine {

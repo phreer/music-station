@@ -13,7 +13,7 @@ const player = usePlayerStore()
 const library = useLibraryStore()
 
 const totalDuration = computed(() => {
-  return queue.queueTracks.reduce((sum, t) => sum + t.duration, 0)
+  return queue.queueTracks.reduce((sum, t) => sum + (t.duration_secs ?? 0), 0)
 })
 
 function playFromQueue(index: number) {
@@ -75,7 +75,7 @@ function remove(index: number) {
             </div>
           </div>
           <div :class="$style.itemDuration">
-            {{ formatDuration(library.findTrack(trackId)?.duration) }}
+            {{ formatDuration(library.findTrack(trackId)?.duration_secs) }}
           </div>
           <NButton
             quaternary

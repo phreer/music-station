@@ -113,7 +113,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
     width: 80,
     align: 'right',
     render(row) {
-      return formatDuration(row.duration)
+      return formatDuration(row.duration_secs)
     },
   },
   {

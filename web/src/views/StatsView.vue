@@ -22,9 +22,9 @@ const statCards = [
   { key: 'total_tracks' as const, label: 'Tracks', icon: Music, format: (v: number) => v.toLocaleString() },
   { key: 'total_albums' as const, label: 'Albums', icon: Disc3, format: (v: number) => v.toLocaleString() },
   { key: 'total_artists' as const, label: 'Artists', icon: Users, format: (v: number) => v.toLocaleString() },
-  { key: 'total_duration' as const, label: 'Total Duration', icon: Clock, format: formatDurationLong },
-  { key: 'total_size' as const, label: 'Library Size', icon: HardDrive, format: formatFileSize },
-  { key: 'total_play_count' as const, label: 'Total Plays', icon: PlayCircle, format: (v: number) => v.toLocaleString() },
+  { key: 'total_duration_secs' as const, label: 'Total Duration', icon: Clock, format: formatDurationLong },
+  { key: 'total_size_bytes' as const, label: 'Library Size', icon: HardDrive, format: formatFileSize },
+  { key: 'total_plays' as const, label: 'Total Plays', icon: PlayCircle, format: (v: number) => v.toLocaleString() },
 ]
 </script>
 

@@ -15,9 +15,9 @@ export const useLibraryStore = defineStore('library', () => {
     const q = searchQuery.value.toLowerCase()
     return allTracks.value.filter(
       (t) =>
-        t.title.toLowerCase().includes(q) ||
-        t.artist.toLowerCase().includes(q) ||
-        t.album.toLowerCase().includes(q),
+        t.title?.toLowerCase().includes(q) ||
+        t.artist?.toLowerCase().includes(q) ||
+        t.album?.toLowerCase().includes(q),
     )
   })
 

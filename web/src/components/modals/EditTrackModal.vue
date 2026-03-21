@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import {
-  NModal, NCard, NForm, NFormItem, NInput, NInputNumber, NButton, NSpace, NGi, NGrid,
+  NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace, NGi, NGrid,
 } from 'naive-ui'
 import type { Track } from '@/types'
 import { updateTrack } from '@/api/tracks'
@@ -21,9 +21,9 @@ const artist = ref('')
 const album = ref('')
 const albumArtist = ref('')
 const genre = ref('')
-const year = ref<number | null>(null)
-const trackNumber = ref<number | null>(null)
-const discNumber = ref<number | null>(null)
+const year = ref<string | null>(null)
+const trackNumber = ref<string | null>(null)
+const discNumber = ref<string | null>(null)
 const composer = ref('')
 const comment = ref('')
 
@@ -35,16 +35,16 @@ watch(
   (visible) => {
     if (!visible || !props.track) return
     const t = props.track
-    title.value = t.title
-    artist.value = t.artist
-    album.value = t.album
-    albumArtist.value = t.album_artist
-    genre.value = t.genre
+    title.value = t.title ?? ''
+    artist.value = t.artist ?? ''
+    album.value = t.album ?? ''
+    albumArtist.value = t.album_artist ?? ''
+    genre.value = t.genre ?? ''
     year.value = t.year
     trackNumber.value = t.track_number
     discNumber.value = t.disc_number
-    composer.value = t.composer
-    comment.value = t.comment
+    composer.value = t.composer ?? ''
+    comment.value = t.comment ?? ''
     error.value = null
   },
 )
@@ -118,17 +118,17 @@ async function handleSave() {
           </NGi>
           <NGi>
             <NFormItem label="Year">
-              <NInputNumber v-model:value="year" :min="0" :max="9999" placeholder="Year" style="width: 100%" />
+              <NInput v-model:value="year" placeholder="Year" />
             </NFormItem>
           </NGi>
           <NGi>
             <NFormItem label="Track #">
-              <NInputNumber v-model:value="trackNumber" :min="1" placeholder="Track number" style="width: 100%" />
+              <NInput v-model:value="trackNumber" placeholder="Track number" />
             </NFormItem>
           </NGi>
           <NGi>
             <NFormItem label="Disc #">
-              <NInputNumber v-model:value="discNumber" :min="1" placeholder="Disc number" style="width: 100%" />
+              <NInput v-model:value="discNumber" placeholder="Disc number" />
             </NFormItem>
           </NGi>
           <NGi>

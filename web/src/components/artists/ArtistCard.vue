@@ -100,7 +100,7 @@ function playAlbum(albumName: string) {
           >
             <div :class="$style.albumInfo">
               <div :class="$style.albumName">{{ album.name }}</div>
-              <div :class="$style.albumMeta">{{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration) }}</div>
+              <div :class="$style.albumMeta">{{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}</div>
             </div>
             <NButton circle quaternary size="tiny" @click="playAlbum(album.name)">
               <template #icon><Play :size="12" /></template>
@@ -118,7 +118,7 @@ function playAlbum(albumName: string) {
           >
             <span :class="$style.trackTitle">{{ track.title }}</span>
             <span :class="$style.trackAlbum">{{ track.album }}</span>
-            <span :class="$style.trackDur">{{ formatDuration(track.duration) }}</span>
+            <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
           </div>
         </div>
       </div>
