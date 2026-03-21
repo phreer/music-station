@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated } from 'vue'
 import { NGrid, NGridItem } from 'naive-ui'
 import type { Artist } from '@/types'
 import ArtistCard from './ArtistCard.vue'
@@ -25,19 +25,34 @@ function loadMore() {
   visibleCount.value = Math.min(visibleCount.value + BATCH_SIZE, props.artists.length)
 }
 
-onMounted(() => {
+function findScrollParent(el: HTMLElement | null): HTMLElement | null {
+  while (el) {
+    if (/(auto|scroll)/.test(getComputedStyle(el).overflowY)) return el
+    el = el.parentElement
+  }
+  return null
+}
+
+function setupObserver() {
+  observer?.disconnect()
+  const root = findScrollParent(sentinel.value)
   observer = new IntersectionObserver(
     (entries) => {
       if (entries[0]?.isIntersecting) loadMore()
     },
-    { rootMargin: '200px' },
+    { root, rootMargin: '200px' },
   )
   if (sentinel.value) observer.observe(sentinel.value)
+}
+
+watch(sentinel, (el) => {
+  if (el && observer) observer.observe(el)
 })
 
-onBeforeUnmount(() => {
-  observer?.disconnect()
-})
+onMounted(setupObserver)
+onActivated(setupObserver)
+onDeactivated(() => observer?.disconnect())
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
