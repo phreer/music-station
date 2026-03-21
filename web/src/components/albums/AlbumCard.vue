@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { NCard } from 'naive-ui'
 import type { Album, Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -10,6 +11,7 @@ import { useLibraryStore } from '@/stores/library'
 
 const props = defineProps<{ album: Album }>()
 
+const router = useRouter()
 const player = usePlayerStore()
 const queue = useQueueStore()
 const library = useLibraryStore()
@@ -64,7 +66,11 @@ function playTrack(track: Track) {
       </div>
     </div>
     <div :class="$style.info">
-      <div :class="$style.albumName" :title="album.name">{{ album.name }}</div>
+      <div
+        :class="[$style.albumName, $style.albumNameLink]"
+        :title="album.name"
+        @click.stop="router.push({ name: 'album-detail', params: { name: album.name } })"
+      >{{ album.name }}</div>
       <div :class="$style.albumMeta">{{ album.artist }}</div>
       <div :class="$style.albumMeta">
         {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
@@ -137,6 +143,8 @@ function playTrack(track: Track) {
 
 .info { padding: 0 2px; }
 .albumName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumNameLink { cursor: pointer; }
+.albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
 .albumMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .expandToggle {
