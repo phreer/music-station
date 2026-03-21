@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NCard, NButton, NPopconfirm } from 'naive-ui'
-import { Play, ListPlus, Trash2, ChevronDown } from 'lucide-vue-next'
+import { NCard } from 'naive-ui'
 import type { Playlist } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
@@ -11,6 +10,10 @@ import { usePlaylistStore } from '@/stores/playlists'
 import { useLibraryStore } from '@/stores/library'
 
 const props = defineProps<{ playlist: Playlist }>()
+
+const emit = defineEmits<{
+  'request-delete': [playlistId: string, playlistName: string]
+}>()
 
 const player = usePlayerStore()
 const queue = useQueueStore()
@@ -48,10 +51,6 @@ function playTrack(trackId: string) {
   player.playTrack(trackId)
 }
 
-async function handleDelete() {
-  await playlistStore.deletePlaylist(props.playlist.id)
-}
-
 async function handleRemoveTrack(trackId: string) {
   await playlistStore.removeTrack(props.playlist.id, trackId)
 }
@@ -72,12 +71,12 @@ async function handleRemoveTrack(trackId: string) {
       </div>
       <div v-else :class="$style.coverPlaceholder">&#9835;</div>
       <div :class="$style.overlay">
-        <NButton circle type="primary" @click.stop="playPlaylist">
-          <template #icon><Play :size="18" /></template>
-        </NButton>
-        <NButton circle secondary @click.stop="queue.addMultiple(playlist.tracks)">
-          <template #icon><ListPlus :size="18" /></template>
-        </NButton>
+        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playPlaylist" title="Play playlist">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        </button>
+        <button :class="$style.iconBtn" @click.stop="queue.addMultiple(playlist.tracks)" title="Add to queue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+        </button>
       </div>
     </div>
 
@@ -90,17 +89,15 @@ async function handleRemoveTrack(trackId: string) {
     </div>
 
     <div :class="$style.cardFooter">
-      <NPopconfirm @positive-click="handleDelete">
-        <template #trigger>
-          <NButton quaternary size="tiny" :class="$style.deleteBtn">
-            <template #icon><Trash2 :size="12" /></template>
-            Delete
-          </NButton>
-        </template>
-        Delete playlist "{{ playlist.name }}"?
-      </NPopconfirm>
+      <button
+        :class="$style.deleteBtn"
+        @click="emit('request-delete', playlist.id, playlist.name)"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+        Delete
+      </button>
       <div :class="$style.expandToggle" @click="expanded = !expanded">
-        <ChevronDown :size="16" :class="[$style.chevron, expanded && $style.chevronOpen]" />
+        <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
       </div>
     </div>
 
@@ -116,9 +113,13 @@ async function handleRemoveTrack(trackId: string) {
           <span :class="$style.trackTitle">{{ track.title }}</span>
           <span :class="$style.trackArtist">{{ track.artist }}</span>
           <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
-          <NButton quaternary circle size="tiny" @click.stop="handleRemoveTrack(track.id)">
-            <template #icon><Trash2 :size="10" /></template>
-          </NButton>
+          <button
+            :class="$style.trackRemoveBtn"
+            title="Remove from playlist"
+            @click.stop="handleRemoveTrack(track.id)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+          </button>
         </div>
       </div>
     </Transition>
@@ -147,13 +148,31 @@ async function handleRemoveTrack(trackId: string) {
 }
 .coverWrapper:hover .overlay { opacity: 1; }
 
+.iconBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; cursor: pointer; padding: 0;
+  background: rgba(255,255,255,0.15); color: #fff;
+  transition: background 0.15s, transform 0.1s;
+}
+.iconBtn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
+.iconBtnPrimary { background: var(--n-primary-color, #0066cc); }
+.iconBtnPrimary:hover { background: var(--n-primary-color-hover, #0077ee); }
+
 .info { padding: 0 2px; }
 .playlistName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .playlistMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .cardFooter { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
-.deleteBtn { opacity: 0.5; }
-.deleteBtn:hover { opacity: 1; }
+
+.deleteBtn {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: transparent; color: inherit; cursor: pointer;
+  font-size: 12px; padding: 4px 8px; border-radius: 4px;
+  opacity: 0.4; transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.deleteBtn:hover { opacity: 1; background: rgba(220, 38, 38, 0.08); color: #dc2626; }
+
 .expandToggle { cursor: pointer; opacity: 0.4; padding: 4px; }
 .expandToggle:hover { opacity: 0.8; }
 .chevron { transition: transform 0.2s; }
@@ -170,4 +189,13 @@ async function handleRemoveTrack(trackId: string) {
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackArtist { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+.trackRemoveBtn {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: none; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer; padding: 0;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+}
+.trackRow:hover .trackRemoveBtn { opacity: 0.5; }
+.trackRemoveBtn:hover { opacity: 1 !important; background: rgba(220, 38, 38, 0.1); color: #dc2626; }
 </style>

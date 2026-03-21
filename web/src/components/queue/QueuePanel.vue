@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { NButton, NEmpty, NScrollbar } from 'naive-ui'
-import { X, Trash2 } from 'lucide-vue-next'
+import { NEmpty, NScrollbar } from 'naive-ui'
 import { useQueueStore } from '@/stores/queue'
 import { usePlayerStore } from '@/stores/player'
-import { useLibraryStore } from '@/stores/library'
-import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
 import { computed } from 'vue'
+import QueueItem from './QueueItem.vue'
 
 const queue = useQueueStore()
 const player = usePlayerStore()
-const library = useLibraryStore()
 
 const totalDuration = computed(() => {
   return queue.queueTracks.reduce((sum, t) => sum + (t.duration_secs ?? 0), 0)
 })
+
+const closeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>'
+const trashIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>'
 
 function playFromQueue(index: number) {
   queue.playIndex(index)
@@ -35,13 +35,21 @@ function remove(index: number) {
       <div :class="$style.header">
         <h3 :class="$style.title">Play Queue</h3>
         <div :class="$style.headerActions">
-          <NButton quaternary size="tiny" @click="queue.clear" :disabled="queue.isEmpty">
-            <template #icon><Trash2 :size="14" /></template>
+          <button
+            :class="$style.headerBtn"
+            :disabled="queue.isEmpty"
+            title="Clear queue"
+            @click="queue.clear"
+          >
+            <span v-html="trashIconSvg" />
             Clear
-          </NButton>
-          <NButton quaternary circle size="small" @click="queue.toggleVisible">
-            <template #icon><X :size="16" /></template>
-          </NButton>
+          </button>
+          <button
+            :class="$style.headerBtnCircle"
+            title="Close"
+            @click="queue.toggleVisible"
+            v-html="closeIconSvg"
+          />
         </div>
       </div>
 
@@ -52,41 +60,14 @@ function remove(index: number) {
 
       <NScrollbar :class="$style.list">
         <NEmpty v-if="queue.isEmpty" description="Queue is empty" :class="$style.empty" />
-        <div
+        <QueueItem
           v-for="(trackId, index) in queue.queue"
           :key="trackId + '-' + index"
-          :class="[$style.item, index === queue.currentIndex && $style.itemActive]"
-          @click="playFromQueue(index)"
-        >
-          <div :class="$style.itemCover">
-            <img
-              v-if="library.findTrack(trackId)?.has_cover"
-              :src="coverUrl(trackId)"
-              :class="$style.coverImg"
-            />
-            <div v-else :class="$style.coverPlaceholder">&#9834;</div>
-          </div>
-          <div :class="$style.itemInfo">
-            <div :class="$style.itemTitle">
-              {{ library.findTrack(trackId)?.title || 'Unknown' }}
-            </div>
-            <div :class="$style.itemArtist">
-              {{ library.findTrack(trackId)?.artist || 'Unknown' }}
-            </div>
-          </div>
-          <div :class="$style.itemDuration">
-            {{ formatDuration(library.findTrack(trackId)?.duration_secs) }}
-          </div>
-          <NButton
-            quaternary
-            circle
-            size="tiny"
-            :class="$style.removeBtn"
-            @click.stop="remove(index)"
-          >
-            <template #icon><X :size="12" /></template>
-          </NButton>
-        </div>
+          :track-id="trackId"
+          :is-active="index === queue.currentIndex"
+          @play="playFromQueue(index)"
+          @remove="remove(index)"
+        />
       </NScrollbar>
     </div>
   </Transition>
@@ -126,6 +107,52 @@ function remove(index: number) {
   gap: 4px;
 }
 
+.headerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 12px;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.headerBtn:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.1);
+}
+
+.headerBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.headerBtnCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.headerBtnCircle:hover {
+  opacity: 1;
+  background: rgba(128, 128, 128, 0.15);
+}
+
 .info {
   display: flex;
   justify-content: space-between;
@@ -141,87 +168,6 @@ function remove(index: number) {
 
 .empty {
   padding: 40px 0;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.item:hover {
-  background: var(--n-merged-color, rgba(0, 0, 0, 0.04));
-}
-
-.itemActive {
-  background: rgba(0, 102, 204, 0.08);
-  border-left: 3px solid var(--n-primary-color, #0066cc);
-}
-
-.itemCover {
-  width: 36px;
-  height: 36px;
-  border-radius: 4px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.coverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.coverPlaceholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--n-merged-color, #f0f0f0);
-  font-size: 14px;
-  opacity: 0.3;
-}
-
-.itemInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.itemTitle {
-  font-size: 13px;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.itemArtist {
-  font-size: 11px;
-  opacity: 0.6;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.itemDuration {
-  font-size: 11px;
-  opacity: 0.5;
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
-}
-
-.removeBtn {
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.item:hover .removeBtn {
-  opacity: 1;
 }
 </style>
 

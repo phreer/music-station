@@ -32,10 +32,10 @@ export const useQueueStore = defineStore('queue', () => {
   }
 
   function addMultiple(trackIds: string[]) {
-    for (const id of trackIds) {
-      if (!queue.value.includes(id)) {
-        queue.value.push(id)
-      }
+    const existing = new Set(queue.value)
+    const toAdd = trackIds.filter((id) => !existing.has(id))
+    if (toAdd.length > 0) {
+      queue.value.push(...toAdd)
     }
   }
 

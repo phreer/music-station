@@ -77,7 +77,7 @@ watch(
               :class="[
                 $style.word,
                 idx === lyrics.currentLineIndex &&
-                  player.currentTime >= word.offset &&
+                  wi <= lyrics.currentWordIndex &&
                   $style.wordActive,
               ]"
             >{{ word.text }}</span>

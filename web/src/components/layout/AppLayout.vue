@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, type Component } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppNav from './AppNav.vue'
 import MusicPlayer from '@/components/player/MusicPlayer.vue'
@@ -10,13 +11,23 @@ import AlbumsView from '@/views/AlbumsView.vue'
 import ArtistsView from '@/views/ArtistsView.vue'
 import PlaylistsView from '@/views/PlaylistsView.vue'
 import StatsView from '@/views/StatsView.vue'
-import { useUiStore } from '@/stores/ui'
+import { useUiStore, type ViewName } from '@/stores/ui'
 import { useLyricsStore } from '@/stores/lyrics'
 import { usePlayerStore } from '@/stores/player'
 
 const ui = useUiStore()
 const lyrics = useLyricsStore()
 const player = usePlayerStore()
+
+const viewComponents: Record<ViewName, Component> = {
+  tracks: TracksView,
+  albums: AlbumsView,
+  artists: ArtistsView,
+  playlists: PlaylistsView,
+  stats: StatsView,
+}
+
+const activeViewComponent = computed(() => viewComponents[ui.currentView])
 </script>
 
 <template>
@@ -25,11 +36,9 @@ const player = usePlayerStore()
     <AppNav />
     <div :class="$style.body">
       <main :class="$style.main">
-        <TracksView v-if="ui.currentView === 'tracks'" />
-        <AlbumsView v-else-if="ui.currentView === 'albums'" />
-        <ArtistsView v-else-if="ui.currentView === 'artists'" />
-        <PlaylistsView v-else-if="ui.currentView === 'playlists'" />
-        <StatsView v-else-if="ui.currentView === 'stats'" />
+        <KeepAlive :max="5">
+          <component :is="activeViewComponent" :key="ui.currentView" />
+        </KeepAlive>
       </main>
       <!-- Lyrics sidebar: shown when something is playing and sidebar is toggled on -->
       <Transition name="sidebar">

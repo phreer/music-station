@@ -9,6 +9,8 @@ export const useLyricsStore = defineStore('lyrics', () => {
   const isLoading = ref(false)
   const parsedLines = ref<ParsedLyricsLine[]>([])
   const currentLineIndex = ref(-1)
+  // Index of the last active word within the current line (for word-level highlighting)
+  const currentWordIndex = ref(-1)
   const sidebarVisible = ref(true)
   const hasLyrics = ref(false)
 
@@ -60,13 +62,34 @@ export const useLyricsStore = defineStore('lyrics', () => {
         break
       }
     }
-    currentLineIndex.value = idx
+    // Only write reactive refs when values actually change
+    if (currentLineIndex.value !== idx) {
+      currentLineIndex.value = idx
+    }
+    // Compute active word index for the current line
+    let wIdx = -1
+    if (idx >= 0) {
+      const words = parsedLines.value[idx]?.words
+      if (words && words.length > 0) {
+        for (let w = 0; w < words.length; w++) {
+          if (time >= words[w]!.offset) {
+            wIdx = w
+          } else {
+            break
+          }
+        }
+      }
+    }
+    if (currentWordIndex.value !== wIdx) {
+      currentWordIndex.value = wIdx
+    }
   }
 
   function reset() {
     currentLyrics.value = null
     parsedLines.value = []
     currentLineIndex.value = -1
+    currentWordIndex.value = -1
     hasLyrics.value = false
   }
 
@@ -79,6 +102,7 @@ export const useLyricsStore = defineStore('lyrics', () => {
     isLoading,
     parsedLines,
     currentLineIndex,
+    currentWordIndex,
     sidebarVisible,
     hasLyrics,
     hasParsedLines,

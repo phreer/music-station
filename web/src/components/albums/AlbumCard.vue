@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NCard, NButton } from 'naive-ui'
-import { Play, ListPlus, ChevronDown } from 'lucide-vue-next'
+import { NCard } from 'naive-ui'
 import type { Album, Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration, formatDurationLong } from '@/utils/format'
@@ -20,10 +19,8 @@ const expanded = ref(false)
 // Use tracks from album directly (already populated by /albums endpoint)
 const tracks = computed<Track[]>(() => {
   if (props.album.tracks && props.album.tracks.length > 0) return props.album.tracks
-  // Fallback: find tracks from library by album name
-  return library.allTracks.filter(
-    (t) => t.album === props.album.name && t.artist === props.album.artist,
-  )
+  // Fallback: use pre-computed index instead of scanning allTracks
+  return library.getTracksByAlbum(props.album.name, props.album.artist)
 })
 
 const coverTrack = computed(() => tracks.value.find((t) => t.has_cover))
@@ -58,12 +55,12 @@ function playTrack(track: Track) {
       />
       <div v-else :class="$style.coverPlaceholder">&#9834;</div>
       <div :class="$style.overlay">
-        <NButton circle type="primary" @click.stop="playAlbum">
-          <template #icon><Play :size="18" /></template>
-        </NButton>
-        <NButton circle secondary @click.stop="addAlbumToQueue">
-          <template #icon><ListPlus :size="18" /></template>
-        </NButton>
+        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playAlbum" title="Play album">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        </button>
+        <button :class="$style.iconBtn" @click.stop="addAlbumToQueue" title="Add to queue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+        </button>
       </div>
     </div>
     <div :class="$style.info">
@@ -75,7 +72,7 @@ function playTrack(track: Track) {
     </div>
 
     <div :class="$style.expandToggle" @click="expanded = !expanded">
-      <ChevronDown :size="16" :class="[$style.chevron, expanded && $style.chevronOpen]" />
+      <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
     </div>
 
     <Transition name="expand">
@@ -89,12 +86,13 @@ function playTrack(track: Track) {
           <span :class="$style.trackNum">{{ track.track_number ?? '—' }}</span>
           <span :class="$style.trackTitle">{{ track.title }}</span>
           <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
-          <NButton
-            quaternary circle size="tiny"
+          <button
+            :class="$style.trackAddBtn"
+            title="Add to queue"
             @click.stop="queue.addToQueue(track.id)"
           >
-            <template #icon><ListPlus :size="12" /></template>
-          </NButton>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+          </button>
         </div>
       </div>
     </Transition>
@@ -126,6 +124,17 @@ function playTrack(track: Track) {
 }
 .coverWrapper:hover .overlay { opacity: 1; }
 
+.iconBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: none; cursor: pointer; padding: 0;
+  background: rgba(255,255,255,0.15); color: #fff;
+  transition: background 0.15s, transform 0.1s;
+}
+.iconBtn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
+.iconBtnPrimary { background: var(--n-primary-color, #0066cc); }
+.iconBtnPrimary:hover { background: var(--n-primary-color-hover, #0077ee); }
+
 .info { padding: 0 2px; }
 .albumName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .albumMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -149,6 +158,15 @@ function playTrack(track: Track) {
 .trackNum { width: 20px; text-align: right; opacity: 0.4; font-size: 11px; flex-shrink: 0; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+.trackAddBtn {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: none; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer; padding: 0;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+}
+.trackRow:hover .trackAddBtn { opacity: 0.5; }
+.trackAddBtn:hover { opacity: 1 !important; background: rgba(128,128,128,0.15); }
 </style>
 
 <style>

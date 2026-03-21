@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { NCard, NButton, NTabs, NTab } from 'naive-ui'
-import { Play, ListPlus, ChevronDown, Music, Disc3 } from 'lucide-vue-next'
+import { NCard, NTabs, NTab } from 'naive-ui'
 import type { Artist } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration, formatDurationLong } from '@/utils/format'
@@ -19,7 +18,7 @@ const expanded = ref(false)
 const activeTab = ref<'albums' | 'tracks'>('albums')
 
 const artistTracks = computed(() =>
-  library.allTracks.filter((t) => t.artist === props.artist.name || t.album_artist === props.artist.name),
+  library.getTracksByArtist(props.artist.name),
 )
 
 const coverTrack = computed(() =>
@@ -53,7 +52,7 @@ function playAlbum(albumName: string) {
           loading="lazy"
         />
         <div v-else :class="$style.avatarPlaceholder">
-          <Music :size="28" />
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
         </div>
       </div>
       <div :class="$style.info">
@@ -63,16 +62,13 @@ function playAlbum(albumName: string) {
         </div>
       </div>
       <div :class="$style.actions">
-        <NButton circle secondary size="small" @click.stop="playArtist">
-          <template #icon><Play :size="14" /></template>
-        </NButton>
-        <NButton circle quaternary size="small" @click.stop="queue.addMultiple(artistTracks.map(t => t.id))">
-          <template #icon><ListPlus :size="14" /></template>
-        </NButton>
-        <ChevronDown
-          :size="16"
-          :class="[$style.chevron, expanded && $style.chevronOpen]"
-        />
+        <button :class="$style.actionBtn" title="Play all" @click.stop="playArtist">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+        </button>
+        <button :class="$style.actionBtn" title="Add all to queue" @click.stop="queue.addMultiple(artistTracks.map(t => t.id))">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+        </button>
+        <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
       </div>
     </div>
 
@@ -81,12 +77,16 @@ function playAlbum(albumName: string) {
         <NTabs v-model:value="activeTab" size="small" :class="$style.tabs">
           <NTab name="albums">
             <template #default>
-              <span><Disc3 :size="12" style="margin-right:4px;vertical-align:middle" />Albums</span>
+              <span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="12" x2="12" y1="2" y2="22"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><circle cx="12" cy="12" r="10"></circle></svg>Albums
+              </span>
             </template>
           </NTab>
           <NTab name="tracks">
             <template #default>
-              <span><Music :size="12" style="margin-right:4px;vertical-align:middle" />Tracks</span>
+              <span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>Tracks
+              </span>
             </template>
           </NTab>
         </NTabs>
@@ -102,9 +102,9 @@ function playAlbum(albumName: string) {
               <div :class="$style.albumName">{{ album.name }}</div>
               <div :class="$style.albumMeta">{{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}</div>
             </div>
-            <NButton circle quaternary size="tiny" @click="playAlbum(album.name)">
-              <template #icon><Play :size="12" /></template>
-            </NButton>
+            <button :class="$style.albumPlayBtn" title="Play album" @click="playAlbum(album.name)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            </button>
           </div>
         </div>
 
@@ -143,6 +143,16 @@ function playAlbum(albumName: string) {
 .meta { font-size: 12px; opacity: 0.6; margin-top: 2px; }
 
 .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+.actionBtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  border: none; cursor: pointer; padding: 0;
+  background: transparent; color: inherit;
+  opacity: 0.6; transition: opacity 0.15s, background 0.15s;
+}
+.actionBtn:hover { opacity: 1; background: rgba(128,128,128,0.12); }
+
 .chevron { transition: transform 0.2s; opacity: 0.4; }
 .chevronOpen { transform: rotate(180deg); }
 
@@ -154,6 +164,15 @@ function playAlbum(albumName: string) {
 .albumInfo { flex: 1; min-width: 0; }
 .albumName { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .albumMeta { font-size: 11px; opacity: 0.5; }
+
+.albumPlayBtn {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border: none; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer; padding: 0;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+}
+.albumRow:hover .albumPlayBtn { opacity: 0.5; }
+.albumPlayBtn:hover { opacity: 1 !important; background: rgba(128,128,128,0.15); }
 
 .trackRow { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 .trackRow:hover { background: var(--n-merged-color, rgba(0,0,0,0.04)); }
