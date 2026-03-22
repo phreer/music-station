@@ -52,10 +52,11 @@ cargo test       # Run tests
 3. Calls `library.scan()` to recursively scan folder for supported audio files (.flac, .mp3, .ogg, .m4a)
 4. Each file dispatched to format-specific handler via `AudioFile` trait in `audio.rs`
 5. Metadata extracted with Symphonia; tracks stored in `Arc<RwLock<Vec<Track>>>`
-6. Initializes 3 SQLite databases in `<library>/.music-station/` directory:
+6. Initializes 4 SQLite databases in `<library>/.music-station/` directory:
    - `lyrics.db` — lyrics storage with format detection
    - `playlists.db` — server-side playlist persistence
    - `stats.db` — play count tracking
+   - `favorites.db` — favorite artists
 7. Loads lyrics flags and play counts into in-memory track state
 8. Creates lyrics providers (NetEase, QQ Music) from `music-search-rs`
 9. Axum router created with shared `AppState`, HTTP server starts on `0.0.0.0:3000`
@@ -66,14 +67,17 @@ cargo test       # Run tests
 | `src/main.rs` | Entry point, CLI args, DB init, server startup |
 | `src/library.rs` | `MusicLibrary`, `Track`, `Album`, `Artist` structs and scanning |
 | `src/audio.rs` | `AudioFile` trait with `FlacFile`, `Mp3File`, `OggFile`, `M4aFile` implementations |
-| `src/server.rs` | HTTP handlers, `AppState`, `create_router()` with 26 routes |
+| `src/server.rs` | HTTP handlers, `AppState`, `create_router()` with 29 routes |
 | `src/lyrics.rs` | `LyricDatabase`, lyrics format detection (Plain/LRC/LRC-Word) |
 | `src/lyrics/fetcher.rs` | `LyricsProvider` trait, `LyricsAggregator` for multi-provider fallback |
 | `src/lyrics/music_search_provider.rs` | NetEase & QQ Music lyrics provider implementations |
 | `src/playlist.rs` | `PlaylistDatabase`, server-side CRUD for playlists |
 | `src/stats.rs` | `StatsDatabase`, play count persistence |
+| `src/favorites.rs` | `FavoritesDatabase`, favorite artists persistence |
 | `src/bin/client.rs` | CLI client binary |
-| `static/` | Web client (vanilla JS SPA: `index.html`, `app.js`, `styles.css`) |
+| `static/` | New web client (Vue 3 + Vite, built output) |
+| `static-legacy/` | Legacy web client (vanilla JS SPA) |
+| `web/` | New web client source (Vue 3, TypeScript, Pinia, Naive UI) |
 | `music-search-rs/` | Local crate: NetEase Music and QQ Music search/lyrics APIs |
 
 ### API Endpoints
@@ -114,6 +118,11 @@ cargo test       # Run tests
 - `DELETE /playlists/:id` — Delete playlist
 - `POST /playlists/:id/tracks/:track_id` — Add track
 - `DELETE /playlists/:id/tracks/:track_id` — Remove track
+
+**Favorites:**
+- `GET /favorites/artists` — List all favorite artists
+- `PUT /favorites/artists/:name` — Add artist to favorites
+- `DELETE /favorites/artists/:name` — Remove artist from favorites
 
 **Statistics:**
 - `GET /stats` — Library stats (total tracks, albums, artists, duration, size, play counts)
