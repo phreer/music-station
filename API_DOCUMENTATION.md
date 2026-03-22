@@ -18,6 +18,7 @@
   - [Cover Art](#cover-art)
   - [Lyrics](#lyrics)
   - [Playlists](#playlists)
+  - [Favorites](#favorites)
   - [Statistics](#statistics)
 - [Error Handling](#error-handling)
 - [Client Development Examples](#client-development-examples)
@@ -120,7 +121,8 @@ Currently, the API does not require authentication. All endpoints are publicly a
   name: string,                       // Artist name
   album_count: number,                // Number of albums
   track_count: number,                // Total number of tracks
-  albums: Album[]                     // Array of albums
+  albums: Album[],                    // Array of albums
+  is_favorite: boolean                // Whether this artist is favorited
 }
 ```
 
@@ -999,6 +1001,68 @@ DELETE /playlists/:id
 
 ---
 
+### Favorites
+
+#### List Favorite Artists
+
+```http
+GET /favorites/artists
+```
+
+**Response:**
+```json
+200 OK
+Content-Type: application/json
+
+[
+  {
+    "artist_name": "Pink Floyd",
+    "created_at": "2024-01-01T12:00:00Z"
+  }
+]
+```
+
+#### Add Artist to Favorites
+
+```http
+PUT /favorites/artists/:name
+```
+
+**Parameters:**
+- `name` (path) - Artist name (URL-encoded)
+
+**Response:**
+```http
+200 OK
+```
+
+**Errors:**
+- `500 Internal Server Error` - Database error
+
+#### Remove Artist from Favorites
+
+```http
+DELETE /favorites/artists/:name
+```
+
+**Parameters:**
+- `name` (path) - Artist name (URL-encoded)
+
+**Response:**
+```http
+200 OK
+```
+
+**Errors:**
+- `404 Not Found` - Artist not in favorites
+- `500 Internal Server Error` - Database error
+
+**Notes:**
+- Favorite status is reflected in the `is_favorite` field on every `Artist` object returned by `GET /artists` and `GET /artists/:name`
+- Favorites are persisted in `<library>/.music-station/favorites.db`
+
+---
+
 ### Statistics
 
 #### Get Library Statistics
@@ -1453,16 +1517,20 @@ Consider using inode numbers or embedding UUIDs in metadata for stable IDs.
 
 ### Database Location
 
-Lyrics are stored in `./lyrics.db` in the server's working directory. Back up this file to preserve lyrics data.
+All databases are stored in `<library>/.music-station/`:
+- `lyrics.db` — lyrics storage
+- `playlists.db` — server-side playlists
+- `stats.db` — play count tracking
+- `favorites.db` — favorite artists
+
+Back up this directory to preserve all persistent data.
 
 ### Web Client
 
-The server includes a built-in web client at:
-```
-http://localhost:3000/web/index.html
-```
+The server includes two built-in web clients:
 
-This serves as a reference implementation using the API.
+- **New client (Vue 3):** `http://localhost:3000/web/`
+- **Legacy client:** `http://localhost:3000/web-legacy/`
 
 ---
 
@@ -1474,4 +1542,4 @@ For issues or questions:
 - Examine data structures: `src/library.rs`
 
 **Server Version:** 0.1.0  
-**Documentation Last Updated:** 2025-10-26
+**Documentation Last Updated:** 2026-03-22

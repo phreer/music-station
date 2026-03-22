@@ -106,6 +106,23 @@ cargo run --bin music-client -- playlist play <playlist-id>
 ```
 This will play all tracks in the playlist in order.
 
+### Favorite Artists
+
+#### List Favorite Artists
+```bash
+cargo run --bin music-client -- favorite list
+```
+
+#### Add Artist to Favorites
+```bash
+cargo run --bin music-client -- favorite add "Pink Floyd"
+```
+
+#### Remove Artist from Favorites
+```bash
+cargo run --bin music-client -- favorite remove "Pink Floyd"
+```
+
 ### 3. Custom Server URL
 If your server is running on a different host/port:
 ```bash
