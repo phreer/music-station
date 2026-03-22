@@ -1138,7 +1138,9 @@ function displayArtists(artists) {
     }
 
     const favoriteCount = artists.filter(a => a.is_favorite).length;
-    const visibleArtists = showOnlyFavoriteArtists ? artists.filter(a => a.is_favorite) : artists;
+    const filteredArtists = showOnlyFavoriteArtists ? artists.filter(a => a.is_favorite) : artists;
+    // Sort favorites to the top, preserving original order within each group
+    const visibleArtists = [...filteredArtists].sort((a, b) => (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0));
 
     // Render filter bar into its own container above the artist grid
     let filterBarContainer = document.getElementById('artist-filter-bar-container');
@@ -1195,6 +1197,13 @@ function displayArtists(artists) {
                 <div class="artist-view-selector" style="display: none;">
                     <button class="view-btn active" onclick="event.stopPropagation(); switchArtistView(${globalIndex}, 'albums', this)">Albums</button>
                     <button class="view-btn" onclick="event.stopPropagation(); switchArtistView(${globalIndex}, 'tracks', this)">All Tracks</button>
+                    <button class="artist-detail-favorite-btn ${artist.is_favorite ? 'btn-favorite-active' : 'btn-favorite'}"
+                        id="artist-detail-fav-btn-${globalIndex}"
+                        onclick="event.stopPropagation(); toggleFavoriteArtist('${escapeHtml(artist.name)}', ${globalIndex})"
+                        title="${artist.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        <i data-lucide="heart"></i>
+                        <span>${artist.is_favorite ? 'Unfavorite' : 'Favorite'}</span>
+                    </button>
                 </div>
 
                 <div id="artist-content-${globalIndex}" class="artist-expanded-content" style="display: none;">
@@ -1230,9 +1239,42 @@ async function toggleFavoriteArtist(artistName, index) {
 
         // Update local state
         currentArtists[index].is_favorite = !isFavorite;
+        const nowFavorite = !isFavorite;
 
-        // Re-render artists view
-        displayArtists(currentArtists);
+        // Update card header heart button in-place
+        const card = document.getElementById(`artist-card-${index}`);
+        if (card) {
+            const headerBtn = card.querySelector('.artist-favorite-btn');
+            if (headerBtn) {
+                headerBtn.className = `artist-favorite-btn ${nowFavorite ? 'btn-favorite-active' : 'btn-favorite'}`;
+                headerBtn.title = nowFavorite ? 'Remove from favorites' : 'Add to favorites';
+            }
+
+            // Update detail view favorite button in-place
+            const detailBtn = document.getElementById(`artist-detail-fav-btn-${index}`);
+            if (detailBtn) {
+                detailBtn.className = `artist-detail-favorite-btn ${nowFavorite ? 'btn-favorite-active' : 'btn-favorite'}`;
+                detailBtn.title = nowFavorite ? 'Remove from favorites' : 'Add to favorites';
+                const span = detailBtn.querySelector('span');
+                if (span) span.textContent = nowFavorite ? 'Unfavorite' : 'Favorite';
+            }
+        }
+
+        // Re-sort the list to move the card to the correct position,
+        // but only if the card is not currently expanded (to avoid disrupting UX).
+        const isExpanded = card && card.classList.contains('expanded');
+        if (!isExpanded) {
+            displayArtists(currentArtists);
+        } else {
+            // Update the filter bar count without full re-render
+            const favoriteCount = currentArtists.filter(a => a.is_favorite).length;
+            const filterBar = document.querySelector('.artist-filter-bar button');
+            if (filterBar) {
+                const label = showOnlyFavoriteArtists ? 'Favorites' : 'Favorites';
+                filterBar.innerHTML = `<i data-lucide="heart"></i> ${label} (${favoriteCount})`;
+                lucide.createIcons();
+            }
+        }
     } catch (err) {
         console.error('Error toggling favorite artist:', err);
     }

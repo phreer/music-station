@@ -1264,6 +1264,42 @@ header h1 {
     display: flex;
     gap: 10px;
     margin: 20px 0;
+    align-items: center;
+}
+
+.artist-detail-favorite-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    padding: 5px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-light);
+    font-size: 13px;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.artist-detail-favorite-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.artist-detail-favorite-btn:hover {
+    color: #e05c7a;
+    border-color: #e05c7a;
+    background: rgba(224, 92, 122, 0.08);
+}
+
+.artist-detail-favorite-btn.btn-favorite-active {
+    color: #e05c7a;
+    border-color: #e05c7a;
+}
+
+.artist-detail-favorite-btn.btn-favorite-active svg {
+    fill: #e05c7a;
 }
 
 .view-btn {
