@@ -40,6 +40,12 @@ struct PlaylistUpdate {
     tracks: Option<Vec<String>>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct FavoriteArtist {
+    artist_name: String,
+    favorited_at: String,
+}
+
 #[derive(Parser)]
 #[command(name = "music-client")]
 #[command(about = "Music Station CLI Client", long_about = None)]
@@ -66,6 +72,9 @@ enum Command {
     /// Playlist management commands
     #[command(subcommand)]
     Playlist(PlaylistCommand),
+    /// Artist favorite management commands
+    #[command(subcommand)]
+    Favorite(FavoriteCommand),
 }
 
 #[derive(Parser)]
@@ -122,6 +131,22 @@ enum PlaylistCommand {
     },
 }
 
+#[derive(Parser)]
+enum FavoriteCommand {
+    /// List all favorite artists
+    List,
+    /// Add an artist to favorites
+    Add {
+        /// Artist name
+        name: String,
+    },
+    /// Remove an artist from favorites
+    Remove {
+        /// Artist name
+        name: String,
+    },
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -133,6 +158,9 @@ async fn main() -> Result<()> {
         Command::PlayAll => play_all_tracks(&cli.server).await?,
         Command::Playlist(playlist_cmd) => {
             handle_playlist_command(&cli.server, playlist_cmd).await?
+        }
+        Command::Favorite(favorite_cmd) => {
+            handle_favorite_command(&cli.server, favorite_cmd).await?
         }
     }
 
@@ -501,7 +529,91 @@ async fn show_playlist_info(server: &str, id: &str) -> Result<()> {
                 _ => println!("  {}. {} (not found)", idx + 1, track_id),
             }
         }
+
     }
+
+    Ok(())
+}
+
+async fn handle_favorite_command(server: &str, cmd: FavoriteCommand) -> Result<()> {
+    match cmd {
+        FavoriteCommand::List => list_favorite_artists(server).await,
+        FavoriteCommand::Add { name } => add_favorite_artist(server, &name).await,
+        FavoriteCommand::Remove { name } => remove_favorite_artist(server, &name).await,
+    }
+}
+
+async fn list_favorite_artists(server: &str) -> Result<()> {
+    let url = format!("{}/favorites/artists", server);
+    let response = reqwest::get(&url)
+        .await
+        .context("Failed to connect to server")?;
+
+    if !response.status().is_success() {
+        anyhow::bail!("Server returned error: {}", response.status());
+    }
+
+    let favorites: Vec<FavoriteArtist> =
+        response.json().await.context("Failed to parse response")?;
+
+    if favorites.is_empty() {
+        println!("No favorite artists.");
+        return Ok(());
+    }
+
+    println!("Favorite Artists ({}):", favorites.len());
+    println!("{:-<60}", "");
+    for fav in favorites {
+        println!("  {}", fav.artist_name);
+        println!("  Favorited: {}", fav.favorited_at);
+        println!();
+    }
+
+    Ok(())
+}
+
+async fn add_favorite_artist(server: &str, name: &str) -> Result<()> {
+    let url = format!("{}/favorites/artists/{}", server, name);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .put(&url)
+        .send()
+        .await
+        .context("Failed to connect to server")?;
+
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        anyhow::bail!("Artist not found: {}", name);
+    }
+
+    if !response.status().is_success() {
+        anyhow::bail!("Server returned error: {}", response.status());
+    }
+
+    println!("✓ Added \"{}\" to favorites!", name);
+
+    Ok(())
+}
+
+async fn remove_favorite_artist(server: &str, name: &str) -> Result<()> {
+    let url = format!("{}/favorites/artists/{}", server, name);
+    let client = reqwest::Client::new();
+
+    let response = client
+        .delete(&url)
+        .send()
+        .await
+        .context("Failed to connect to server")?;
+
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        anyhow::bail!("\"{}\" is not in favorites", name);
+    }
+
+    if !response.status().is_success() {
+        anyhow::bail!("Server returned error: {}", response.status());
+    }
+
+    println!("✓ Removed \"{}\" from favorites!", name);
 
     Ok(())
 }

@@ -17,6 +17,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
+use crate::favorites::{FavoriteArtist, FavoritesDatabase};
 use crate::library::{Album, Artist, LibraryStats, MusicLibrary, Track, TrackMetadataUpdate};
 use crate::lyrics::fetcher::LyricsProvider as LyricsProviderTrait;
 use crate::lyrics::fetcher::{
@@ -33,6 +34,7 @@ pub struct AppState {
     pub lyrics_db: LyricDatabase,
     pub playlist_db: PlaylistDatabase,
     pub stats_db: StatsDatabase,
+    pub favorites_db: FavoritesDatabase,
     pub netease_provider: Option<std::sync::Arc<NetEaseLyricsProvider>>,
     pub qqmusic_provider: Option<std::sync::Arc<QQMusicLyricsProvider>>,
 }
@@ -42,6 +44,7 @@ pub fn create_router(
     lyrics_db: LyricDatabase,
     playlist_db: PlaylistDatabase,
     stats_db: StatsDatabase,
+    favorites_db: FavoritesDatabase,
 ) -> Router {
     // Initialize lyrics providers
     let netease_provider = NetEaseLyricsProvider::new(None)
@@ -63,6 +66,7 @@ pub fn create_router(
         lyrics_db,
         playlist_db,
         stats_db,
+        favorites_db,
         netease_provider,
         qqmusic_provider,
     };
@@ -104,6 +108,14 @@ pub fn create_router(
         .route("/artists", get(list_artists))
         .route("/artists/:name", get(get_artist))
         .route("/stats", get(get_stats))
+        .route(
+            "/favorites/artists",
+            get(list_favorite_artists),
+        )
+        .route(
+            "/favorites/artists/:name",
+            axum::routing::put(add_favorite_artist).delete(remove_favorite_artist),
+        )
         .route("/playlists", get(list_playlists).post(create_playlist))
         .route(
             "/playlists/:id",
@@ -996,6 +1008,84 @@ async fn remove_track_from_playlist(
         playlist_id
     );
     Ok(Json(playlist))
+}
+
+// ========== FAVORITE ARTIST ENDPOINTS ==========
+
+/// List all favorite artists
+async fn list_favorite_artists(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<FavoriteArtist>>, StatusCode> {
+    tracing::debug!("Fetching all favorite artists");
+
+    let favorites = state.favorites_db.get_favorite_artists().await.map_err(|e| {
+        tracing::error!("Error fetching favorite artists: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tracing::debug!("Returning {} favorite artists", favorites.len());
+    Ok(Json(favorites))
+}
+
+/// Add an artist to favorites
+async fn add_favorite_artist(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Result<Json<FavoriteArtist>, StatusCode> {
+    tracing::debug!("Adding artist to favorites: {}", name);
+
+    // Verify artist exists in the library
+    if state.library.get_artist(&name).await.is_none() {
+        tracing::warn!("Artist not found: {}", name);
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    let favorite = state
+        .favorites_db
+        .add_favorite_artist(&name)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error adding favorite artist {}: {}", name, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    state
+        .library
+        .update_artist_favorite_status(&name, true)
+        .await;
+
+    tracing::debug!("Successfully added artist to favorites: {}", name);
+    Ok(Json(favorite))
+}
+
+/// Remove an artist from favorites
+async fn remove_favorite_artist(
+    State(state): State<AppState>,
+    Path(name): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    tracing::debug!("Removing artist from favorites: {}", name);
+
+    let removed = state
+        .favorites_db
+        .remove_favorite_artist(&name)
+        .await
+        .map_err(|e| {
+            tracing::error!("Error removing favorite artist {}: {}", name, e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if !removed {
+        tracing::debug!("Artist {} was not in favorites", name);
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    state
+        .library
+        .update_artist_favorite_status(&name, false)
+        .await;
+
+    tracing::debug!("Successfully removed artist from favorites: {}", name);
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[cfg(test)]

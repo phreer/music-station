@@ -48,6 +48,7 @@ pub struct Artist {
     pub album_count: usize,
     pub track_count: usize,
     pub albums: Vec<Album>,
+    pub is_favorite: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -261,6 +262,18 @@ impl MusicLibrary {
         self.invalidate_cache().await;
     }
 
+    /// Update the is_favorite flag for an artist.
+    /// Because artists are computed from tracks, we update the artists cache directly
+    /// to avoid a full rebuild for this lightweight operation.
+    pub async fn update_artist_favorite_status(&self, artist_name: &str, is_favorite: bool) {
+        let mut cache = self.artists_cache.write().await;
+        if let Some(ref mut artists) = *cache {
+            if let Some(artist) = artists.iter_mut().find(|a| a.name == artist_name) {
+                artist.is_favorite = is_favorite;
+            }
+        }
+    }
+
     /// Build the album list from tracks (uncached computation).
     fn build_albums(tracks: &[Track]) -> Vec<Album> {
         let mut albums_map: HashMap<String, Vec<Track>> = HashMap::new();
@@ -323,6 +336,7 @@ impl MusicLibrary {
                     album_count,
                     track_count,
                     albums,
+                    is_favorite: false,
                 }
             })
             .collect();

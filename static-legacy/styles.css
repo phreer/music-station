@@ -1183,6 +1183,52 @@ header h1 {
     color: var(--text-color);
 }
 
+.artist-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.artist-card.expanded .artist-card-header {
+    justify-content: flex-start;
+}
+
+.artist-favorite-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.artist-favorite-btn:hover {
+    color: #e05c7a;
+    transform: scale(1.2);
+}
+
+.artist-favorite-btn.btn-favorite-active {
+    color: #e05c7a;
+}
+
+.artist-favorite-btn.btn-favorite-active svg {
+    fill: #e05c7a;
+}
+
+.artist-filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 0 4px;
+}
+
 .artist-card-meta {
     font-size: 14px;
     color: var(--text-light);

@@ -1126,6 +1126,7 @@ async function loadArtists() {
 }
 
 let currentArtists = [];
+let showOnlyFavoriteArtists = false;
 
 function displayArtists(artists) {
     const artistList = document.getElementById('artist-list');
@@ -1136,13 +1137,41 @@ function displayArtists(artists) {
         return;
     }
 
-    artistList.innerHTML = artists.map((artist, index) => {
+    const favoriteCount = artists.filter(a => a.is_favorite).length;
+    const visibleArtists = showOnlyFavoriteArtists ? artists.filter(a => a.is_favorite) : artists;
+
+    // Render filter bar into its own container above the artist grid
+    let filterBarContainer = document.getElementById('artist-filter-bar-container');
+    if (!filterBarContainer) {
+        filterBarContainer = document.createElement('div');
+        filterBarContainer.id = 'artist-filter-bar-container';
+        artistList.parentNode.insertBefore(filterBarContainer, artistList);
+    }
+    filterBarContainer.innerHTML = `
+        <div class="artist-filter-bar">
+            <button class="btn btn-small ${showOnlyFavoriteArtists ? 'btn-primary' : 'btn-secondary'}"
+                onclick="toggleFavoriteFilter()"
+                title="${showOnlyFavoriteArtists ? 'Show all artists' : 'Show favorites only'}">
+                <i data-lucide="heart"></i>
+                ${showOnlyFavoriteArtists ? 'Favorites' : 'Favorites'} (${favoriteCount})
+            </button>
+        </div>
+    `;
+
+    if (visibleArtists.length === 0) {
+        artistList.innerHTML = '<p style="text-align: center; color: #b8b8b8; padding: 20px;">No favorite artists yet</p>';
+        lucide.createIcons();
+        return;
+    }
+
+    artistList.innerHTML = visibleArtists.map((artist) => {
+        const globalIndex = artists.indexOf(artist);
         const firstAlbum = artist.albums[0];
         const firstTrack = firstAlbum ? firstAlbum.tracks[0] : null;
         const artistImageUrl = firstTrack && firstTrack.has_cover ? `${API_BASE}/cover/${firstTrack.id}` : null;
 
         return `
-        <div class="artist-card" id="artist-card-${index}" onclick="toggleArtist(this, ${index})">
+        <div class="artist-card" id="artist-card-${globalIndex}" onclick="toggleArtist(this, ${globalIndex})">
             <div class="artist-image-wrapper">
                 ${artistImageUrl
                 ? `<img src="${artistImageUrl}" alt="${escapeHtml(artist.name)}" class="artist-profile-img" onerror="this.style.display='none'; this.parentElement.querySelector('.artist-icon-large').style.display='flex';">`
@@ -1150,24 +1179,63 @@ function displayArtists(artists) {
                 <div class="artist-icon-large" ${artistImageUrl ? 'style="display: none;"' : ''}><i data-lucide="user"></i></div>
             </div>
             <div class="artist-details-content">
-                <h3>${escapeHtml(artist.name)}</h3>
+                <div class="artist-card-header">
+                    <h3>${escapeHtml(artist.name)}</h3>
+                    <button class="artist-favorite-btn ${artist.is_favorite ? 'btn-favorite-active' : 'btn-favorite'}"
+                        onclick="event.stopPropagation(); toggleFavoriteArtist('${escapeHtml(artist.name)}', ${globalIndex})"
+                        title="${artist.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        <i data-lucide="heart"></i>
+                    </button>
+                </div>
                 <div class="artist-card-meta">
                     <span>${artist.album_count} albums</span> • 
                     <span>${artist.track_count} tracks</span>
                 </div>
                 
                 <div class="artist-view-selector" style="display: none;">
-                    <button class="view-btn active" onclick="event.stopPropagation(); switchArtistView(${index}, 'albums', this)">Albums</button>
-                    <button class="view-btn" onclick="event.stopPropagation(); switchArtistView(${index}, 'tracks', this)">All Tracks</button>
+                    <button class="view-btn active" onclick="event.stopPropagation(); switchArtistView(${globalIndex}, 'albums', this)">Albums</button>
+                    <button class="view-btn" onclick="event.stopPropagation(); switchArtistView(${globalIndex}, 'tracks', this)">All Tracks</button>
                 </div>
 
-                <div id="artist-content-${index}" class="artist-expanded-content" style="display: none;">
+                <div id="artist-content-${globalIndex}" class="artist-expanded-content" style="display: none;">
                     <!-- Content will be rendered here -->
                 </div>
             </div>
         </div>
     `}).join('');
     lucide.createIcons();
+}
+
+function toggleFavoriteFilter() {
+    showOnlyFavoriteArtists = !showOnlyFavoriteArtists;
+    displayArtists(currentArtists);
+}
+
+async function toggleFavoriteArtist(artistName, index) {
+    const artist = currentArtists[index];
+    if (!artist) return;
+
+    const isFavorite = artist.is_favorite;
+    const method = isFavorite ? 'DELETE' : 'PUT';
+
+    try {
+        const response = await fetch(`${API_BASE}/favorites/artists/${encodeURIComponent(artistName)}`, {
+            method,
+        });
+
+        if (!response.ok) {
+            console.error('Failed to toggle favorite:', response.status);
+            return;
+        }
+
+        // Update local state
+        currentArtists[index].is_favorite = !isFavorite;
+
+        // Re-render artists view
+        displayArtists(currentArtists);
+    } catch (err) {
+        console.error('Error toggling favorite artist:', err);
+    }
 }
 
 function toggleArtist(element, index) {

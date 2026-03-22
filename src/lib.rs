@@ -4,6 +4,7 @@
 //! including music library management and lyrics fetching capabilities.
 
 pub mod audio;
+pub mod favorites;
 pub mod library;
 pub mod lyrics;
 pub mod playlist;

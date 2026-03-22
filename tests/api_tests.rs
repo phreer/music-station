@@ -5,6 +5,7 @@ use axum::body::Bytes;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
 use music_station::{
+    favorites::FavoritesDatabase,
     library::MusicLibrary,
     lyrics::LyricDatabase,
     server::create_router,
@@ -26,8 +27,11 @@ async fn setup() -> (axum::Router, tempfile::TempDir) {
         .await
         .unwrap();
     let stats_db = StatsDatabase::new(&base.join("stats.db")).await.unwrap();
+    let favorites_db = FavoritesDatabase::new(&base.join("favorites.db"))
+        .await
+        .unwrap();
 
-    let router = create_router(library, lyrics_db, playlist_db, stats_db);
+    let router = create_router(library, lyrics_db, playlist_db, stats_db, favorites_db);
     (router, dir)
 }
 

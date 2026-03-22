@@ -1,4 +1,5 @@
 mod audio;
+mod favorites;
 mod library;
 mod lyrics;
 mod playlist;
@@ -7,6 +8,7 @@ mod stats;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use favorites::FavoritesDatabase;
 use library::MusicLibrary;
 use lyrics::LyricDatabase;
 use playlist::PlaylistDatabase;
@@ -93,6 +95,14 @@ async fn main() -> Result<()> {
 
     tracing::info!("Stats database: {}", stats_db_path.display());
 
+    // Initialize favorites database
+    let favorites_db_path = cli.library.join(".music-station").join("favorites.db");
+    let favorites_db = FavoritesDatabase::new(&favorites_db_path)
+        .await
+        .context("Failed to initialize favorites database")?;
+
+    tracing::info!("Favorites database: {}", favorites_db_path.display());
+
     // Update has_lyrics flags for all tracks
     if let Ok(tracks_with_lyrics) = lyrics_db.get_tracks_with_lyrics().await {
         for track_id in tracks_with_lyrics {
@@ -107,8 +117,17 @@ async fn main() -> Result<()> {
         }
     }
 
+    // Warm up the artists cache, then apply favorite flags
+    // (get_artists() triggers a cache build from the now-complete track data)
+    let _ = library.get_artists().await;
+    if let Ok(favorite_names) = favorites_db.get_favorite_artist_names().await {
+        for name in favorite_names {
+            library.update_artist_favorite_status(&name, true).await;
+        }
+    }
+
     // Create and start the server
-    let app = server::create_router(library, lyrics_db, playlist_db, stats_db);
+    let app = server::create_router(library, lyrics_db, playlist_db, stats_db, favorites_db);
     let addr = format!("0.0.0.0:{}", cli.port);
 
     tracing::info!("Server listening on http://{}", addr);
