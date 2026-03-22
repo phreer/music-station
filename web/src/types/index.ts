@@ -33,6 +33,7 @@ export interface Artist {
   album_count: number
   track_count: number
   albums: Album[]
+  is_favorite: boolean
 }
 
 export interface Playlist {

@@ -2,18 +2,20 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NSpin, NEmpty, NButton } from 'naive-ui'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ArrowLeft, Heart } from 'lucide-vue-next'
 import type { Artist, Track } from '@/types'
 import { fetchArtist } from '@/api/artists'
 import { coverUrl } from '@/api/client'
 import { formatDuration, formatDurationLong } from '@/utils/format'
 import { useArtistsStore } from '@/stores/artists'
+import { useFavoritesStore } from '@/stores/favorites'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 
 const route = useRoute()
 const router = useRouter()
 const artistsStore = useArtistsStore()
+const favoritesStore = useFavoritesStore()
 const player = usePlayerStore()
 const queue = useQueueStore()
 
@@ -42,6 +44,19 @@ function sortAlbumTracks(tracks: Track[]): Track[] {
 
 // Cover: first track with cover art across all albums
 const coverTrack = computed(() => allTracks.value.find((t) => t.has_cover) ?? null)
+
+// Favorite state: read from store cache when available so toggling from ArtistCard stays in sync
+const isFavorite = computed(() => {
+  const cached = artistsStore.allArtists.find((a) => a.name === artistName.value)
+  return cached ? cached.is_favorite : (artist.value?.is_favorite ?? false)
+})
+
+async function toggleFavorite() {
+  if (!artist.value) return
+  await favoritesStore.toggleArtist(artist.value.name)
+  // Patch local ref in case this artist was loaded without a store cache entry
+  if (artist.value) artist.value.is_favorite = isFavorite.value
+}
 
 async function load() {
   if (route.name !== 'artist-detail') return
@@ -149,6 +164,14 @@ onUnmounted(() => abortController?.abort())
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
                 </template>
                 Add to Queue
+              </NButton>
+              <NButton
+                :class="[isFavorite && $style.favBtnActive]"
+                :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                @click="toggleFavorite"
+              >
+                <template #icon><Heart :size="14" :fill="isFavorite ? 'currentColor' : 'none'" /></template>
+                {{ isFavorite ? 'Unfavorite' : 'Favorite' }}
               </NButton>
             </div>
           </div>
@@ -301,6 +324,10 @@ onUnmounted(() => abortController?.abort())
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.favBtnActive {
+  color: #e05c7a !important;
 }
 
 /* Album sections */

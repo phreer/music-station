@@ -8,6 +8,7 @@ import { formatDuration, formatDurationLong } from '@/utils/format'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import { useLibraryStore } from '@/stores/library'
+import { useFavoritesStore } from '@/stores/favorites'
 
 const props = defineProps<{ artist: Artist }>()
 
@@ -15,6 +16,7 @@ const router = useRouter()
 const player = usePlayerStore()
 const queue = useQueueStore()
 const library = useLibraryStore()
+const favorites = useFavoritesStore()
 
 const expanded = ref(false)
 const activeTab = ref<'albums' | 'tracks'>('albums')
@@ -72,6 +74,13 @@ function playAlbum(albumName: string) {
         </button>
         <button :class="$style.actionBtn" title="Add all to queue" @click.stop="queue.addMultiple(artistTracks.map(t => t.id))">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+        </button>
+        <button
+          :class="[$style.actionBtn, $style.heartBtn, artist.is_favorite && $style.heartActive]"
+          :title="artist.is_favorite ? 'Remove from favorites' : 'Add to favorites'"
+          @click.stop="favorites.toggleArtist(artist.name)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" :fill="artist.is_favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
         </button>
         <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
       </div>
@@ -161,6 +170,10 @@ function playAlbum(albumName: string) {
   opacity: 0.6; transition: opacity 0.15s, background 0.15s;
 }
 .actionBtn:hover { opacity: 1; background: rgba(128,128,128,0.12); }
+
+.heartBtn { color: var(--n-text-color, inherit); }
+.heartBtn:hover { color: #e05c7a; }
+.heartActive { color: #e05c7a; opacity: 1; }
 
 .chevron { transition: transform 0.2s; opacity: 0.4; }
 .chevronOpen { transform: rotate(180deg); }

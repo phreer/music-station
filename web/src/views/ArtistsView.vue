@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NEmpty, NButton, NInput } from 'naive-ui'
-import { RefreshCw, Search } from 'lucide-vue-next'
+import { RefreshCw, Search, Heart } from 'lucide-vue-next'
 import { useArtistsStore } from '@/stores/artists'
 import ArtistGrid from '@/components/artists/ArtistGrid.vue'
 
 const store = useArtistsStore()
 const searchQuery = ref('')
+const showFavoritesOnly = ref(false)
+
+const favoriteCount = computed(() => store.allArtists.filter((a) => a.is_favorite).length)
 
 const filteredArtists = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return store.allArtists
-  return store.allArtists.filter((a) => a.name.toLowerCase().includes(q))
+  let list = store.allArtists
+  if (q) list = list.filter((a) => a.name.toLowerCase().includes(q))
+  if (showFavoritesOnly.value) list = list.filter((a) => a.is_favorite)
+  // Favorites first, preserve original order within each group
+  return [...list].sort((a, b) => (b.is_favorite ? 1 : 0) - (a.is_favorite ? 1 : 0))
 })
 
 onMounted(() => store.loadArtists())
@@ -31,6 +37,16 @@ onMounted(() => store.loadArtists())
           <Search :size="16" />
         </template>
       </NInput>
+      <NButton
+        :type="showFavoritesOnly ? 'primary' : 'default'"
+        :secondary="!showFavoritesOnly"
+        :class="$style.favBtn"
+        @click="showFavoritesOnly = !showFavoritesOnly"
+        :title="showFavoritesOnly ? 'Show all artists' : 'Show favorites only'"
+      >
+        <template #icon><Heart :size="14" /></template>
+        {{ favoriteCount }}
+      </NButton>
       <span :class="$style.count">
         {{ filteredArtists.length }} / {{ store.allArtists.length }}
       </span>
@@ -63,6 +79,9 @@ onMounted(() => store.loadArtists())
 .searchInput {
   max-width: 320px;
   flex: 1;
+}
+.favBtn {
+  flex-shrink: 0;
 }
 .count {
   font-size: 13px;
