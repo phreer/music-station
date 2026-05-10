@@ -8,6 +8,7 @@ import { formatDuration } from '@/utils/format'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import AddToPlaylistModal from '@/components/modals/AddToPlaylistModal.vue'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const { tracks } = defineProps<{
   tracks: Track[]
@@ -133,9 +134,14 @@ const columns: DataTableColumns<Track> = [
   {
     key: 'actions',
     title: '',
-    width: 112,
+    width: 144,
     render(row) {
       return h('div', { class: 'track-actions' }, [
+        h(TrackFavoriteButton, {
+          trackId: row.id,
+          size: 28,
+          iconSize: 14,
+        }),
         h('button', {
           class: 'track-action-btn',
           title: 'Play',
@@ -235,6 +241,7 @@ const rowProps = (row: Track) => ({
 /* Lightweight native action buttons — replaces NButton + Lucide component instances */
 .track-actions {
   display: flex;
+  align-items: center;
   gap: 4px;
 }
 

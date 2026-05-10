@@ -9,6 +9,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import { useLibraryStore } from '@/stores/library'
 import { useFavoritesStore } from '@/stores/favorites'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const props = defineProps<{ artist: Artist }>()
 
@@ -135,6 +136,7 @@ function playAlbum(albumName: string) {
             <span :class="$style.trackTitle">{{ track.title }}</span>
             <span :class="$style.trackAlbum">{{ track.album }}</span>
             <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
+            <TrackFavoriteButton :track-id="track.id" :size="22" :icon-size="12" />
           </div>
         </div>
       </div>
@@ -204,4 +206,6 @@ function playAlbum(albumName: string) {
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackAlbum { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.trackRow :global(.track-favorite-button) { opacity: 0; flex-shrink: 0; }
+.trackRow:hover :global(.track-favorite-button) { opacity: 0.5; }
 </style>

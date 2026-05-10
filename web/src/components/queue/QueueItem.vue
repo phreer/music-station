@@ -4,6 +4,7 @@ import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
 import { useLibraryStore } from '@/stores/library'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const props = defineProps<{
   trackId: string
@@ -43,6 +44,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
     <div :class="$style.itemDuration">
       {{ formatDuration(track?.duration_secs) }}
     </div>
+    <TrackFavoriteButton v-if="track" :track-id="track.id" :size="22" :icon-size="12" />
     <button
       :class="$style.removeBtn"
       title="Remove from queue"
@@ -141,7 +143,13 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   transition: opacity 0.15s, background 0.15s;
 }
 
-.item:hover .removeBtn {
+.item :global(.track-favorite-button) {
+  flex-shrink: 0;
+  opacity: 0;
+}
+
+.item:hover .removeBtn,
+.item:hover :global(.track-favorite-button) {
   opacity: 0.6;
 }
 

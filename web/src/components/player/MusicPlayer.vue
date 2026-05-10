@@ -19,6 +19,7 @@ import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
 import LyricsModal from '@/components/modals/LyricsModal.vue'
 import EditTrackModal from '@/components/modals/EditTrackModal.vue'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const player = usePlayerStore()
 const lyrics = useLyricsStore()
@@ -74,10 +75,10 @@ function handleSeek(value: number) {
         />
         <div v-else :class="$style.coverPlaceholder">&#9834;</div>
       </div>
-      <div :class="$style.trackInfo">
-        <div :class="$style.trackTitle">
-          {{ player.currentTrack?.title || 'Unknown Title' }}
-        </div>
+        <div :class="$style.trackInfo">
+          <div :class="$style.trackTitle">
+            {{ player.currentTrack?.title || 'Unknown Title' }}
+          </div>
         <div :class="$style.trackArtist">
           <span
             v-if="player.currentTrack?.artist"
@@ -92,7 +93,13 @@ function handleSeek(value: number) {
           >{{ player.currentTrack.album }}</span>
           <span v-if="!player.currentTrack?.artist && !player.currentTrack?.album">Unknown Artist</span>
         </div>
-      </div>
+        </div>
+        <TrackFavoriteButton
+          v-if="player.currentTrack"
+          :track-id="player.currentTrack.id"
+          :size="30"
+          :icon-size="15"
+        />
       <!-- Per-track actions -->
       <div :class="$style.trackActions">
         <NButton

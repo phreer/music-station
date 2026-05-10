@@ -10,6 +10,7 @@ import { formatDuration, formatDurationLong } from '@/utils/format'
 import { useAlbumsStore } from '@/stores/albums'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -173,13 +174,16 @@ onUnmounted(() => abortController?.abort())
               <span v-if="track.artist" :class="$style.trackArtist">{{ track.artist }}</span>
             </div>
             <span :class="$style.colDur">{{ formatDuration(track.duration_secs) }}</span>
-            <button
-              :class="$style.addBtn"
-              title="Add to queue"
-              @click.stop="queue.addToQueue(track.id)"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
-            </button>
+            <div :class="$style.rowActions">
+              <TrackFavoriteButton :track-id="track.id" />
+              <button
+                :class="$style.addBtn"
+                title="Add to queue"
+                @click.stop="queue.addToQueue(track.id)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -303,7 +307,7 @@ onUnmounted(() => abortController?.abort())
 
 .trackListHeader {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 36px;
+  grid-template-columns: 36px 1fr 64px 68px;
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 600;
@@ -316,7 +320,7 @@ onUnmounted(() => abortController?.abort())
 
 .trackRow {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 36px;
+  grid-template-columns: 36px 1fr 64px 68px;
   align-items: center;
   padding: 8px 12px;
   border-radius: 6px;
@@ -390,7 +394,15 @@ onUnmounted(() => abortController?.abort())
   transition: opacity 0.15s, background 0.15s;
 }
 
-.trackRow:hover .addBtn {
+.rowActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+
+.trackRow:hover .addBtn,
+.trackRow:hover .rowActions :global(.track-favorite-button) {
   opacity: 0.5;
 }
 

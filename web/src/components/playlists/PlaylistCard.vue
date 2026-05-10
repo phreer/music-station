@@ -8,6 +8,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import { usePlaylistStore } from '@/stores/playlists'
 import { useLibraryStore } from '@/stores/library'
+import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const props = defineProps<{ playlist: Playlist }>()
 
@@ -113,6 +114,7 @@ async function handleRemoveTrack(trackId: string) {
           <span :class="$style.trackTitle">{{ track.title }}</span>
           <span :class="$style.trackArtist">{{ track.artist }}</span>
           <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
+          <TrackFavoriteButton :track-id="track.id" :size="22" :icon-size="12" />
           <button
             :class="$style.trackRemoveBtn"
             title="Remove from playlist"
@@ -196,6 +198,8 @@ async function handleRemoveTrack(trackId: string) {
   background: transparent; color: inherit; cursor: pointer; padding: 0;
   opacity: 0; transition: opacity 0.15s, background 0.15s;
 }
+.trackRow :global(.track-favorite-button) { opacity: 0; flex-shrink: 0; }
+.trackRow:hover :global(.track-favorite-button) { opacity: 0.5; }
 .trackRow:hover .trackRemoveBtn { opacity: 0.5; }
 .trackRemoveBtn:hover { opacity: 1 !important; background: var(--app-danger-bg); color: var(--app-danger); }
 </style>
