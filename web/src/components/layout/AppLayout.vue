@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppNav from './AppNav.vue'
 import MusicPlayer from '@/components/player/MusicPlayer.vue'
@@ -12,6 +13,45 @@ import { useUiStore } from '@/stores/ui'
 const lyrics = useLyricsStore()
 const player = usePlayerStore()
 const ui = useUiStore()
+
+const showLeftSidebar = computed(
+  () => ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack,
+)
+const showRightSidebar = computed(
+  () => ui.lyricsPanelSide === 'right' && lyrics.sidebarVisible && player.currentTrack,
+)
+
+let activePointerId: number | null = null
+
+function startResize(event: PointerEvent) {
+  activePointerId = event.pointerId
+  window.addEventListener('pointermove', handleResize)
+  window.addEventListener('pointerup', stopResize)
+  window.addEventListener('pointercancel', stopResize)
+}
+
+function handleResize(event: PointerEvent) {
+  if (activePointerId !== event.pointerId) return
+
+  if (ui.lyricsPanelSide === 'left') {
+    ui.setSidebarWidth(event.clientX)
+    return
+  }
+
+  ui.setSidebarWidth(window.innerWidth - event.clientX)
+}
+
+function stopResize(event?: PointerEvent) {
+  if (event && activePointerId !== event.pointerId) return
+  activePointerId = null
+  window.removeEventListener('pointermove', handleResize)
+  window.removeEventListener('pointerup', stopResize)
+  window.removeEventListener('pointercancel', stopResize)
+}
+
+onBeforeUnmount(() => {
+  stopResize()
+})
 </script>
 
 <template>
@@ -21,11 +61,14 @@ const ui = useUiStore()
     <div :class="$style.body">
       <Transition name="sidebar">
         <div
-          v-if="ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack"
-          :class="[$style.lyricsSidebar, $style.lyricsSidebarLeft]"
+          v-if="showLeftSidebar"
+          :class="[$style.lyricsSidebarShell, $style.lyricsSidebarLeft]"
           :style="{ width: ui.sidebarWidth + 'px' }"
         >
-          <LyricsSidebar />
+          <div :class="[$style.resizeHandle, $style.resizeHandleLeft]" @pointerdown="startResize" />
+          <div :class="$style.lyricsSidebar">
+            <LyricsSidebar />
+          </div>
         </div>
       </Transition>
       <main :class="$style.main">
@@ -37,11 +80,14 @@ const ui = useUiStore()
       </main>
       <Transition name="sidebar">
         <div
-          v-if="ui.lyricsPanelSide === 'right' && lyrics.sidebarVisible && player.currentTrack"
-          :class="[$style.lyricsSidebar, $style.lyricsSidebarRight]"
+          v-if="showRightSidebar"
+          :class="[$style.lyricsSidebarShell, $style.lyricsSidebarRight]"
           :style="{ width: ui.sidebarWidth + 'px' }"
         >
-          <LyricsSidebar />
+          <div :class="$style.lyricsSidebar">
+            <LyricsSidebar />
+          </div>
+          <div :class="[$style.resizeHandle, $style.resizeHandleRight]" @pointerdown="startResize" />
         </div>
       </Transition>
     </div>
@@ -76,10 +122,17 @@ const ui = useUiStore()
   display: none; /* Chrome/Safari/Edge */
 }
 
-.lyricsSidebar {
+.lyricsSidebarShell {
   flex-shrink: 0;
+  display: flex;
   overflow: hidden;
   padding-bottom: 80px; /* align with player bar */
+  position: relative;
+}
+
+.lyricsSidebar {
+  flex: 1;
+  min-width: 0;
 }
 
 .lyricsSidebarLeft {
@@ -88,6 +141,42 @@ const ui = useUiStore()
 
 .lyricsSidebarRight {
   order: 1;
+}
+
+.resizeHandle {
+  width: 10px;
+  flex-shrink: 0;
+  align-self: stretch;
+  cursor: col-resize;
+  position: relative;
+  touch-action: none;
+}
+
+.resizeHandle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: var(--app-border);
+  opacity: 0.55;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+
+.resizeHandle:hover::before {
+  opacity: 1;
+  background: var(--n-primary-color, #0066cc);
+}
+
+.resizeHandleLeft {
+  order: 1;
+}
+
+.resizeHandleRight {
+  order: -1;
 }
 </style>
 
