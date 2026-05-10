@@ -19,6 +19,15 @@ const ui = useUiStore()
     <AppHeader />
     <AppNav />
     <div :class="$style.body">
+      <Transition name="sidebar">
+        <div
+          v-if="ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack"
+          :class="[$style.lyricsSidebar, $style.lyricsSidebarLeft]"
+          :style="{ width: ui.sidebarWidth + 'px' }"
+        >
+          <LyricsSidebar />
+        </div>
+      </Transition>
       <main :class="$style.main">
         <RouterView v-slot="{ Component }">
           <KeepAlive :max="5">
@@ -26,11 +35,10 @@ const ui = useUiStore()
           </KeepAlive>
         </RouterView>
       </main>
-      <!-- Lyrics sidebar: shown when something is playing and sidebar is toggled on -->
       <Transition name="sidebar">
         <div
-          v-if="lyrics.sidebarVisible && player.currentTrack"
-          :class="$style.lyricsSidebar"
+          v-if="ui.lyricsPanelSide === 'right' && lyrics.sidebarVisible && player.currentTrack"
+          :class="[$style.lyricsSidebar, $style.lyricsSidebarRight]"
           :style="{ width: ui.sidebarWidth + 'px' }"
         >
           <LyricsSidebar />
@@ -72,6 +80,14 @@ const ui = useUiStore()
   flex-shrink: 0;
   overflow: hidden;
   padding-bottom: 80px; /* align with player bar */
+}
+
+.lyricsSidebarLeft {
+  order: -1;
+}
+
+.lyricsSidebarRight {
+  order: 1;
 }
 </style>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { NButton, NEmpty, NSpin } from 'naive-ui'
-import { Minus, RotateCcw, Plus, X, Music2 } from 'lucide-vue-next'
+import { Minus, RotateCcw, Plus, X, Music2, PanelLeft, PanelRight } from 'lucide-vue-next'
 import { useLyricsStore } from '@/stores/lyrics'
 import { usePlayerStore } from '@/stores/player'
 import { useUiStore } from '@/stores/ui'
@@ -32,6 +32,18 @@ watch(
         Lyrics
       </span>
       <div :class="$style.actions">
+        <NButton
+          quaternary
+          circle
+          size="tiny"
+          :title="ui.lyricsPanelSide === 'left' ? 'Move lyrics to right' : 'Move lyrics to left'"
+          @click="ui.toggleLyricsPanelSide"
+        >
+          <template #icon>
+            <PanelRight v-if="ui.lyricsPanelSide === 'left'" :size="14" />
+            <PanelLeft v-else :size="14" />
+          </template>
+        </NButton>
         <NButton
           quaternary
           circle
