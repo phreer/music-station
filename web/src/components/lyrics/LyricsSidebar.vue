@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue'
 import { NButton, NEmpty, NSpin } from 'naive-ui'
-import { X, Music2 } from 'lucide-vue-next'
+import { Minus, RotateCcw, Plus, X, Music2 } from 'lucide-vue-next'
 import { useLyricsStore } from '@/stores/lyrics'
 import { usePlayerStore } from '@/stores/player'
+import { useUiStore } from '@/stores/ui'
 
 const lyrics = useLyricsStore()
 const player = usePlayerStore()
+const ui = useUiStore()
 
 const listRef = ref<HTMLElement | null>(null)
 
@@ -29,12 +31,50 @@ watch(
         <Music2 :size="14" style="margin-right: 6px; vertical-align: middle" />
         Lyrics
       </span>
-      <NButton quaternary circle size="tiny" @click="lyrics.toggleSidebar">
-        <template #icon><X :size="14" /></template>
-      </NButton>
+      <div :class="$style.actions">
+        <NButton
+          quaternary
+          circle
+          size="tiny"
+          title="Smaller lyrics"
+          :disabled="ui.lyricsFontSize <= ui.minLyricsFontSize"
+          @click="ui.decreaseLyricsFontSize"
+        >
+          <template #icon><Minus :size="14" /></template>
+        </NButton>
+        <NButton
+          quaternary
+          circle
+          size="tiny"
+          title="Reset lyrics size"
+          :disabled="ui.lyricsFontSize === ui.defaultLyricsFontSize"
+          @click="ui.resetLyricsFontSize"
+        >
+          <template #icon><RotateCcw :size="12" /></template>
+        </NButton>
+        <NButton
+          quaternary
+          circle
+          size="tiny"
+          title="Larger lyrics"
+          :disabled="ui.lyricsFontSize >= ui.maxLyricsFontSize"
+          @click="ui.increaseLyricsFontSize"
+        >
+          <template #icon><Plus :size="14" /></template>
+        </NButton>
+        <NButton quaternary circle size="tiny" title="Close lyrics" @click="lyrics.toggleSidebar">
+          <template #icon><X :size="14" /></template>
+        </NButton>
+      </div>
     </div>
 
-    <div :class="$style.body">
+    <div
+      :class="$style.body"
+      :style="{
+        '--lyrics-font-size': `${ui.lyricsFontSize}px`,
+        '--lyrics-active-font-size': `${ui.lyricsFontSize + 2}px`,
+      }"
+    >
       <NSpin v-if="lyrics.isLoading" :class="$style.spinner" />
 
       <NEmpty
@@ -116,6 +156,12 @@ watch(
   flex-shrink: 0;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .title {
   font-size: 13px;
   font-weight: 600;
@@ -142,7 +188,7 @@ watch(
 }
 
 .plainText {
-  font-size: 14px;
+  font-size: var(--lyrics-font-size, 17px);
   line-height: 1.8;
   white-space: pre-wrap;
   opacity: 0.8;
@@ -156,7 +202,7 @@ watch(
 }
 
 .line {
-  font-size: 14px;
+  font-size: var(--lyrics-font-size, 17px);
   line-height: 1.6;
   text-align: center;
   padding: 4px 8px;
@@ -172,7 +218,7 @@ watch(
 
 .lineActive {
   opacity: 1;
-  font-size: 16px;
+  font-size: var(--lyrics-active-font-size, 19px);
   font-weight: 600;
   color: var(--n-primary-color, #0066cc);
   background: var(--app-active-bg);
