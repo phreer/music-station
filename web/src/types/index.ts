@@ -56,12 +56,12 @@ export interface Lyrics {
 export type LyricFormat = 'plain' | 'lrc' | 'lrc_word'
 
 export interface LyricsSearchResult {
-  song_id: string
+  id: string
   title: string
   artist: string
-  album: string
-  duration: number
-  provider: string
+  album?: string | null
+  duration?: number | null
+  confidence: number
 }
 
 export interface LibraryStats {

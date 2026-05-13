@@ -67,7 +67,7 @@ async function start() {
       }
       const top = results[0]!
       task.message = `Fetching from ${provider}…`
-      const lyrics = await fetchLyricsFromProvider(provider, top.song_id)
+      const lyrics = await fetchLyricsFromProvider(provider, top.id)
       await uploadLyrics(task.track.id, lyrics.content, lyrics.format, lyrics.language ?? '', provider)
       library.updateTrackLocally(task.track.id, { has_lyrics: true })
       task.status = 'done'

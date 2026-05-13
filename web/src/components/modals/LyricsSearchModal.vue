@@ -6,6 +6,10 @@ import type { Track, LyricsSearchResult, Lyrics } from '@/types'
 import { searchLyrics, fetchLyricsFromProvider } from '@/api/lyrics'
 import { formatDuration } from '@/utils/format'
 
+type SearchResultWithProvider = LyricsSearchResult & {
+  provider: 'netease' | 'qqmusic'
+}
+
 const props = defineProps<{
   show: boolean
   track: Track | null
@@ -17,9 +21,9 @@ const emit = defineEmits<{
 }>()
 
 const query = ref('')
-const results = ref<LyricsSearchResult[]>([])
+const results = ref<SearchResultWithProvider[]>([])
 const isSearching = ref(false)
-const isFetching = ref<string | null>(null) // song_id being fetched
+const isFetching = ref<string | null>(null)
 const error = ref<string | null>(null)
 
 // Pre-fill query from track info when opening
@@ -45,8 +49,8 @@ async function handleSearch() {
       searchLyrics(query.value, 'netease'),
       searchLyrics(query.value, 'qqmusic'),
     ])
-    const ne = netease.status === 'fulfilled' ? netease.value : []
-    const qqr = qq.status === 'fulfilled' ? qq.value : []
+    const ne = netease.status === 'fulfilled' ? netease.value.map((result) => ({ ...result, provider: 'netease' as const })) : []
+    const qqr = qq.status === 'fulfilled' ? qq.value.map((result) => ({ ...result, provider: 'qqmusic' as const })) : []
     results.value = [...ne, ...qqr].slice(0, 20)
     if (results.value.length === 0) error.value = 'No results found'
   } catch (e) {
@@ -56,10 +60,10 @@ async function handleSearch() {
   }
 }
 
-async function handleSelect(result: LyricsSearchResult) {
-  isFetching.value = result.song_id
+async function handleSelect(result: SearchResultWithProvider) {
+  isFetching.value = result.id
   try {
-    const lyrics: Lyrics = await fetchLyricsFromProvider(result.provider, result.song_id)
+    const lyrics: Lyrics = await fetchLyricsFromProvider(result.provider, result.id)
     emit('select', lyrics.content, lyrics.format)
     emit('update:show', false)
   } catch (e) {
@@ -100,11 +104,11 @@ async function handleSelect(result: LyricsSearchResult) {
           <div v-else :class="$style.results">
             <div
               v-for="r in results"
-              :key="r.provider + r.song_id"
+              :key="r.provider + r.id"
               :class="$style.result"
               @click="handleSelect(r)"
             >
-              <NSpin :show="isFetching === r.song_id" :size="'small'">
+              <NSpin :show="isFetching === r.id" :size="'small'">
                 <div :class="$style.resultInfo">
                   <span :class="$style.resultTitle">{{ r.title }}</span>
                   <span :class="$style.resultArtist">{{ r.artist }}</span>
