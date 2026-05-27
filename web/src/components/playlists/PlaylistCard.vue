@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { NCard } from 'naive-ui'
 import type { Playlist } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -20,6 +21,7 @@ const player = usePlayerStore()
 const queue = useQueueStore()
 const playlistStore = usePlaylistStore()
 const library = useLibraryStore()
+const router = useRouter()
 
 const expanded = ref(false)
 
@@ -82,7 +84,11 @@ async function handleRemoveTrack(trackId: string) {
     </div>
 
     <div :class="$style.info">
-      <div :class="$style.playlistName">{{ playlist.name }}</div>
+      <div
+        :class="[$style.playlistName, $style.playlistNameLink]"
+        :title="playlist.name"
+        @click.stop="router.push({ name: 'playlist-detail', params: { id: playlist.id } })"
+      >{{ playlist.name }}</div>
       <div :class="$style.playlistMeta" v-if="playlist.description">{{ playlist.description }}</div>
       <div :class="$style.playlistMeta">
         {{ playlist.tracks.length }} tracks · {{ formatDuration(totalDuration) }}
@@ -163,6 +169,8 @@ async function handleRemoveTrack(trackId: string) {
 
 .info { padding: 0 2px; }
 .playlistName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playlistNameLink { cursor: pointer; }
+.playlistNameLink:hover { color: var(--n-primary-color, #0066cc); text-decoration: underline; }
 .playlistMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .cardFooter { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
