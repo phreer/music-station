@@ -66,6 +66,9 @@ onMounted(() => {
   --app-success: #18a058;
   --app-error: #d03050;
   --app-shadow: rgba(0, 0, 0, 0.1);
+  --app-scrollbar-track: rgba(0, 0, 0, 0.06);
+  --app-scrollbar-thumb: rgba(0, 0, 0, 0.28);
+  --app-scrollbar-thumb-hover: rgba(0, 0, 0, 0.42);
 }
 
 [data-theme='dark'] {
@@ -81,6 +84,9 @@ onMounted(() => {
   --app-success: #36d399;
   --app-error: #f87171;
   --app-shadow: rgba(0, 0, 0, 0.3);
+  --app-scrollbar-track: rgba(255, 255, 255, 0.08);
+  --app-scrollbar-thumb: rgba(255, 255, 255, 0.3);
+  --app-scrollbar-thumb-hover: rgba(255, 255, 255, 0.46);
 }
 
 /* Global reset and base styles */
@@ -110,5 +116,33 @@ body {
 
 #app {
   height: 100%;
+}
+
+/* Keep horizontal track-list scrollbars easy to acquire without making the
+   visible thumb dominate the interface. */
+.track-scroll-region {
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+}
+
+.track-scroll-region::-webkit-scrollbar {
+  height: 14px;
+}
+
+.track-scroll-region::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+  border-radius: 999px;
+}
+
+.track-scroll-region::-webkit-scrollbar-thumb {
+  min-width: 48px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--app-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+.track-scroll-region::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+  background-clip: padding-box;
 }
 </style>

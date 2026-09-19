@@ -21,6 +21,7 @@ const router = useRouter()
 
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
+const scrollbarProps = { trigger: 'none' as const }
 const fixedColumnWidth = 50 + 144
 const tableWrapper = ref<HTMLElement | null>(null)
 const containerWidth = ref(0)
@@ -261,7 +262,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="tableWrapper">
+  <div
+    ref="tableWrapper"
+    class="track-list-wrapper"
+    :class="{ 'track-list-wrapper--scrollable': tableScrollX !== undefined }"
+  >
     <NDataTable
       :columns="columns"
       :data="tracks"
@@ -269,6 +274,7 @@ onBeforeUnmount(() => {
       :row-props="rowProps"
       :row-class-name="rowClassName"
       :scroll-x="tableScrollX"
+      :scrollbar-props="scrollbarProps"
       table-layout="fixed"
       :max-height="'calc(100vh - 250px)'"
       virtual-scroll
@@ -284,6 +290,23 @@ onBeforeUnmount(() => {
 .track-row-playing .track-title-text {
   font-weight: 600;
   color: var(--n-primary-color);
+}
+
+.track-list-wrapper--scrollable .n-data-table-base-table-body {
+  /* The scrollbar lives in this gutter instead of overlapping a playable row. */
+  padding-bottom: 16px;
+}
+
+.track-list-wrapper--scrollable .n-scrollbar {
+  --n-scrollbar-height: 10px !important;
+  --n-scrollbar-color: var(--app-scrollbar-thumb) !important;
+  --n-scrollbar-color-hover: var(--app-scrollbar-thumb-hover) !important;
+  --n-scrollbar-rail-color: var(--app-scrollbar-track) !important;
+}
+
+.track-list-wrapper--scrollable .n-scrollbar-rail--horizontal {
+  pointer-events: auto;
+  border-radius: 999px;
 }
 
 .track-resize-header {

@@ -170,7 +170,7 @@ onUnmounted(() => abortController?.abort())
         </div>
 
         <!-- Track list -->
-        <div :class="$style.trackList" :style="trackListStyle">
+        <div :class="[$style.trackList, 'track-scroll-region']" :style="trackListStyle">
           <div :class="$style.trackListHeader">
             <span :class="$style.colNum">#</span>
             <div :class="[$style.headerCell, $style.colTitle]">
@@ -325,6 +325,7 @@ onUnmounted(() => abortController?.abort())
 /* Track list */
 .trackList {
   overflow-x: auto;
+  padding-bottom: 14px;
   border-top: 1px solid var(--app-border);
 }
 
@@ -503,6 +504,10 @@ onUnmounted(() => abortController?.abort())
   .trackRow {
     grid-template-columns: 36px minmax(0, 1fr) 64px 68px;
     min-width: 0;
+  }
+
+  .trackList {
+    padding-bottom: 0;
   }
 }
 </style>
