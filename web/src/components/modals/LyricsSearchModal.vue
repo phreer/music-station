@@ -108,15 +108,17 @@ async function handleSelect(result: SearchResultWithProvider) {
               :class="$style.result"
               @click="handleSelect(r)"
             >
-              <NSpin :show="isFetching === r.id" :size="'small'">
-                <div :class="$style.resultInfo">
-                  <span :class="$style.resultTitle">{{ r.title }}</span>
-                  <span :class="$style.resultArtist">{{ r.artist }}</span>
-                  <span :class="$style.resultAlbum">{{ r.album }}</span>
-                </div>
-                <div :class="$style.resultMeta">
-                  <span :class="$style.provider">{{ r.provider }}</span>
-                  <span :class="$style.duration">{{ formatDuration(r.duration) }}</span>
+              <NSpin :show="isFetching === r.id" :size="'small'" :class="$style.resultSpin">
+                <div :class="$style.resultContent">
+                  <div :class="$style.resultInfo">
+                    <span :class="$style.resultTitle">{{ r.title }}</span>
+                    <span :class="$style.resultArtist">{{ r.artist }}</span>
+                    <span :class="$style.resultAlbum">{{ r.album }}</span>
+                  </div>
+                  <div :class="$style.resultMeta">
+                    <span :class="$style.provider">{{ r.provider }}</span>
+                    <span :class="$style.duration">{{ formatDuration(r.duration) }}</span>
+                  </div>
                 </div>
               </NSpin>
             </div>
@@ -147,10 +149,20 @@ async function handleSelect(result: SearchResultWithProvider) {
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.resultSpin {
+  width: 100%;
+  min-width: 0;
+}
+
+.resultContent {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  width: 100%;
+  min-width: 0;
 }
 
 .result:hover {
