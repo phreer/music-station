@@ -11,6 +11,7 @@ import { useAlbumsStore } from '@/stores/albums'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
+import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,6 +23,13 @@ const album = ref<Album | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 let abortController: AbortController | null = null
+const { widths: columnWidths, getWidth, startResize } = useResizableTrackColumns(
+  'album-detail-track-columns',
+  [
+    { key: 'title', defaultWidth: 420, minWidth: 180, maxWidth: 720 },
+    { key: 'duration', defaultWidth: 104, minWidth: 96, maxWidth: 180 },
+  ],
+)
 
 const albumName = computed(() => decodeURIComponent(route.params.name as string))
 
@@ -44,6 +52,12 @@ const sortedTracks = computed<Track[]>(() => {
     return na - nb
   })
 })
+
+const trackListStyle = computed(() => ({
+  '--album-title-col-width': `${columnWidths.value.title}px`,
+  '--album-duration-col-width': `${columnWidths.value.duration}px`,
+  '--album-track-min-width': `${36 + getWidth('title') + getWidth('duration') + 68}px`,
+}))
 
 async function load() {
   if (route.name !== 'album-detail') return
@@ -156,11 +170,18 @@ onUnmounted(() => abortController?.abort())
         </div>
 
         <!-- Track list -->
-        <div :class="$style.trackList">
+        <div :class="$style.trackList" :style="trackListStyle">
           <div :class="$style.trackListHeader">
             <span :class="$style.colNum">#</span>
-            <span :class="$style.colTitle">Title</span>
-            <span :class="$style.colDur">Duration</span>
+            <div :class="[$style.headerCell, $style.colTitle]">
+              <span>Title</span>
+              <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
+            </div>
+            <div :class="[$style.headerCell, $style.colDur]">
+              <span>Duration</span>
+              <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
+            </div>
+            <span />
           </div>
           <div
             v-for="track in sortedTracks"
@@ -174,6 +195,7 @@ onUnmounted(() => abortController?.abort())
               <span v-if="track.artist" :class="$style.trackArtist">{{ track.artist }}</span>
             </div>
             <span :class="$style.colDur">{{ formatDuration(track.duration_secs) }}</span>
+            <span />
             <div :class="$style.rowActions">
               <TrackFavoriteButton :track-id="track.id" />
               <button
@@ -302,12 +324,14 @@ onUnmounted(() => abortController?.abort())
 
 /* Track list */
 .trackList {
+  overflow-x: auto;
   border-top: 1px solid var(--app-border);
 }
 
 .trackListHeader {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 68px;
+  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 68px;
+  min-width: var(--album-track-min-width);
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 600;
@@ -320,7 +344,8 @@ onUnmounted(() => abortController?.abort())
 
 .trackRow {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 68px;
+  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 68px;
+  min-width: var(--album-track-min-width);
   align-items: center;
   padding: 8px 12px;
   border-radius: 6px;
@@ -354,6 +379,49 @@ onUnmounted(() => abortController?.abort())
   gap: 2px;
   min-width: 0;
   overflow: hidden;
+}
+
+.headerCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.headerCell.colDur {
+  justify-content: flex-end;
+}
+
+.headerCell.colDur span:first-child {
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: -8px;
+  right: -18px;
+  width: 28px;
+  height: calc(100% + 16px);
+  cursor: col-resize;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 9px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--app-border);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.trackListHeader:hover .resizeHandle::after,
+.resizeHandle:hover::after {
+  opacity: 0.7;
 }
 
 .trackTitle {
@@ -429,6 +497,12 @@ onUnmounted(() => abortController?.abort())
 
   .albumName {
     font-size: 24px;
+  }
+
+  .trackListHeader,
+  .trackRow {
+    grid-template-columns: 36px minmax(0, 1fr) 64px 68px;
+    min-width: 0;
   }
 }
 </style>

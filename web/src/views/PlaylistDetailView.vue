@@ -12,6 +12,7 @@ import { usePlayerStore } from '@/stores/player'
 import { usePlaylistStore } from '@/stores/playlists'
 import { useQueueStore } from '@/stores/queue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
+import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,14 @@ const playlist = ref<Playlist | null>(null)
 const isLoadingPlaylist = ref(false)
 const error = ref<string | null>(null)
 let abortController: AbortController | null = null
+const { widths: columnWidths, getWidth, startResize } = useResizableTrackColumns(
+  'playlist-detail-track-columns',
+  [
+    { key: 'title', defaultWidth: 420, minWidth: 180, maxWidth: 720 },
+    { key: 'album', defaultWidth: 220, minWidth: 120, maxWidth: 520 },
+    { key: 'duration', defaultWidth: 104, minWidth: 96, maxWidth: 180 },
+  ],
+)
 
 const playlistId = computed(() => route.params.id as string)
 
@@ -48,6 +57,13 @@ const unresolvedTrackCount = computed(() => {
 })
 
 const isLoading = computed(() => isLoadingPlaylist.value || library.isLoading)
+
+const trackListStyle = computed(() => ({
+  '--playlist-title-col-width': `${columnWidths.value.title}px`,
+  '--playlist-album-col-width': `${columnWidths.value.album}px`,
+  '--playlist-duration-col-width': `${columnWidths.value.duration}px`,
+  '--playlist-track-min-width': `${42 + getWidth('title') + getWidth('album') + getWidth('duration') + 112 + 60}px`,
+}))
 
 async function load() {
   if (route.name !== 'playlist-detail') return
@@ -161,12 +177,22 @@ onUnmounted(() => abortController?.abort())
           </div>
         </div>
 
-        <div :class="$style.trackList">
+        <div :class="$style.trackList" :style="trackListStyle">
           <div :class="$style.trackListHeader">
             <span :class="$style.colNum">#</span>
-            <span :class="$style.colTitle">Title</span>
-            <span :class="$style.colAlbum">Album</span>
-            <span :class="$style.colDur">Duration</span>
+            <div :class="[$style.headerCell, $style.colTitle]">
+              <span>Title</span>
+              <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
+            </div>
+            <div :class="[$style.headerCell, $style.colAlbum]">
+              <span>Album</span>
+              <span :class="$style.resizeHandle" @mousedown.prevent="startResize('album', $event)" />
+            </div>
+            <div :class="[$style.headerCell, $style.colDur]">
+              <span>Duration</span>
+              <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
+            </div>
+            <span />
           </div>
 
           <NEmpty
@@ -195,6 +221,7 @@ onUnmounted(() => abortController?.abort())
               @click.stop="track.album && router.push({ name: 'album-detail', params: { name: track.album } })"
             >{{ track.album ?? '-' }}</span>
             <span :class="$style.colDur">{{ formatDuration(track.duration_secs) }}</span>
+            <span />
             <div :class="$style.rowActions">
               <TrackFavoriteButton :track-id="track.id" />
               <button
@@ -332,13 +359,15 @@ onUnmounted(() => abortController?.abort())
 }
 
 .trackList {
+  overflow-x: auto;
   border-top: 1px solid var(--app-border);
 }
 
 .trackListHeader,
 .trackRow {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1.6fr) minmax(120px, 0.9fr) 80px 112px;
+  grid-template-columns: 42px var(--playlist-title-col-width) var(--playlist-album-col-width) var(--playlist-duration-col-width) minmax(0, 1fr) 112px;
+  min-width: var(--playlist-track-min-width);
   align-items: center;
   gap: 12px;
 }
@@ -372,6 +401,49 @@ onUnmounted(() => abortController?.abort())
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.headerCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.headerCell.colDur {
+  justify-content: flex-end;
+}
+
+.headerCell.colDur span:first-child {
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: -10px;
+  right: -18px;
+  width: 28px;
+  height: calc(100% + 20px);
+  cursor: col-resize;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 9px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--app-border);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.trackListHeader:hover .resizeHandle::after,
+.resizeHandle:hover::after {
+  opacity: 0.7;
 }
 
 .trackTitle,
@@ -433,7 +505,7 @@ onUnmounted(() => abortController?.abort())
   .playlistName { font-size: 24px; white-space: normal; }
   .colAlbum { display: none; }
   .trackListHeader,
-  .trackRow { grid-template-columns: 32px minmax(0, 1fr) 64px 100px; gap: 8px; }
+  .trackRow { grid-template-columns: 32px minmax(0, 1fr) 64px 100px; min-width: 0; gap: 8px; }
   .trackListHeader .colAlbum,
   .trackRow .colAlbum { display: none; }
 }
@@ -442,7 +514,7 @@ onUnmounted(() => abortController?.abort())
   .header { flex-direction: column; }
   .coverWrapper { width: 160px; height: 160px; }
   .trackListHeader,
-  .trackRow { grid-template-columns: 28px minmax(0, 1fr) 86px; }
+  .trackRow { grid-template-columns: 28px minmax(0, 1fr) 86px; min-width: 0; }
   .colDur { display: none; }
 }
 </style>

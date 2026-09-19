@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
-import { h, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -9,6 +9,7 @@ import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import AddToPlaylistModal from '@/components/modals/AddToPlaylistModal.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
+import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
 const { tracks } = defineProps<{
   tracks: Track[]
@@ -20,6 +21,56 @@ const router = useRouter()
 
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
+const fixedColumnWidth = 50 + 144
+const tableWrapper = ref<HTMLElement | null>(null)
+const containerWidth = ref(0)
+let resizeObserver: ResizeObserver | null = null
+const { getWidth, startResize } = useResizableTrackColumns(
+  'track-list-column-widths',
+  [
+    { key: 'title', defaultWidth: 320, minWidth: 180, maxWidth: 640 },
+    { key: 'album', defaultWidth: 220, minWidth: 120, maxWidth: 480 },
+    { key: 'duration', defaultWidth: 104, minWidth: 96, maxWidth: 180 },
+    { key: 'play_count', defaultWidth: 72, minWidth: 56, maxWidth: 140 },
+  ],
+)
+
+const tableContentWidth = computed(() =>
+  fixedColumnWidth
+  + getWidth('title')
+  + getWidth('album')
+  + getWidth('duration')
+  + getWidth('play_count'),
+)
+
+const tableWidth = computed(() => Math.max(tableContentWidth.value, containerWidth.value))
+const tableScrollX = computed(() => (
+  tableContentWidth.value > containerWidth.value ? tableContentWidth.value : undefined
+))
+const spacerWidth = computed(() => tableWidth.value - tableContentWidth.value)
+
+function lockedWidth(key: string): { width: number, minWidth: number, maxWidth: number } {
+  const width = getWidth(key)
+  return { width, minWidth: width, maxWidth: width }
+}
+
+function fixedWidth(width: number): { width: number, minWidth: number, maxWidth: number } {
+  return { width, minWidth: width, maxWidth: width }
+}
+
+function resizableTitle(label: string, key: string, align: 'left' | 'right' = 'left') {
+  return h('div', { class: ['track-resize-header', align === 'right' && 'track-resize-header-right'] }, [
+    h('span', { class: 'track-resize-header-label' }, label),
+    h('span', {
+      class: 'track-column-resize-handle',
+      onMousedown: (event: MouseEvent) => {
+        event.preventDefault()
+        event.stopPropagation()
+        startResize(key, event)
+      },
+    }),
+  ])
+}
 
 function handlePlay(track: Track) {
   // Add track to queue (if absent) and update currentIndex before playing,
@@ -44,11 +95,11 @@ const playlistIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height=
 
 // Column definitions — NO reactive dependency on player state.
 // Current track highlighting is handled via row-class-name instead.
-const columns: DataTableColumns<Track> = [
+const columns = computed<DataTableColumns<Track>>(() => [
   {
     key: 'cover',
     title: '',
-    width: 50,
+    ...fixedWidth(50),
     render(row) {
       if (row.has_cover) {
         return h('img', {
@@ -83,8 +134,8 @@ const columns: DataTableColumns<Track> = [
   },
   {
     key: 'title',
-    title: 'Title',
-    minWidth: 200,
+    title: () => resizableTitle('Title', 'title'),
+    ...lockedWidth('title'),
     render(row) {
       const artistEl = row.artist
         ? h('span', {
@@ -103,8 +154,8 @@ const columns: DataTableColumns<Track> = [
   },
   {
     key: 'album',
-    title: 'Album',
-    width: 200,
+    title: () => resizableTitle('Album', 'album'),
+    ...lockedWidth('album'),
     render(row) {
       if (!row.album) return h('span', { class: 'track-album-text' }, '-')
       return h('span', {
@@ -118,8 +169,8 @@ const columns: DataTableColumns<Track> = [
   },
   {
     key: 'duration',
-    title: 'Duration',
-    width: 80,
+    title: () => resizableTitle('Duration', 'duration', 'right'),
+    ...lockedWidth('duration'),
     align: 'right',
     render(row) {
       return formatDuration(row.duration_secs)
@@ -127,14 +178,19 @@ const columns: DataTableColumns<Track> = [
   },
   {
     key: 'play_count',
-    title: 'Plays',
-    width: 60,
+    title: () => resizableTitle('Plays', 'play_count', 'right'),
+    ...lockedWidth('play_count'),
     align: 'right',
+  },
+  {
+    key: 'spacer',
+    title: '',
+    ...fixedWidth(spacerWidth.value),
   },
   {
     key: 'actions',
     title: '',
-    width: 144,
+    ...fixedWidth(144),
     render(row) {
       return h('div', { class: 'track-actions' }, [
         h(TrackFavoriteButton, {
@@ -172,7 +228,7 @@ const columns: DataTableColumns<Track> = [
       ])
     },
   },
-]
+])
 
 // Stable row key for efficient virtual-list DOM diffing
 const rowKey = (row: Track): DataTableRowKey => row.id
@@ -186,16 +242,34 @@ const rowProps = (row: Track) => ({
   style: { cursor: 'pointer' },
   onClick: () => handlePlay(row),
 })
+
+onMounted(() => {
+  const updateContainerWidth = () => {
+    containerWidth.value = tableWrapper.value?.clientWidth ?? 0
+  }
+
+  updateContainerWidth()
+  if (!tableWrapper.value) return
+  resizeObserver = new ResizeObserver(updateContainerWidth)
+  resizeObserver.observe(tableWrapper.value)
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+})
+
 </script>
 
 <template>
-  <div>
+  <div ref="tableWrapper">
     <NDataTable
       :columns="columns"
       :data="tracks"
       :row-key="rowKey"
       :row-props="rowProps"
       :row-class-name="rowClassName"
+      :scroll-x="tableScrollX"
+      table-layout="fixed"
       :max-height="'calc(100vh - 250px)'"
       virtual-scroll
       size="small"
@@ -210,6 +284,56 @@ const rowProps = (row: Track) => ({
 .track-row-playing .track-title-text {
   font-weight: 600;
   color: var(--n-primary-color);
+}
+
+.track-resize-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.track-resize-header-right {
+  justify-content: flex-end;
+}
+
+.track-resize-header-right .track-resize-header-label {
+  padding-right: 14px;
+}
+
+.track-resize-header-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-column-resize-handle {
+  position: absolute;
+  top: -10px;
+  right: -18px;
+  width: 28px;
+  height: calc(100% + 20px);
+  cursor: col-resize;
+  z-index: 1;
+}
+
+.track-column-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 11px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--app-border);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.track-resize-header:hover .track-column-resize-handle::after,
+.track-column-resize-handle:hover::after {
+  opacity: 0.7;
 }
 
 /* CSS-based ellipsis — replaces NEllipsis + NTooltip component instances */

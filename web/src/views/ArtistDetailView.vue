@@ -12,6 +12,7 @@ import { useFavoritesStore } from '@/stores/favorites'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
+import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,13 @@ const artist = ref<Artist | null>(null)
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 let abortController: AbortController | null = null
+const { widths: columnWidths, getWidth, startResize } = useResizableTrackColumns(
+  'artist-detail-track-columns',
+  [
+    { key: 'title', defaultWidth: 420, minWidth: 180, maxWidth: 720 },
+    { key: 'duration', defaultWidth: 104, minWidth: 96, maxWidth: 180 },
+  ],
+)
 
 const artistName = computed(() => decodeURIComponent(route.params.name as string))
 
@@ -31,6 +39,12 @@ const artistName = computed(() => decodeURIComponent(route.params.name as string
 const allTracks = computed<Track[]>(() =>
   artist.value?.albums.flatMap((a) => sortAlbumTracks(a.tracks)) ?? [],
 )
+
+const trackListStyle = computed(() => ({
+  '--artist-title-col-width': `${columnWidths.value.title}px`,
+  '--artist-duration-col-width': `${columnWidths.value.duration}px`,
+  '--artist-track-min-width': `${36 + getWidth('title') + getWidth('duration') + 68}px`,
+}))
 
 function sortAlbumTracks(tracks: Track[]): Track[] {
   return [...tracks].sort((a, b) => {
@@ -209,7 +223,20 @@ onUnmounted(() => abortController?.abort())
               </button>
             </div>
 
-            <div :class="$style.trackList">
+            <div :class="$style.trackList" :style="trackListStyle">
+              <div :class="$style.trackListHeader">
+                <span :class="$style.colNum">#</span>
+                <div :class="[$style.headerCell, $style.colTitle]">
+                  <span>Title</span>
+                  <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
+                </div>
+                <div :class="[$style.headerCell, $style.trackDur]">
+                  <span>Duration</span>
+                  <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
+                </div>
+                <span />
+                <span />
+              </div>
               <div
                 v-for="track in sortAlbumTracks(album.tracks)"
                 :key="track.id"
@@ -219,6 +246,7 @@ onUnmounted(() => abortController?.abort())
                 <span :class="$style.colNum">{{ track.track_number ?? '—' }}</span>
                 <span :class="$style.trackTitle">{{ track.title ?? 'Unknown Title' }}</span>
                 <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
+                <span />
                 <div :class="$style.rowActions">
                   <TrackFavoriteButton :track-id="track.id" />
                   <button
@@ -428,11 +456,26 @@ onUnmounted(() => abortController?.abort())
 .trackList {
   display: flex;
   flex-direction: column;
+  overflow-x: auto;
+}
+
+.trackListHeader {
+  display: grid;
+  grid-template-columns: 36px var(--artist-title-col-width) var(--artist-duration-col-width) minmax(0, 1fr) 68px;
+  min-width: var(--artist-track-min-width);
+  align-items: center;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.4;
 }
 
 .trackRow {
   display: grid;
-  grid-template-columns: 36px 1fr 64px 68px;
+  grid-template-columns: 36px var(--artist-title-col-width) var(--artist-duration-col-width) minmax(0, 1fr) 68px;
+  min-width: var(--artist-track-min-width);
   align-items: center;
   padding: 6px 12px;
   border-radius: 6px;
@@ -452,6 +495,53 @@ onUnmounted(() => abortController?.abort())
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   padding-right: 16px;
+}
+
+.colTitle {
+  min-width: 0;
+}
+
+.headerCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.headerCell.trackDur {
+  justify-content: flex-end;
+}
+
+.headerCell.trackDur span:first-child {
+  padding-right: 14px;
+  white-space: nowrap;
+}
+
+.resizeHandle {
+  position: absolute;
+  top: -6px;
+  right: -18px;
+  width: 28px;
+  height: calc(100% + 12px);
+  cursor: col-resize;
+}
+
+.resizeHandle::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 9px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--app-border);
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.trackListHeader:hover .resizeHandle::after,
+.resizeHandle:hover::after {
+  opacity: 0.7;
 }
 
 .trackTitle {
@@ -512,6 +602,12 @@ onUnmounted(() => abortController?.abort())
 
   .artistName {
     font-size: 24px;
+  }
+
+  .trackListHeader,
+  .trackRow {
+    grid-template-columns: 36px minmax(0, 1fr) 64px 68px;
+    min-width: 0;
   }
 }
 </style>
