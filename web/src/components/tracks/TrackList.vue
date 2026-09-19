@@ -22,7 +22,7 @@ const router = useRouter()
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 const scrollbarProps = { trigger: 'none' as const }
-const fixedColumnWidth = 50 + 144
+const fixedColumnWidth = 50 + 162
 const tableWrapper = ref<HTMLElement | null>(null)
 const containerWidth = ref(0)
 let resizeObserver: ResizeObserver | null = null
@@ -191,7 +191,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
   {
     key: 'actions',
     title: '',
-    ...fixedWidth(144),
+    ...fixedWidth(162),
     render(row) {
       return h('div', { class: 'track-actions' }, [
         h(TrackFavoriteButton, {
@@ -297,25 +297,21 @@ onBeforeUnmount(() => {
   padding-bottom: 16px;
 }
 
-.track-list-wrapper .n-data-table-base-table-body:has(.n-scrollbar-rail--vertical > .n-scrollbar-rail__scrollbar) {
-  /* Keep missed vertical-scrollbar clicks outside the playable table rows. */
-  padding-right: 18px;
-}
-
 .track-list-wrapper .n-scrollbar {
   --n-scrollbar-width: 14px !important;
   --n-scrollbar-color: var(--app-scrollbar-thumb) !important;
   --n-scrollbar-color-hover: var(--app-scrollbar-thumb-hover) !important;
-  --n-scrollbar-rail-color: var(--app-scrollbar-track) !important;
+  --n-scrollbar-rail-color: transparent !important;
 }
 
 .track-list-wrapper--scrollable .n-scrollbar {
   --n-scrollbar-height: 10px !important;
 }
 
-.track-list-wrapper .n-scrollbar-rail--vertical {
+.track-list-wrapper .n-scrollbar-rail--vertical:has(> .n-scrollbar-rail__scrollbar) {
   pointer-events: auto;
   border-radius: 999px;
+  background: var(--app-scrollbar-track);
 }
 
 .track-list-wrapper .n-scrollbar-rail--vertical > .n-scrollbar-rail__scrollbar {
@@ -323,9 +319,10 @@ onBeforeUnmount(() => {
   background-clip: padding-box;
 }
 
-.track-list-wrapper--scrollable .n-scrollbar-rail--horizontal {
+.track-list-wrapper--scrollable .n-scrollbar-rail--horizontal:has(> .n-scrollbar-rail__scrollbar) {
   pointer-events: auto;
   border-radius: 999px;
+  background: var(--app-scrollbar-track);
 }
 
 .track-resize-header {
@@ -409,6 +406,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding-right: 18px;
 }
 
 .track-action-btn {
