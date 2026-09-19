@@ -297,11 +297,30 @@ onBeforeUnmount(() => {
   padding-bottom: 16px;
 }
 
-.track-list-wrapper--scrollable .n-scrollbar {
-  --n-scrollbar-height: 10px !important;
+.track-list-wrapper .n-data-table-base-table-body:has(.n-scrollbar-rail--vertical > .n-scrollbar-rail__scrollbar) {
+  /* Keep missed vertical-scrollbar clicks outside the playable table rows. */
+  padding-right: 18px;
+}
+
+.track-list-wrapper .n-scrollbar {
+  --n-scrollbar-width: 14px !important;
   --n-scrollbar-color: var(--app-scrollbar-thumb) !important;
   --n-scrollbar-color-hover: var(--app-scrollbar-thumb-hover) !important;
   --n-scrollbar-rail-color: var(--app-scrollbar-track) !important;
+}
+
+.track-list-wrapper--scrollable .n-scrollbar {
+  --n-scrollbar-height: 10px !important;
+}
+
+.track-list-wrapper .n-scrollbar-rail--vertical {
+  pointer-events: auto;
+  border-radius: 999px;
+}
+
+.track-list-wrapper .n-scrollbar-rail--vertical > .n-scrollbar-rail__scrollbar {
+  border: 3px solid transparent;
+  background-clip: padding-box;
 }
 
 .track-list-wrapper--scrollable .n-scrollbar-rail--horizontal {
