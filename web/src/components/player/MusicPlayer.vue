@@ -63,7 +63,7 @@ function handleSeek(value: number) {
 </script>
 
 <template>
-  <NConfigProvider :theme="darkTheme">
+  <NConfigProvider :theme="darkTheme" abstract>
   <div v-show="player.currentTrack" :class="$style.player">
     <!-- Track Info -->
     <div :class="$style.info">
@@ -192,11 +192,8 @@ function handleSeek(value: number) {
 
 <style module>
 .player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   height: 80px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   padding: 0 24px;

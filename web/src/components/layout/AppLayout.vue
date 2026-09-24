@@ -101,20 +101,21 @@ onBeforeUnmount(() => {
 .layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
 .body {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 }
 
 .main {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding-bottom: 90px; /* space for player bar */
   scrollbar-width: none; /* Firefox */
 }
 
@@ -126,7 +127,6 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   overflow: hidden;
-  padding-bottom: 80px; /* align with player bar */
   position: relative;
 }
 
