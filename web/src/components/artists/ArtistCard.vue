@@ -63,10 +63,11 @@ function playAlbum(albumName: string) {
         </div>
       </div>
         <div :class="$style.info">
-          <div
+          <RouterLink
             :class="[$style.name, $style.nameLink]"
-            @click.stop="router.push({ name: 'artist-detail', params: { name: artist.name } })"
-          >{{ artist.name }}</div>
+            :to="{ name: 'artist-detail', params: { name: artist.name } }"
+            @click.stop
+          >{{ artist.name }}</RouterLink>
         <div :class="$style.meta">
           {{ artist.album_count }} albums · {{ artist.track_count }} tracks
         </div>
@@ -161,7 +162,7 @@ function playAlbum(albumName: string) {
 
 .info { flex: 1; min-width: 0; }
 .name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nameLink { cursor: pointer; }
+.nameLink { cursor: pointer; color: inherit; text-decoration: none; display: block; }
 .nameLink:hover { text-decoration: underline; opacity: 0.8; }
 .meta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; }
 
@@ -206,7 +207,7 @@ function playAlbum(albumName: string) {
 
 .trackRow { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-radius: 4px; cursor: pointer; font-size: 13px; }
 .trackRow:hover { background: var(--app-hover); }
-.trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
+.trackRowActive { color: var(--app-primary); font-weight: 600; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackAlbum { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }

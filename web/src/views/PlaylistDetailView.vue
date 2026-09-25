@@ -390,7 +390,7 @@ onUnmounted(() => abortController?.abort())
 }
 
 .trackRow:hover { background: var(--app-hover); }
-.trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
+.trackRowActive { color: var(--app-primary); font-weight: 600; }
 
 .colNum {
   font-variant-numeric: tabular-nums;
@@ -465,7 +465,7 @@ onUnmounted(() => abortController?.abort())
 }
 
 .navLink { cursor: pointer; }
-.navLink:hover { color: var(--n-primary-color, #0066cc); text-decoration: underline; }
+.navLink:hover { color: var(--app-primary); text-decoration: underline; }
 
 .rowActions {
   display: flex;

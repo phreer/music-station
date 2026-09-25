@@ -487,7 +487,7 @@ onUnmounted(() => abortController?.abort())
 
 .trackRow:hover { background: var(--app-hover); }
 
-.trackRowActive { color: var(--n-primary-color, #0066cc); }
+.trackRowActive { color: var(--app-primary); }
 .trackRowActive .trackTitle { font-weight: 600; }
 
 .colNum {

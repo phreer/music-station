@@ -359,7 +359,7 @@ onUnmounted(() => abortController?.abort())
 }
 
 .trackRowActive {
-  color: var(--n-primary-color, #0066cc);
+  color: var(--app-primary);
 }
 
 .trackRowActive .trackTitle {

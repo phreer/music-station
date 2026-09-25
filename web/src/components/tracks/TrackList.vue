@@ -241,7 +241,14 @@ const rowClassName = (row: Track): string => {
 
 const rowProps = (row: Track) => ({
   style: { cursor: 'pointer' },
+  tabindex: 0,
   onClick: () => handlePlay(row),
+  onKeydown: (event: KeyboardEvent) => {
+    if (event.target !== event.currentTarget) return
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    handlePlay(row)
+  },
 })
 
 onMounted(() => {
@@ -309,6 +316,10 @@ onBeforeUnmount(() => {
 .track-row-playing .n-data-table-td,
 .track-row-playing:hover .n-data-table-td {
   background: var(--app-active-bg) !important;
+}
+
+.track-row-playing .n-data-table-td:first-child {
+  box-shadow: inset 3px 0 var(--app-primary);
 }
 
 /* Current-track highlighting via row class (decoupled from columns computed) */

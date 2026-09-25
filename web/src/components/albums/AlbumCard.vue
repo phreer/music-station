@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { NCard } from 'naive-ui'
 import type { Album, Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -11,7 +10,6 @@ import { useLibraryStore } from '@/stores/library'
 
 const props = defineProps<{ album: Album }>()
 
-const router = useRouter()
 const player = usePlayerStore()
 const queue = useQueueStore()
 const library = useLibraryStore()
@@ -76,24 +74,24 @@ function playTrack(track: Track) {
       </div>
     </div>
     <div :class="$style.info">
-      <div
+      <RouterLink
         :class="[$style.albumName, $style.albumNameLink]"
         :title="album.name"
-        @click.stop="router.push({ name: 'album-detail', params: { name: album.name } })"
-      >{{ album.name }}</div>
-      <div
+        :to="{ name: 'album-detail', params: { name: album.name } }"
+      >{{ album.name }}</RouterLink>
+      <RouterLink
         v-if="album.artist"
         :class="[$style.albumMeta, $style.albumMetaLink]"
-        @click.stop="router.push({ name: 'artist-detail', params: { name: album.artist } })"
-      >{{ album.artist }}</div>
+        :to="{ name: 'artist-detail', params: { name: album.artist } }"
+      >{{ album.artist }}</RouterLink>
       <div :class="$style.albumMeta">
         {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
       </div>
     </div>
 
-    <div :class="$style.expandToggle" @click="expanded = !expanded">
+    <button :class="$style.expandToggle" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name} tracks`" :aria-expanded="expanded" @click="expanded = !expanded">
       <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-    </div>
+    </button>
 
     <Transition name="expand">
       <div v-if="expanded" :class="$style.trackList">
@@ -160,14 +158,15 @@ function playTrack(track: Track) {
 
 .info { padding: 0 2px; }
 .albumName { font-weight: 600; font-size: 14px; line-height: 1.4; min-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.albumNameLink { cursor: pointer; }
+.albumNameLink { cursor: pointer; color: inherit; text-decoration: none; }
 .albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
 .albumMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.albumMetaLink { cursor: pointer; }
+.albumMetaLink { cursor: pointer; display: block; text-decoration: none; }
 .albumMetaLink:hover { text-decoration: underline; opacity: 0.8; }
 
 .expandToggle {
-  display: flex; justify-content: center; padding: 6px 0 0;
+  display: flex; justify-content: center; width: 100%; padding: 6px 0 0;
+  border: 0; background: transparent; color: inherit;
   cursor: pointer; opacity: 0.4;
 }
 .expandToggle:hover { opacity: 0.8; }

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { NCard } from 'naive-ui'
 import type { Playlist } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -21,7 +20,6 @@ const player = usePlayerStore()
 const queue = useQueueStore()
 const playlistStore = usePlaylistStore()
 const library = useLibraryStore()
-const router = useRouter()
 
 const expanded = ref(false)
 const failedCoverIds = ref(new Set<string>())
@@ -90,11 +88,11 @@ async function handleRemoveTrack(trackId: string) {
     </div>
 
     <div :class="$style.info">
-      <div
+      <RouterLink
         :class="[$style.playlistName, $style.playlistNameLink]"
         :title="playlist.name"
-        @click.stop="router.push({ name: 'playlist-detail', params: { id: playlist.id } })"
-      >{{ playlist.name }}</div>
+        :to="{ name: 'playlist-detail', params: { id: playlist.id } }"
+      >{{ playlist.name }}</RouterLink>
       <div :class="$style.playlistMeta" v-if="playlist.description">{{ playlist.description }}</div>
       <div :class="$style.playlistMeta">
         {{ playlist.tracks.length }} tracks · {{ formatDuration(totalDuration) }}
@@ -109,9 +107,9 @@ async function handleRemoveTrack(trackId: string) {
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
         Delete
       </button>
-      <div :class="$style.expandToggle" @click="expanded = !expanded">
+      <button :class="$style.expandToggle" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name} tracks`" :aria-expanded="expanded" @click="expanded = !expanded">
         <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-      </div>
+      </button>
     </div>
 
     <Transition name="expand">
@@ -176,7 +174,7 @@ async function handleRemoveTrack(trackId: string) {
 
 .info { padding: 0 2px; }
 .playlistName { font-weight: 600; font-size: 14px; line-height: 1.4; min-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.playlistNameLink { cursor: pointer; }
+.playlistNameLink { cursor: pointer; color: inherit; text-decoration: none; }
 .playlistNameLink:hover { color: var(--app-primary); text-decoration: underline; }
 .playlistMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
@@ -190,7 +188,7 @@ async function handleRemoveTrack(trackId: string) {
 }
 .deleteBtn:hover { opacity: 1; background: var(--app-danger-bg); color: var(--app-danger); }
 
-.expandToggle { cursor: pointer; opacity: 0.4; padding: 4px; }
+.expandToggle { cursor: pointer; opacity: 0.4; padding: 4px; border: 0; background: transparent; color: inherit; }
 .expandToggle:hover { opacity: 0.8; }
 .chevron { transition: transform 0.2s; }
 .chevronOpen { transform: rotate(180deg); }
