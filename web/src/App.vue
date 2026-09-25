@@ -5,8 +5,9 @@ import {
   NMessageProvider,
   NNotificationProvider,
   darkTheme,
-  type GlobalThemeOverrides,
 } from 'naive-ui'
+import { themeOverrides } from '@/styles/theme'
+import '@/styles/tokens.css'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useUiStore } from '@/stores/ui'
 import { useLibraryStore } from '@/stores/library'
@@ -18,13 +19,7 @@ const playlistStore = usePlaylistStore()
 
 const theme = computed(() => (ui.isDarkMode ? darkTheme : null))
 
-const themeOverrides: GlobalThemeOverrides = {
-  common: {
-    primaryColor: '#0066cc',
-    primaryColorHover: '#0077ee',
-    primaryColorPressed: '#0052a3',
-  },
-}
+const overrides = computed(() => themeOverrides[ui.isDarkMode ? 'dark' : 'light'])
 
 function syncThemeAttribute() {
   document.documentElement.dataset.theme = ui.isDarkMode ? 'dark' : 'light'
@@ -40,7 +35,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <NConfigProvider :theme="theme" :theme-overrides="themeOverrides">
+  <NConfigProvider :theme="theme" :theme-overrides="overrides">
     <NMessageProvider>
       <NNotificationProvider>
         <AppLayout />
@@ -50,45 +45,6 @@ onMounted(() => {
 </template>
 
 <style>
-/* App-level CSS custom properties for dark mode support.
-   Naive UI --n-* vars are scoped to its component subtrees;
-   these --app-* vars are globally available via :root. */
-:root {
-  --app-bg: #ffffff;
-  --app-text: #1a1a1a;
-  --app-surface: #ffffff;
-  --app-border: #e0e0e0;
-  --app-hover: rgba(0, 0, 0, 0.04);
-  --app-active-bg: rgba(0, 102, 204, 0.08);
-  --app-placeholder-bg: #f0f0f0;
-  --app-danger: #dc2626;
-  --app-danger-bg: rgba(220, 38, 38, 0.08);
-  --app-success: #18a058;
-  --app-error: #d03050;
-  --app-shadow: rgba(0, 0, 0, 0.1);
-  --app-scrollbar-track: rgba(0, 0, 0, 0.06);
-  --app-scrollbar-thumb: rgba(0, 0, 0, 0.28);
-  --app-scrollbar-thumb-hover: rgba(0, 0, 0, 0.42);
-}
-
-[data-theme='dark'] {
-  --app-bg: #18181c;
-  --app-text: #e0e0e6;
-  --app-surface: #1e1e22;
-  --app-border: #333338;
-  --app-hover: rgba(255, 255, 255, 0.06);
-  --app-active-bg: rgba(0, 102, 204, 0.18);
-  --app-placeholder-bg: #2a2a2e;
-  --app-danger: #f87171;
-  --app-danger-bg: rgba(248, 113, 113, 0.12);
-  --app-success: #36d399;
-  --app-error: #f87171;
-  --app-shadow: rgba(0, 0, 0, 0.3);
-  --app-scrollbar-track: rgba(255, 255, 255, 0.08);
-  --app-scrollbar-thumb: rgba(255, 255, 255, 0.3);
-  --app-scrollbar-thumb-hover: rgba(255, 255, 255, 0.46);
-}
-
 /* Global reset and base styles */
 *,
 *::before,

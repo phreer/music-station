@@ -25,6 +25,7 @@ const naiveMenuOptions = computed(() =>
 
 const activeKey = computed(() => {
   const name = route.name as string | undefined
+  if (name?.endsWith('-detail')) return name.slice(0, -7) + 's'
   return name ?? 'tracks'
 })
 
@@ -34,7 +35,7 @@ function handleSelect(key: string) {
 </script>
 
 <template>
-  <nav :class="$style.nav">
+  <nav :class="$style.nav" aria-label="Library">
     <NMenu
       mode="horizontal"
       :value="activeKey"
@@ -47,5 +48,19 @@ function handleSelect(key: string) {
 <style module>
 .nav {
   border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar { display: none; }
+
+.nav :global(.n-menu) { min-width: max-content; }
+.nav :global(.n-menu-item-content) { border-radius: 8px; }
+.nav :global(.n-menu-item-content--selected) { background: var(--app-active-bg); }
+
+@media (max-width: 600px) {
+  .nav { padding-inline: 8px; }
 }
 </style>

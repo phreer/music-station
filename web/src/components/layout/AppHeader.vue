@@ -12,7 +12,7 @@ const ui = useUiStore()
       <img src="/favicon.png" :class="$style.logo" alt="FL Music" />
       <h1 :class="$style.title">FL Music</h1>
     </div>
-    <NButton quaternary circle @click="ui.toggleTheme">
+    <NButton quaternary circle :aria-label="ui.isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'" @click="ui.toggleTheme">
       <template #icon>
         <Moon v-if="ui.isDarkMode" :size="18" />
         <Sun v-else :size="18" />
@@ -26,8 +26,9 @@ const ui = useUiStore()
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
-  border-bottom: 1px solid var(--app-border);
+  min-height: 56px;
+  padding: 8px 24px;
+  background: var(--app-surface);
 }
 
 .titleGroup {
@@ -43,11 +44,13 @@ const ui = useUiStore()
 }
 
 .title {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
-  background: linear-gradient(135deg, #0066cc, #00a8e8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.025em;
+  color: var(--app-text);
+}
+
+@media (max-width: 600px) {
+  .header { padding-inline: 16px; }
 }
 </style>
