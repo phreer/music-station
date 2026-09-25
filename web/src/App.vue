@@ -25,10 +25,10 @@ function syncThemeAttribute() {
   document.documentElement.dataset.theme = ui.isDarkMode ? 'dark' : 'light'
 }
 
+syncThemeAttribute()
 watch(() => ui.isDarkMode, syncThemeAttribute)
 
 onMounted(() => {
-  syncThemeAttribute()
   library.loadTracks()
   playlistStore.loadPlaylists()
 })

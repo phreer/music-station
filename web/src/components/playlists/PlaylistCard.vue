@@ -64,7 +64,8 @@ async function handleRemoveTrack(trackId: string) {
 
 <template>
   <NCard :class="$style.card" hoverable>
-    <div :class="$style.coverWrapper" tabindex="0" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name}`" @click="expanded = !expanded" @keydown.enter.self="expanded = !expanded" @keydown.space.self.prevent="expanded = !expanded">
+    <div :class="$style.coverWrapper">
+      <button :class="$style.coverExpand" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name}`" :aria-expanded="expanded" @click="expanded = !expanded">
       <!-- Cover grid (up to 4 images) -->
       <div v-if="coverTrackIds.length > 0" :class="$style.coverGrid">
         <img
@@ -77,6 +78,7 @@ async function handleRemoveTrack(trackId: string) {
         />
       </div>
       <div v-else :class="$style.coverPlaceholder">&#9835;</div>
+      </button>
       <div :class="$style.overlay">
         <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playPlaylist" title="Play playlist">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
@@ -146,6 +148,8 @@ async function handleRemoveTrack(trackId: string) {
   position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
   border-radius: 10px; margin-bottom: 12px;
 }
+.coverExpand { display: block; width: 100%; height: 100%; border: 0; padding: 0; cursor: pointer; background: transparent; color: inherit; }
+.coverWrapper:focus-within { outline: 2px solid var(--app-focus-ring); outline-offset: 2px; }
 .coverGrid {
   width: 100%; height: 100%; display: grid;
   grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px;
@@ -158,7 +162,9 @@ async function handleRemoveTrack(trackId: string) {
 .overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   gap: 12px; background: linear-gradient(transparent, rgba(0,0,0,0.5)); opacity: 0; transition: opacity 0.2s;
+  pointer-events: none;
 }
+.overlay button { pointer-events: auto; }
 .coverWrapper:hover .overlay, .coverWrapper:focus-within .overlay { opacity: 1; }
 
 .iconBtn {
