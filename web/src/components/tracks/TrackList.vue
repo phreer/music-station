@@ -279,17 +279,42 @@ onBeforeUnmount(() => {
       :max-height="'calc(100vh - 250px)'"
       virtual-scroll
       size="small"
-      striped
     />
     <AddToPlaylistModal v-model:show="showAddToPlaylist" :track="addToPlaylistTrack" />
   </div>
 </template>
 
 <style>
+.track-list-wrapper {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+
+.track-list-wrapper .n-data-table-th {
+  background: var(--app-surface);
+  color: var(--app-text-muted);
+  font-weight: 600;
+}
+
+.track-list-wrapper .n-data-table-td {
+  border-bottom-color: var(--app-border);
+}
+
+.track-list-wrapper .n-data-table-tr:hover .n-data-table-td {
+  background: var(--app-hover);
+}
+
+.track-row-playing .n-data-table-td,
+.track-row-playing:hover .n-data-table-td {
+  background: var(--app-active-bg) !important;
+}
+
 /* Current-track highlighting via row class (decoupled from columns computed) */
 .track-row-playing .track-title-text {
   font-weight: 600;
-  color: var(--n-primary-color);
+  color: var(--app-primary);
 }
 
 .track-list-wrapper--scrollable .n-data-table-base-table-body {
@@ -385,7 +410,7 @@ onBeforeUnmount(() => {
 
 .track-artist-text {
   font-size: 12px;
-  opacity: 0.6;
+  color: var(--app-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -432,5 +457,11 @@ onBeforeUnmount(() => {
 
 .track-action-btn:active {
   background: rgba(128, 128, 128, 0.25);
+}
+
+.track-action-btn:focus-visible { opacity: 1; }
+
+@media (hover: none) {
+  .track-action-btn { opacity: 1; }
 }
 </style>

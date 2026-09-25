@@ -24,6 +24,7 @@ const library = useLibraryStore()
 const router = useRouter()
 
 const expanded = ref(false)
+const failedCoverIds = ref(new Set<string>())
 
 const tracks = computed(() =>
   props.playlist.tracks
@@ -33,8 +34,12 @@ const tracks = computed(() =>
 
 // Up to 4 cover images for the grid
 const coverTrackIds = computed(() =>
-  tracks.value.filter((t) => t.has_cover).slice(0, 4).map((t) => t.id),
+  tracks.value.filter((t) => t.has_cover && !failedCoverIds.value.has(t.id)).slice(0, 4).map((t) => t.id),
 )
+
+function markCoverFailed(id: string) {
+  failedCoverIds.value = new Set([...failedCoverIds.value, id])
+}
 
 const totalDuration = computed(() =>
   tracks.value.reduce((sum, t) => sum + (t.duration_secs ?? 0), 0),
@@ -61,7 +66,7 @@ async function handleRemoveTrack(trackId: string) {
 
 <template>
   <NCard :class="$style.card" hoverable>
-    <div :class="$style.coverWrapper" @click="expanded = !expanded">
+    <div :class="$style.coverWrapper" tabindex="0" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name}`" @click="expanded = !expanded" @keydown.enter.self="expanded = !expanded" @keydown.space.self.prevent="expanded = !expanded">
       <!-- Cover grid (up to 4 images) -->
       <div v-if="coverTrackIds.length > 0" :class="$style.coverGrid">
         <img
@@ -70,6 +75,7 @@ async function handleRemoveTrack(trackId: string) {
           :src="coverUrl(id)"
           :class="$style.coverGridImg"
           loading="lazy"
+          @error="markCoverFailed(id)"
         />
       </div>
       <div v-else :class="$style.coverPlaceholder">&#9835;</div>
@@ -135,11 +141,12 @@ async function handleRemoveTrack(trackId: string) {
 </template>
 
 <style module>
-.card { overflow: hidden; }
+.card { overflow: hidden; border-color: var(--app-border); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--app-shadow); }
 
 .coverWrapper {
   position: relative; aspect-ratio: 1; overflow: hidden; cursor: pointer;
-  border-radius: 6px; margin-bottom: 10px;
+  border-radius: 10px; margin-bottom: 12px;
 }
 .coverGrid {
   width: 100%; height: 100%; display: grid;
@@ -148,13 +155,13 @@ async function handleRemoveTrack(trackId: string) {
 .coverGridImg { width: 100%; height: 100%; object-fit: cover; }
 .coverPlaceholder {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #1a2332, #2a3f55); font-size: 48px; opacity: 0.3;
+  background: var(--app-placeholder-bg); color: var(--app-text-muted); font-size: 48px;
 }
 .overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  gap: 12px; background: rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.2s;
+  gap: 12px; background: linear-gradient(transparent, rgba(0,0,0,0.5)); opacity: 0; transition: opacity 0.2s;
 }
-.coverWrapper:hover .overlay { opacity: 1; }
+.coverWrapper:hover .overlay, .coverWrapper:focus-within .overlay { opacity: 1; }
 
 .iconBtn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -164,14 +171,14 @@ async function handleRemoveTrack(trackId: string) {
   transition: background 0.15s, transform 0.1s;
 }
 .iconBtn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
-.iconBtnPrimary { background: var(--n-primary-color, #0066cc); }
-.iconBtnPrimary:hover { background: var(--n-primary-color-hover, #0077ee); }
+.iconBtnPrimary { background: var(--app-primary); }
+.iconBtnPrimary:hover { background: var(--app-primary-hover); }
 
 .info { padding: 0 2px; }
-.playlistName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playlistName { font-weight: 600; font-size: 14px; line-height: 1.4; min-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .playlistNameLink { cursor: pointer; }
-.playlistNameLink:hover { color: var(--n-primary-color, #0066cc); text-decoration: underline; }
-.playlistMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playlistNameLink:hover { color: var(--app-primary); text-decoration: underline; }
+.playlistMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .cardFooter { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
 
@@ -195,7 +202,7 @@ async function handleRemoveTrack(trackId: string) {
   cursor: pointer; border-radius: 4px; font-size: 13px; transition: background 0.15s;
 }
 .trackRow:hover { background: var(--app-hover); }
-.trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
+.trackRowActive { color: var(--app-primary); font-weight: 600; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackArtist { flex: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.5; font-size: 11px; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
@@ -210,4 +217,9 @@ async function handleRemoveTrack(trackId: string) {
 .trackRow:hover :global(.track-favorite-button) { opacity: 0.5; }
 .trackRow:hover .trackRemoveBtn { opacity: 0.5; }
 .trackRemoveBtn:hover { opacity: 1 !important; background: var(--app-danger-bg); color: var(--app-danger); }
+@media (hover: none) {
+  .coverWrapper .overlay { opacity: 1; }
+  .card:hover { transform: none; }
+  .trackRemoveBtn, .trackRow :global(.track-favorite-button) { opacity: 0.7; }
+}
 </style>

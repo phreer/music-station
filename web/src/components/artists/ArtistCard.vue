@@ -20,6 +20,7 @@ const library = useLibraryStore()
 const favorites = useFavoritesStore()
 
 const expanded = ref(false)
+const coverFailed = ref(false)
 const activeTab = ref<'albums' | 'tracks'>('albums')
 
 const artistTracks = computed(() =>
@@ -48,13 +49,14 @@ function playAlbum(albumName: string) {
 
 <template>
   <NCard :class="$style.card" hoverable>
-    <div :class="$style.header" @click="expanded = !expanded">
+    <div :class="$style.header" tabindex="0" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${artist.name}`" @click="expanded = !expanded" @keydown.enter.self="expanded = !expanded" @keydown.space.self.prevent="expanded = !expanded">
       <div :class="$style.avatar">
         <img
-          v-if="coverTrack"
+          v-if="coverTrack && !coverFailed"
           :src="coverUrl(coverTrack.id)"
           :class="$style.avatarImg"
           loading="lazy"
+          @error="coverFailed = true"
         />
         <div v-else :class="$style.avatarPlaceholder">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
@@ -145,7 +147,8 @@ function playAlbum(albumName: string) {
 </template>
 
 <style module>
-.card { overflow: hidden; }
+.card { overflow: hidden; border-color: var(--app-border); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--app-shadow); }
 
 .header { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 0; }
 
@@ -153,14 +156,14 @@ function playAlbum(albumName: string) {
 .avatarImg { width: 100%; height: 100%; object-fit: cover; }
 .avatarPlaceholder {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #1a2332, #0f1419); opacity: 0.5;
+  background: var(--app-placeholder-bg); color: var(--app-text-muted);
 }
 
 .info { flex: 1; min-width: 0; }
 .name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nameLink { cursor: pointer; }
 .nameLink:hover { text-decoration: underline; opacity: 0.8; }
-.meta { font-size: 12px; opacity: 0.6; margin-top: 2px; }
+.meta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; }
 
 .actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
@@ -172,6 +175,7 @@ function playAlbum(albumName: string) {
   opacity: 0.6; transition: opacity 0.15s, background 0.15s;
 }
 .actionBtn:hover { opacity: 1; background: rgba(128,128,128,0.12); }
+@media (hover: none) { .card:hover { transform: none; } .actionBtn { opacity: 1; } }
 
 .heartBtn { color: var(--n-text-color, inherit); }
 .heartBtn:hover { color: #e05c7a; }

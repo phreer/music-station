@@ -90,5 +90,10 @@ onMounted(() => {
 .heading {
   font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+@media (max-width: 600px) {
+  .container { padding: 16px; }
 }
 </style>

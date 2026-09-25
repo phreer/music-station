@@ -27,6 +27,7 @@ function refresh() {
 <template>
   <div :class="$style.container">
     <div :class="$style.toolbar">
+      <h2 :class="$style.heading">Tracks</h2>
       <NInput
         v-model:value="localSearchQuery"
         placeholder="Search tracks..."
@@ -59,24 +60,33 @@ function refresh() {
 
 <style module>
 .container {
-  padding: 16px 24px;
+  padding: 24px;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 
+.heading { font-size: 22px; font-weight: 700; letter-spacing: -0.025em; }
+
 .searchInput {
-  max-width: 400px;
+  width: min(400px, 100%);
 }
 
 .trackCount {
   font-size: 13px;
-  opacity: 0.6;
+  color: var(--app-text-muted);
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .container { padding: 16px; }
+  .heading { width: 100%; }
+  .searchInput { flex: 1 1 100%; }
 }
 
 .error {

@@ -58,11 +58,19 @@ onMounted(() => store.loadAlbums())
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .heading {
   font-size: 22px;
   font-weight: 700;
+  letter-spacing: -0.025em;
   flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .container { padding: 16px; }
+  .heading { width: 100%; }
+  .searchInput { flex: 1 1 100%; max-width: none; }
 }
 .searchInput {
   max-width: 320px;

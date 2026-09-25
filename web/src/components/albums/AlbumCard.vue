@@ -17,6 +17,7 @@ const queue = useQueueStore()
 const library = useLibraryStore()
 
 const expanded = ref(false)
+const coverFailed = ref(false)
 
 // Use tracks from album directly (already populated by /albums endpoint)
 const tracks = computed<Track[]>(() => {
@@ -56,12 +57,13 @@ function playTrack(track: Track) {
 
 <template>
   <NCard :class="$style.card" hoverable>
-    <div :class="$style.coverWrapper" @click="expanded = !expanded">
+    <div :class="$style.coverWrapper" tabindex="0" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name}`" @click="expanded = !expanded" @keydown.enter.self="expanded = !expanded" @keydown.space.self.prevent="expanded = !expanded">
       <img
-        v-if="coverTrack"
+        v-if="coverTrack && !coverFailed"
         :src="coverUrl(coverTrack.id)"
         :class="$style.coverImg"
         loading="lazy"
+        @error="coverFailed = true"
       />
       <div v-else :class="$style.coverPlaceholder">&#9834;</div>
       <div :class="$style.overlay">
@@ -118,29 +120,32 @@ function playTrack(track: Track) {
 </template>
 
 <style module>
-.card { overflow: hidden; }
+.card { overflow: hidden; border-color: var(--app-border); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--app-shadow); }
 
 .coverWrapper {
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
   cursor: pointer;
-  border-radius: 6px;
-  margin-bottom: 10px;
+  border-radius: 10px;
+  margin-bottom: 12px;
 }
-.coverImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coverImg { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s ease; }
+.coverWrapper:hover .coverImg { transform: scale(1.02); }
 .coverPlaceholder {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #1a2332, #0f1419);
-  font-size: 48px; opacity: 0.3;
+  background: var(--app-placeholder-bg);
+  color: var(--app-text-muted);
+  font-size: 48px;
 }
 .overlay {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center; gap: 12px;
-  background: rgba(0,0,0,0.5);
+  background: linear-gradient(transparent, rgba(0,0,0,0.5));
   opacity: 0; transition: opacity 0.2s;
 }
-.coverWrapper:hover .overlay { opacity: 1; }
+.coverWrapper:hover .overlay, .coverWrapper:focus-within .overlay { opacity: 1; }
 
 .iconBtn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -150,14 +155,14 @@ function playTrack(track: Track) {
   transition: background 0.15s, transform 0.1s;
 }
 .iconBtn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
-.iconBtnPrimary { background: var(--n-primary-color, #0066cc); }
-.iconBtnPrimary:hover { background: var(--n-primary-color-hover, #0077ee); }
+.iconBtnPrimary { background: var(--app-primary); }
+.iconBtnPrimary:hover { background: var(--app-primary-hover); }
 
 .info { padding: 0 2px; }
-.albumName { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumName { font-weight: 600; font-size: 14px; line-height: 1.4; min-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .albumNameLink { cursor: pointer; }
 .albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
-.albumMeta { font-size: 12px; opacity: 0.6; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .albumMetaLink { cursor: pointer; }
 .albumMetaLink:hover { text-decoration: underline; opacity: 0.8; }
 
@@ -176,7 +181,7 @@ function playTrack(track: Track) {
   font-size: 13px; transition: background 0.15s;
 }
 .trackRow:hover { background: var(--app-hover); }
-.trackRowActive { color: var(--n-primary-color, #0066cc); font-weight: 600; }
+.trackRowActive { color: var(--app-primary); font-weight: 600; }
 .trackNum { width: 20px; text-align: right; opacity: 0.4; font-size: 11px; flex-shrink: 0; }
 .trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
@@ -187,8 +192,13 @@ function playTrack(track: Track) {
   background: transparent; color: inherit; cursor: pointer; padding: 0;
   opacity: 0; transition: opacity 0.15s, background 0.15s;
 }
-.trackRow:hover .trackAddBtn { opacity: 0.5; }
+.trackRow:hover .trackAddBtn, .trackRow:focus-within .trackAddBtn { opacity: 0.7; }
 .trackAddBtn:hover { opacity: 1 !important; background: rgba(128,128,128,0.15); }
+@media (hover: none) {
+  .coverWrapper .overlay { opacity: 1; }
+  .card:hover { transform: none; }
+  .trackAddBtn { opacity: 0.7; }
+}
 </style>
 
 <style>
