@@ -27,7 +27,11 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 <template>
   <div
     :class="[$style.item, isActive && $style.itemActive]"
+    tabindex="0"
+    :aria-label="`Play ${track?.title || 'Unknown'}`"
     @click="emit('play')"
+    @keydown.enter.self="emit('play')"
+    @keydown.space.self.prevent="emit('play')"
   >
     <div :class="$style.itemCover">
       <img
@@ -70,7 +74,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 
 .itemActive {
   background: var(--app-active-bg);
-  border-left: 3px solid var(--n-primary-color, #0066cc);
+  border-left: 3px solid var(--app-primary);
 }
 
 .itemCover {
@@ -113,7 +117,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 
 .itemArtist {
   font-size: 11px;
-  opacity: 0.6;
+  color: var(--app-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -149,12 +153,20 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 }
 
 .item:hover .removeBtn,
-.item:hover :global(.track-favorite-button) {
+.item:focus-within .removeBtn,
+.item:hover :global(.track-favorite-button),
+.item:focus-within :global(.track-favorite-button) {
   opacity: 0.6;
+}
+
+@media (hover: none) {
+  .item .removeBtn, .item :global(.track-favorite-button) { opacity: 0.7; }
 }
 
 .removeBtn:hover {
   opacity: 1 !important;
   background: rgba(128, 128, 128, 0.15);
 }
+
+.removeBtn:focus-visible { opacity: 1; }
 </style>

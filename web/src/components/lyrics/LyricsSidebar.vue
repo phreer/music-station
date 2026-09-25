@@ -19,13 +19,13 @@ watch(
     if (idx < 0 || !listRef.value) return
     await nextTick()
     const el = listRef.value.querySelector(`[data-idx="${idx}"]`) as HTMLElement | null
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' })
   },
 )
 </script>
 
 <template>
-  <div :class="$style.sidebar">
+  <div :class="[$style.sidebar, ui.lyricsPanelSide === 'left' && $style.sidebarLeft]">
     <div :class="$style.header">
       <span :class="$style.title">
         <Music2 :size="14" style="margin-right: 6px; vertical-align: middle" />
@@ -84,7 +84,7 @@ watch(
       :class="$style.body"
       :style="{
         '--lyrics-font-size': `${ui.lyricsFontSize}px`,
-        '--lyrics-active-font-size': `${ui.lyricsFontSize + 2}px`,
+        '--lyrics-active-font-size': `${ui.lyricsFontSize}px`,
       }"
     >
       <NSpin v-if="lyrics.isLoading" :class="$style.spinner" />
@@ -156,8 +156,10 @@ watch(
   height: 100%;
   overflow: hidden;
   border-left: 1px solid var(--app-border);
-  background: var(--app-surface);
+  background: var(--app-surface-raised);
 }
+
+.sidebarLeft { border-left: 0; border-right: 1px solid var(--app-border); }
 
 .header {
   display: flex;
@@ -177,7 +179,7 @@ watch(
 .title {
   font-size: 13px;
   font-weight: 600;
-  opacity: 0.7;
+  color: var(--app-text-muted);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
@@ -185,7 +187,7 @@ watch(
 .body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 10px;
+  padding: 24px 14px;
   scroll-behavior: smooth;
 }
 
@@ -210,7 +212,7 @@ watch(
 .lineList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .line {
@@ -218,21 +220,20 @@ watch(
   line-height: 1.6;
   text-align: center;
   padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  opacity: 0.4;
+  border-radius: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+  color: var(--app-text-muted);
   cursor: default;
 }
 
 .linePast {
-  opacity: 0.35;
+  opacity: 0.65;
 }
 
 .lineActive {
-  opacity: 1;
   font-size: var(--lyrics-active-font-size, 19px);
   font-weight: 600;
-  color: var(--n-primary-color, #0066cc);
+  color: var(--app-primary);
   background: var(--app-active-bg);
 }
 
@@ -241,7 +242,7 @@ watch(
 }
 
 .wordActive {
-  color: var(--n-primary-color, #0066cc);
+  color: var(--app-primary);
   font-weight: 700;
 }
 </style>

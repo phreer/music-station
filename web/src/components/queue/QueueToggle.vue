@@ -9,7 +9,7 @@ const queue = useQueueStore()
 <template>
   <div v-show="!queue.isEmpty" :class="$style.toggle">
     <NBadge :value="queue.queue.length" :max="99" :offset="[-4, 4]">
-      <NButton circle type="primary" size="large" :aria-label="queue.isVisible ? 'Hide play queue' : 'Show play queue'" @click="queue.toggleVisible">
+      <NButton id="queue-toggle-button" circle type="primary" size="large" :aria-label="queue.isVisible ? 'Hide play queue' : 'Show play queue'" @click="queue.toggleVisible">
         <template #icon><ListMusic :size="20" /></template>
       </NButton>
     </NBadge>

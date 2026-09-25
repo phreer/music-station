@@ -4,10 +4,23 @@ import { useQueueStore } from '@/stores/queue'
 import { usePlayerStore } from '@/stores/player'
 import { formatDuration } from '@/utils/format'
 import { computed } from 'vue'
+import { onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import QueueItem from './QueueItem.vue'
 
 const queue = useQueueStore()
 const player = usePlayerStore()
+
+function handleEscape(event: KeyboardEvent) {
+  if (event.key === 'Escape' && queue.isVisible) queue.toggleVisible()
+}
+
+onMounted(() => window.addEventListener('keydown', handleEscape))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
+watch(() => queue.isVisible, async (visible) => {
+  if (visible) return
+  await nextTick()
+  document.getElementById('queue-toggle-button')?.focus()
+})
 
 const totalDuration = computed(() => {
   return queue.queueTracks.reduce((sum, t) => sum + (t.duration_secs ?? 0), 0)
@@ -100,6 +113,7 @@ function remove(index: number) {
 .title {
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .headerActions {
@@ -159,7 +173,7 @@ function remove(index: number) {
   justify-content: space-between;
   padding: 8px 16px;
   font-size: 12px;
-  opacity: 0.6;
+  color: var(--app-text-muted);
   border-bottom: 1px solid var(--app-border);
 }
 

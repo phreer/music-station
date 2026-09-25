@@ -131,6 +131,7 @@ onBeforeUnmount(() => {
   min-height: 0;
   display: flex;
   overflow: hidden;
+  position: relative;
 }
 
 .main {
@@ -198,7 +199,7 @@ onBeforeUnmount(() => {
 
 .resizeHandle:hover::before {
   opacity: 1;
-  background: var(--n-primary-color, #0066cc);
+  background: var(--app-primary);
 }
 
 .resizeHandleLeft {
@@ -207,6 +208,19 @@ onBeforeUnmount(() => {
 
 .resizeHandleRight {
   order: -1;
+}
+
+@media (max-width: 700px) {
+  .lyricsSidebarShell {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 20;
+    width: min(380px, 100%) !important;
+    max-width: 100%;
+    box-shadow: -8px 0 24px var(--app-shadow);
+  }
+  .lyricsSidebarLeft { right: auto; left: 0; }
+  .resizeHandle { display: none; }
 }
 </style>
 
