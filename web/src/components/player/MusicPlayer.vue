@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { NSlider, NButton, NConfigProvider, darkTheme } from 'naive-ui'
+import { NSlider, NButton } from 'naive-ui'
 import {
   Play,
   Pause,
@@ -63,7 +63,6 @@ function handleSeek(value: number) {
 </script>
 
 <template>
-  <NConfigProvider :theme="darkTheme" abstract>
   <div v-show="player.currentTrack" :class="$style.player">
     <!-- Track Info -->
     <div :class="$style.info">
@@ -136,19 +135,19 @@ function handleSeek(value: number) {
     <!-- Controls -->
     <div :class="$style.center">
       <div :class="$style.controls">
-        <NButton quaternary circle size="small" @click="player.playPrevious">
+        <NButton quaternary circle size="small" aria-label="Previous track" @click="player.playPrevious">
           <template #icon><SkipBack :size="16" /></template>
         </NButton>
-        <NButton quaternary circle @click="player.togglePlayPause">
+        <NButton circle type="primary" :class="$style.playButton" :aria-label="player.isPlaying ? 'Pause' : 'Play'" @click="player.togglePlayPause">
           <template #icon>
             <Pause v-if="player.isPlaying" :size="20" />
             <Play v-else :size="20" />
           </template>
         </NButton>
-        <NButton quaternary circle size="small" @click="player.playNext">
+        <NButton quaternary circle size="small" aria-label="Next track" @click="player.playNext">
           <template #icon><SkipForward :size="16" /></template>
         </NButton>
-        <NButton quaternary circle size="small" @click="player.stop">
+        <NButton quaternary circle size="small" aria-label="Stop" @click="player.stop">
           <template #icon><Square :size="14" /></template>
         </NButton>
       </div>
@@ -182,7 +181,6 @@ function handleSeek(value: number) {
 
     <audio ref="audioRef" />
   </div>
-  </NConfigProvider>
 
   <!-- Lyrics Modal -->
   <LyricsModal v-model:show="showLyricsModal" :track="player.currentTrack" />
@@ -192,24 +190,26 @@ function handleSeek(value: number) {
 
 <style module>
 .player {
-  height: 80px;
+  min-height: 80px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  gap: 24px;
-  background: linear-gradient(135deg, #1a2332, #0f1419);
-  color: #e8f4f8;
+  padding: 10px 20px;
+  gap: 18px;
+  background: var(--app-surface-raised);
+  color: var(--app-text);
   z-index: 100;
-  border-top: 2px solid var(--n-primary-color, #0066cc);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px var(--app-shadow);
 }
 
 .info {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: 280px;
-  flex-shrink: 0;
+  flex: 1 1 270px;
+  min-width: 0;
 }
 
 .trackActions {
@@ -222,7 +222,7 @@ function handleSeek(value: number) {
 .cover {
   width: 48px;
   height: 48px;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -239,13 +239,14 @@ function handleSeek(value: number) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--app-placeholder-bg);
   font-size: 20px;
-  opacity: 0.5;
+  color: var(--app-text-muted);
 }
 
 .trackInfo {
   min-width: 0;
+  flex: 1;
 }
 
 .trackTitle {
@@ -258,7 +259,7 @@ function handleSeek(value: number) {
 
 .trackArtist {
   font-size: 12px;
-  opacity: 0.7;
+  color: var(--app-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -278,7 +279,8 @@ function handleSeek(value: number) {
 }
 
 .center {
-  flex: 1;
+  flex: 2 1 360px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -291,6 +293,8 @@ function handleSeek(value: number) {
   gap: 8px;
 }
 
+.playButton { width: 40px; height: 40px; }
+
 .progress {
   display: flex;
   align-items: center;
@@ -301,11 +305,12 @@ function handleSeek(value: number) {
 
 .progressSlider {
   flex: 1;
+  min-width: 0;
 }
 
 .time {
   font-size: 11px;
-  opacity: 0.7;
+  color: var(--app-text-muted);
   font-variant-numeric: tabular-nums;
   width: 40px;
   text-align: center;
@@ -317,10 +322,26 @@ function handleSeek(value: number) {
   gap: 8px;
   width: 150px;
   flex-shrink: 0;
-  opacity: 0.7;
+  color: var(--app-text-muted);
 }
 
 .volumeSlider {
   flex: 1;
+}
+
+@media (max-width: 900px) {
+  .player { flex-wrap: wrap; gap: 4px 16px; padding: 10px 14px; }
+  .info { flex: 1 1 calc(100% - 170px); }
+  .center { order: 2; flex: 1 1 100%; }
+  .volume { flex: 0 0 130px; }
+}
+
+@media (max-width: 520px) {
+  .player { gap: 6px 10px; }
+  .info { flex-basis: calc(100% - 125px); gap: 8px; }
+  .cover { width: 42px; height: 42px; }
+  .trackActions { gap: 0; }
+  .volume { width: 110px; flex-basis: 110px; }
+  .progress { gap: 4px; }
 }
 </style>

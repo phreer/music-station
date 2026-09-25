@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppNav from './AppNav.vue'
 import MusicPlayer from '@/components/player/MusicPlayer.vue'
@@ -13,6 +13,24 @@ import { useUiStore } from '@/stores/ui'
 const lyrics = useLyricsStore()
 const player = usePlayerStore()
 const ui = useUiStore()
+const playerShell = ref<HTMLElement | null>(null)
+const playerHeight = ref(0)
+let playerObserver: ResizeObserver | null = null
+
+function updatePlayerHeight() {
+  playerHeight.value = player.currentTrack ? (playerShell.value?.getBoundingClientRect().height ?? 0) : 0
+}
+
+onMounted(() => {
+  playerObserver = new ResizeObserver(updatePlayerHeight)
+  if (playerShell.value) playerObserver.observe(playerShell.value)
+  updatePlayerHeight()
+})
+
+watch(() => player.currentTrack, async () => {
+  await nextTick()
+  updatePlayerHeight()
+})
 
 const showLeftSidebar = computed(
   () => ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack,
@@ -51,11 +69,12 @@ function stopResize(event?: PointerEvent) {
 
 onBeforeUnmount(() => {
   stopResize()
+  playerObserver?.disconnect()
 })
 </script>
 
 <template>
-  <div :class="$style.layout">
+  <div :class="$style.layout" :style="{ '--app-player-height': `${playerHeight}px` }">
     <AppHeader />
     <AppNav />
     <div :class="$style.body">
@@ -91,7 +110,9 @@ onBeforeUnmount(() => {
         </div>
       </Transition>
     </div>
-    <MusicPlayer />
+    <div v-show="player.currentTrack" ref="playerShell" :class="$style.playerShell">
+      <MusicPlayer />
+    </div>
     <QueuePanel />
     <QueueToggle />
   </div>
@@ -121,6 +142,15 @@ onBeforeUnmount(() => {
 
 .main::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Edge */
+}
+
+.playerShell {
+  flex-shrink: 0;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+}
+
+@media (max-width: 600px) {
+  .playerShell { padding-inline: 8px; }
 }
 
 .lyricsSidebarShell {

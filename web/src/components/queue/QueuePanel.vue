@@ -78,14 +78,15 @@ function remove(index: number) {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 80px;
-  width: 350px;
+  bottom: calc(var(--app-player-height) + 8px);
+  width: min(350px, calc(100vw - 16px));
   display: flex;
   flex-direction: column;
-  background: var(--app-surface);
-  border-left: 1px solid var(--app-border);
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-border);
+  border-radius: 14px 0 0 14px;
   z-index: 90;
-  box-shadow: -4px 0 20px var(--app-shadow);
+  box-shadow: -4px 8px 24px var(--app-shadow);
 }
 
 .header {
