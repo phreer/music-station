@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NEmpty, NButton, NInput } from 'naive-ui'
 import { RefreshCw, Search, Heart } from 'lucide-vue-next'
@@ -24,14 +25,13 @@ onMounted(() => store.loadArtists())
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.toolbar">
-      <h2 :class="$style.heading">Artists</h2>
+  <div class="library-page">
+    <LibraryPageHeader title="Artists" :description="`${filteredArtists.length.toLocaleString()} artists in your library`">
       <NInput
         v-model:value="searchQuery"
-        placeholder="Search artists..."
+        placeholder="Search artists"
         clearable
-        :class="$style.searchInput"
+        class="library-search"
       >
         <template #prefix>
           <Search :size="16" />
@@ -47,13 +47,10 @@ onMounted(() => store.loadArtists())
         <template #icon><Heart :size="14" /></template>
         {{ favoriteCount }}
       </NButton>
-      <span :class="$style.count">
-        {{ filteredArtists.length }} / {{ store.allArtists.length }}
-      </span>
-      <NButton quaternary circle @click="store.refresh" :loading="store.isLoading">
+      <NButton quaternary circle aria-label="Refresh artists" @click="store.refresh" :loading="store.isLoading">
         <template #icon><RefreshCw :size="16" /></template>
       </NButton>
-    </div>
+    </LibraryPageHeader>
     <NSpin :show="store.isLoading">
       <NEmpty v-if="!store.isLoading && filteredArtists.length === 0" description="No artists found" style="padding: 60px 0" />
       <ArtistGrid v-else :artists="filteredArtists" />
@@ -62,39 +59,5 @@ onMounted(() => store.loadArtists())
 </template>
 
 <style module>
-.container {
-  padding: 24px;
-}
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.heading {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  flex-shrink: 0;
-}
-
-@media (max-width: 600px) {
-  .container { padding: 16px; }
-  .heading { width: 100%; }
-  .searchInput { flex: 1 1 100%; max-width: none; }
-}
-.searchInput {
-  max-width: 320px;
-  flex: 1;
-}
-.favBtn {
-  flex-shrink: 0;
-}
-.count {
-  font-size: 13px;
-  opacity: 0.6;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
+.favBtn { flex-shrink: 0; }
 </style>

@@ -1,56 +1,42 @@
 <script setup lang="ts">
 import { NButton } from 'naive-ui'
-import { Sun, Moon } from 'lucide-vue-next'
+import { Sun, Moon, AudioLines } from 'lucide-vue-next'
 import { useUiStore } from '@/stores/ui'
+import AppNav from './AppNav.vue'
 
 const ui = useUiStore()
 </script>
 
 <template>
   <header :class="$style.header">
-    <div :class="$style.titleGroup">
-      <img src="/favicon.png" :class="$style.logo" alt="FL Music" />
-      <h1 :class="$style.title">FL Music</h1>
-    </div>
-    <NButton quaternary circle :aria-label="ui.isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'" @click="ui.toggleTheme">
+    <RouterLink :to="{ name: 'tracks' }" :class="$style.brand" aria-label="FL Music library">
+      <span :class="$style.mark"><AudioLines :size="21" :stroke-width="1.8" /></span>
+      <span>FL Music<span :class="$style.brandDot">.</span></span>
+    </RouterLink>
+    <div :class="$style.navigation"><AppNav /></div>
+    <NButton quaternary circle :class="$style.themeToggle" :aria-label="ui.isDarkMode ? 'Switch to light theme' : 'Switch to dark theme'" @click="ui.toggleTheme">
       <template #icon>
-        <Moon v-if="ui.isDarkMode" :size="18" />
-        <Sun v-else :size="18" />
+        <Sun v-if="ui.isDarkMode" :size="18" />
+        <Moon v-else :size="18" />
       </template>
     </NButton>
   </header>
 </template>
 
 <style module>
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 56px;
-  padding: 8px 24px;
-  background: var(--app-surface);
+.header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; padding: 18px 36px; border-bottom: 1px solid var(--app-border); background: var(--app-surface); flex-shrink: 0; }
+.brand { display: inline-flex; align-items: center; gap: 10px; width: fit-content; font-size: 19px; font-weight: 700; letter-spacing: -0.6px; color: var(--app-text); text-decoration: none; white-space: nowrap; }
+.mark { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 10px; color: var(--app-on-primary); background: var(--app-primary); }
+.brandDot { color: var(--app-primary); }
+.themeToggle { justify-self: end; }
+@media (max-width: 1000px) {
+  .header { grid-template-columns: auto 1fr auto; gap: 16px; padding: 14px 24px; }
+  .navigation { justify-self: center; }
 }
-
-.titleGroup {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
-.title {
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--app-text);
-}
-
-@media (max-width: 600px) {
-  .header { padding-inline: 16px; }
+@media (max-width: 800px) {
+  .header { grid-template-columns: 1fr auto; padding: 12px 16px; gap: 12px; }
+  .navigation { grid-row: 2; grid-column: 1 / -1; width: 100%; }
+  .themeToggle { grid-row: 1; grid-column: 2; }
+  .brand { font-size: 18px; }
 }
 </style>

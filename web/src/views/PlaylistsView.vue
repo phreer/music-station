@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, onMounted } from 'vue'
-import { NButton, NEmpty, NGrid, NGridItem, NSpin, NModal } from 'naive-ui'
+import { NButton, NEmpty, NSpin, NModal } from 'naive-ui'
 import { Plus } from 'lucide-vue-next'
 import { usePlaylistStore } from '@/stores/playlists'
 import PlaylistCard from '@/components/playlists/PlaylistCard.vue'
@@ -34,14 +35,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.toolbar">
-      <h2 :class="$style.heading">Playlists</h2>
-      <NButton type="primary" size="small" @click="showCreate = true">
+  <div class="library-page">
+    <LibraryPageHeader title="Playlists" :description="`${playlistStore.playlists.length} collections, made by you`">
+      <NButton type="primary" @click="showCreate = true">
         <template #icon><Plus :size="16" /></template>
         New Playlist
       </NButton>
-    </div>
+    </LibraryPageHeader>
 
     <NSpin :show="playlistStore.isLoading">
       <NEmpty
@@ -49,11 +49,9 @@ onMounted(() => {
         description="No playlists yet"
         style="padding: 60px 0"
       />
-      <NGrid v-else :x-gap="16" :y-gap="16" cols="1 600:2 900:3 1200:4">
-        <NGridItem v-for="playlist in playlistStore.playlists" :key="playlist.id">
-          <PlaylistCard :playlist="playlist" @request-delete="requestDelete" />
-        </NGridItem>
-      </NGrid>
+      <div v-else :class="$style.grid">
+        <PlaylistCard v-for="playlist in playlistStore.playlists" :key="playlist.id" :playlist="playlist" @request-delete="requestDelete" />
+      </div>
     </NSpin>
 
     <CreatePlaylistModal v-model:show="showCreate" />
@@ -76,24 +74,6 @@ onMounted(() => {
 </template>
 
 <style module>
-.container {
-  padding: 24px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-
-.heading {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-@media (max-width: 600px) {
-  .container { padding: 16px; }
-}
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 28px 24px; align-items: start; }
+@media (max-width: 600px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; } }
 </style>

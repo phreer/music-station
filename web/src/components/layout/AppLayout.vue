@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from './AppHeader.vue'
-import AppNav from './AppNav.vue'
 import MusicPlayer from '@/components/player/MusicPlayer.vue'
 import QueuePanel from '@/components/queue/QueuePanel.vue'
 import QueueToggle from '@/components/queue/QueueToggle.vue'
@@ -76,7 +75,6 @@ onBeforeUnmount(() => {
 <template>
   <div :class="$style.layout" :style="{ '--app-player-height': `${playerHeight}px` }">
     <AppHeader />
-    <AppNav />
     <div :class="$style.body">
       <Transition name="sidebar">
         <div
@@ -137,6 +135,7 @@ onBeforeUnmount(() => {
 .main {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
   scrollbar-width: none; /* Firefox */
 }
@@ -147,7 +146,7 @@ onBeforeUnmount(() => {
 
 .playerShell {
   flex-shrink: 0;
-  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+  padding: 0 20px calc(16px + env(safe-area-inset-bottom));
 }
 
 @media (max-width: 600px) {
@@ -167,10 +166,12 @@ onBeforeUnmount(() => {
 }
 
 .lyricsSidebarLeft {
+  padding: 24px 0 24px 20px;
   order: -1;
 }
 
 .lyricsSidebarRight {
+  padding: 24px 20px 24px 0;
   order: 1;
 }
 
@@ -217,6 +218,8 @@ onBeforeUnmount(() => {
     z-index: 20;
     width: min(380px, 100%) !important;
     max-width: 100%;
+    padding: 8px;
+    background: var(--app-bg);
     box-shadow: -8px 0 24px var(--app-shadow);
   }
   .lyricsSidebarLeft { right: auto; left: 0; }

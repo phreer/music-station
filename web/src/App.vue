@@ -6,7 +6,7 @@ import {
   NNotificationProvider,
   darkTheme,
 } from 'naive-ui'
-import { themeOverrides } from '@/styles/theme'
+import { applyTheme, themeOverrides } from '@/styles/theme'
 import '@/styles/tokens.css'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useUiStore } from '@/stores/ui'
@@ -22,7 +22,7 @@ const theme = computed(() => (ui.isDarkMode ? darkTheme : null))
 const overrides = computed(() => themeOverrides[ui.isDarkMode ? 'dark' : 'light'])
 
 function syncThemeAttribute() {
-  document.documentElement.dataset.theme = ui.isDarkMode ? 'dark' : 'light'
+  applyTheme(ui.isDarkMode ? 'dark' : 'light')
 }
 
 syncThemeAttribute()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, watch } from 'vue'
 import { NInput, NSpin, NAlert, NButton } from 'naive-ui'
 import { Search, RefreshCw } from 'lucide-vue-next'
@@ -25,28 +26,24 @@ function refresh() {
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.toolbar">
-      <h2 :class="$style.heading">Tracks</h2>
+  <div class="library-page">
+    <LibraryPageHeader title="Tracks" :description="`${library.filteredTracks.length.toLocaleString()}${localSearchQuery ? ` of ${library.totalTracks.toLocaleString()}` : ''} tracks in your library`">
       <NInput
         v-model:value="localSearchQuery"
-        placeholder="Search tracks..."
+        placeholder="Search your music"
         clearable
-        :class="$style.searchInput"
+        class="library-search"
       >
         <template #prefix>
           <Search :size="16" />
         </template>
       </NInput>
-      <span :class="$style.trackCount">
-        {{ library.filteredTracks.length }} / {{ library.totalTracks }} tracks
-      </span>
-      <NButton quaternary circle @click="refresh" :loading="library.isLoading">
+      <NButton quaternary circle aria-label="Refresh tracks" @click="refresh" :loading="library.isLoading">
         <template #icon>
           <RefreshCw :size="16" />
         </template>
       </NButton>
-    </div>
+    </LibraryPageHeader>
 
     <NAlert v-if="library.error" type="error" :class="$style.error">
       {{ library.error }}
@@ -59,37 +56,5 @@ function refresh() {
 </template>
 
 <style module>
-.container {
-  padding: 24px;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.heading { font-size: 22px; font-weight: 700; letter-spacing: -0.025em; }
-
-.searchInput {
-  width: min(400px, 100%);
-}
-
-.trackCount {
-  font-size: 13px;
-  color: var(--app-text-muted);
-  white-space: nowrap;
-}
-
-@media (max-width: 600px) {
-  .container { padding: 16px; }
-  .heading { width: 100%; }
-  .searchInput { flex: 1 1 100%; }
-}
-
-.error {
-  margin-bottom: 16px;
-}
+.error { margin-bottom: 16px; }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { onMounted, ref } from 'vue'
 import { NSpin, NGrid, NGridItem, NCard } from 'naive-ui'
 import { Music, Disc3, Users, Clock, HardDrive, PlayCircle } from 'lucide-vue-next'
@@ -29,14 +30,14 @@ const statCards = [
 </script>
 
 <template>
-  <div :class="$style.container">
-    <h2 :class="$style.heading">Library Stats</h2>
+  <div class="library-page">
+    <LibraryPageHeader title="Your library, in numbers" description="A closer look at your music collection." />
     <NSpin :show="isLoading">
-      <NGrid v-if="stats" :x-gap="16" :y-gap="16" cols="2 600:3 900:6">
+      <NGrid v-if="stats" :x-gap="16" :y-gap="16" cols="2 900:3">
         <NGridItem v-for="card in statCards" :key="card.key">
           <NCard :class="$style.statCard">
             <div :class="$style.statIcon">
-              <component :is="card.icon" :size="28" />
+              <component :is="card.icon" :size="21" />
             </div>
             <div :class="$style.statValue">{{ card.format(stats[card.key]) }}</div>
             <div :class="$style.statLabel">{{ card.label }}</div>
@@ -48,33 +49,9 @@ const statCards = [
 </template>
 
 <style module>
-.container {
-  padding: 24px;
-}
-.heading {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 20px;
-}
-.statCard {
-  text-align: center;
-  padding: 8px 0;
-}
-.statIcon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 8px;
-  opacity: 0.5;
-}
-.statValue {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.statLabel {
-  font-size: 12px;
-  opacity: 0.6;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+.statCard { padding: 4px 0; }
+.statIcon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; margin-bottom: 20px; color: var(--app-primary); background: var(--app-active-bg); }
+.statValue { font-size: 30px; font-weight: 600; letter-spacing: -1px; margin-bottom: 4px; overflow-wrap: anywhere; }
+.statLabel { font-size: 13px; color: var(--app-text-muted); }
+@media (max-width: 600px) { .statValue { font-size: 23px; } }
 </style>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NEmpty, NButton, NInput } from 'naive-ui'
 import { RefreshCw, Search } from 'lucide-vue-next'
@@ -22,64 +23,25 @@ onMounted(() => store.loadAlbums())
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.toolbar">
-      <h2 :class="$style.heading">Albums</h2>
+  <div class="library-page">
+    <LibraryPageHeader title="Albums" :description="`${filteredAlbums.length.toLocaleString()} albums in your collection`">
       <NInput
         v-model:value="searchQuery"
-        placeholder="Search albums..."
+        placeholder="Search albums"
         clearable
-        :class="$style.searchInput"
+        class="library-search"
       >
         <template #prefix>
           <Search :size="16" />
         </template>
       </NInput>
-      <span :class="$style.count">
-        {{ filteredAlbums.length }} / {{ store.allAlbums.length }}
-      </span>
-      <NButton quaternary circle @click="store.refresh" :loading="store.isLoading">
+      <NButton quaternary circle aria-label="Refresh albums" @click="store.refresh" :loading="store.isLoading">
         <template #icon><RefreshCw :size="16" /></template>
       </NButton>
-    </div>
+    </LibraryPageHeader>
     <NSpin :show="store.isLoading">
       <NEmpty v-if="!store.isLoading && filteredAlbums.length === 0" description="No albums found" style="padding: 60px 0" />
       <AlbumGrid v-else :albums="filteredAlbums" />
     </NSpin>
   </div>
 </template>
-
-<style module>
-.container {
-  padding: 24px;
-}
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.heading {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  flex-shrink: 0;
-}
-
-@media (max-width: 600px) {
-  .container { padding: 16px; }
-  .heading { width: 100%; }
-  .searchInput { flex: 1 1 100%; max-width: none; }
-}
-.searchInput {
-  max-width: 320px;
-  flex: 1;
-}
-.count {
-  font-size: 13px;
-  opacity: 0.6;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-</style>
