@@ -3,8 +3,7 @@ import { NEmpty, NScrollbar } from 'naive-ui'
 import { useQueueStore } from '@/stores/queue'
 import { usePlayerStore } from '@/stores/player'
 import { formatDuration } from '@/utils/format'
-import { computed } from 'vue'
-import { onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import QueueItem from './QueueItem.vue'
 
 const queue = useQueueStore()
@@ -17,9 +16,8 @@ function handleEscape(event: KeyboardEvent) {
 onMounted(() => window.addEventListener('keydown', handleEscape))
 onBeforeUnmount(() => window.removeEventListener('keydown', handleEscape))
 watch(() => queue.isVisible, async (visible) => {
-  if (visible) return
   await nextTick()
-  document.getElementById('queue-toggle-button')?.focus()
+  document.getElementById(visible ? 'close-play-queue' : 'queue-toggle-button')?.focus()
 })
 
 const totalDuration = computed(() => {
@@ -44,7 +42,7 @@ function remove(index: number) {
 
 <template>
   <Transition name="slide">
-    <div v-if="queue.isVisible" :class="$style.panel">
+    <section v-if="queue.isVisible" id="play-queue" role="region" aria-label="Play queue" :class="$style.panel">
       <div :class="$style.header">
         <h3 :class="$style.title">Play Queue</h3>
         <div :class="$style.headerActions">
@@ -58,6 +56,7 @@ function remove(index: number) {
             Clear
           </button>
           <button
+            id="close-play-queue"
             :class="$style.headerBtnCircle"
             title="Close"
             @click="queue.toggleVisible"
@@ -82,22 +81,22 @@ function remove(index: number) {
           @remove="remove(index)"
         />
       </NScrollbar>
-    </div>
+    </section>
   </Transition>
 </template>
 
 <style module>
 .panel {
   position: fixed;
-  top: 0;
-  right: 0;
+  top: 12px;
+  right: 20px;
   bottom: calc(var(--app-player-height) + 8px);
   width: min(350px, calc(100vw - 16px));
   display: flex;
   flex-direction: column;
   background: var(--app-surface-raised);
   border: 1px solid var(--app-border);
-  border-radius: 14px 0 0 14px;
+  border-radius: 16px;
   z-index: 90;
   box-shadow: -4px 8px 24px var(--app-shadow);
 }
@@ -106,7 +105,7 @@ function remove(index: number) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 18px;
   border-bottom: 1px solid var(--app-border);
 }
 
@@ -184,6 +183,7 @@ function remove(index: number) {
 .empty {
   padding: 40px 0;
 }
+@media (max-width: 600px) { .panel { right: 8px; } }
 </style>
 
 <style>

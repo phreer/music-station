@@ -155,17 +155,18 @@ watch(
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  border-left: 1px solid var(--app-border);
-  background: var(--app-surface-raised);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface);
 }
 
-.sidebarLeft { border-left: 0; border-right: 1px solid var(--app-border); }
+.sidebarLeft { border-color: var(--app-border); }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 16px;
   border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
 }
@@ -180,14 +181,14 @@ watch(
   font-size: 13px;
   font-weight: 600;
   color: var(--app-text-muted);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px 14px;
+  padding: 32px 20px;
   scroll-behavior: smooth;
 }
 
@@ -212,7 +213,7 @@ watch(
 .lineList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .line {
@@ -227,7 +228,7 @@ watch(
 }
 
 .linePast {
-  opacity: 0.65;
+  color: var(--app-text-muted);
 }
 
 .lineActive {
@@ -235,6 +236,7 @@ watch(
   font-weight: 600;
   color: var(--app-primary);
   background: var(--app-active-bg);
+  box-shadow: inset 2px 0 var(--app-primary);
 }
 
 .word {

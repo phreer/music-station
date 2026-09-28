@@ -63,7 +63,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 16px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -74,13 +74,13 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 
 .itemActive {
   background: var(--app-active-bg);
-  border-left: 3px solid var(--app-primary);
+  box-shadow: inset 3px 0 var(--app-primary);
 }
 
 .itemCover {
   width: 36px;
   height: 36px;
-  border-radius: 4px;
+  border-radius: 7px;
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -99,7 +99,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   justify-content: center;
   background: var(--app-placeholder-bg);
   font-size: 14px;
-  opacity: 0.3;
+  color: var(--app-text-muted);
 }
 
 .itemInfo {
@@ -168,5 +168,5 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   background: rgba(128, 128, 128, 0.15);
 }
 
-.removeBtn:focus-visible { opacity: 1; }
+.removeBtn:focus-visible, .item :global(.track-favorite-button.is-active) { opacity: 1; }
 </style>

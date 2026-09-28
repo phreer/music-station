@@ -1,19 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { NSlider, NButton } from 'naive-ui'
-import {
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Square,
-  Volume2,
-  VolumeX,
-  Music2,
-  Pencil,
-} from 'lucide-vue-next'
-import { useRouter } from 'vue-router'
+import { NSlider, NButton, NDropdown, NPopover } from 'naive-ui'
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2 } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
+import { useQueueStore } from '@/stores/queue'
 import { useLyricsStore } from '@/stores/lyrics'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
@@ -23,7 +13,7 @@ import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const player = usePlayerStore()
 const lyrics = useLyricsStore()
-const router = useRouter()
+const queue = useQueueStore()
 const audioRef = ref<HTMLAudioElement | null>(null)
 
 const showLyricsModal = ref(false)
@@ -60,288 +50,117 @@ watch(
 function handleSeek(value: number) {
   player.seek(value)
 }
+const trackActions = [
+  { label: 'Edit track details', key: 'edit' },
+  { label: 'Manage lyrics', key: 'lyrics' },
+  { type: 'divider', key: 'divider' },
+  { label: 'Stop playback', key: 'stop' },
+]
+
+function handleAction(key: string) {
+  if (key === 'edit') showEditModal.value = true
+  if (key === 'lyrics') showLyricsModal.value = true
+  if (key === 'stop') player.stop()
+}
 </script>
 
+
 <template>
-  <div v-show="player.currentTrack" :class="$style.player">
-    <!-- Track Info -->
+  <section v-show="player.currentTrack" :class="$style.player" aria-label="Music player">
     <div :class="$style.info">
       <div :class="$style.cover">
-        <img
-          v-if="player.currentTrack?.has_cover"
-          :src="coverUrl(player.currentTrack!.id)"
-          :class="$style.coverImg"
-        />
-        <div v-else :class="$style.coverPlaceholder">&#9834;</div>
+        <img v-if="player.currentTrack?.has_cover" :src="coverUrl(player.currentTrack.id)" alt="" />
+        <Music2 v-else :size="22" />
       </div>
-        <div :class="$style.trackInfo">
-          <div :class="$style.trackTitle">
-            {{ player.currentTrack?.title || 'Unknown Title' }}
-          </div>
+      <div :class="$style.trackInfo">
+        <div :class="$style.trackTitle" :title="player.currentTrack?.title ?? ''">{{ player.currentTrack?.title || 'Unknown Title' }}</div>
         <div :class="$style.trackArtist">
-          <span
-            v-if="player.currentTrack?.artist"
-            :class="$style.trackLink"
-            @click="router.push({ name: 'artist-detail', params: { name: player.currentTrack.artist } })"
-          >{{ player.currentTrack.artist }}</span>
-          <span v-if="player.currentTrack?.artist && player.currentTrack?.album" :class="$style.trackSep"> · </span>
-          <span
-            v-if="player.currentTrack?.album"
-            :class="$style.trackLink"
-            @click="router.push({ name: 'album-detail', params: { name: player.currentTrack.album } })"
-          >{{ player.currentTrack.album }}</span>
-          <span v-if="!player.currentTrack?.artist && !player.currentTrack?.album">Unknown Artist</span>
+          <RouterLink v-if="player.currentTrack?.artist" :to="{ name: 'artist-detail', params: { name: player.currentTrack.artist } }">{{ player.currentTrack.artist }}</RouterLink>
+          <span v-else>Unknown Artist</span>
+          <template v-if="player.currentTrack?.album">
+            <span :class="$style.separator"> / </span>
+            <RouterLink :to="{ name: 'album-detail', params: { name: player.currentTrack.album } }">{{ player.currentTrack.album }}</RouterLink>
+          </template>
         </div>
-        </div>
-        <TrackFavoriteButton
-          v-if="player.currentTrack"
-          :track-id="player.currentTrack.id"
-          :size="30"
-          :icon-size="15"
-        />
-      <!-- Per-track actions -->
-      <div :class="$style.trackActions">
-        <NButton
-          quaternary
-          circle
-          size="small"
-          :title="'Edit metadata'"
-          @click="showEditModal = true"
-        >
-          <template #icon><Pencil :size="13" /></template>
-        </NButton>
-        <NButton
-          quaternary
-          circle
-          size="small"
-          :title="'Manage lyrics'"
-          :type="lyrics.hasLyrics ? 'primary' : 'default'"
-          @click="showLyricsModal = true"
-        >
-          <template #icon><Music2 :size="13" /></template>
-        </NButton>
-        <NButton
-          quaternary
-          circle
-          size="small"
-          :title="lyrics.sidebarVisible ? 'Hide lyrics sidebar' : 'Show lyrics sidebar'"
-          @click="lyrics.toggleSidebar"
-        >
-          <template #icon><Music2 :size="13" style="opacity: 0.5" /></template>
-        </NButton>
       </div>
+      <TrackFavoriteButton v-if="player.currentTrack" :track-id="player.currentTrack.id" :size="32" :icon-size="17" />
+      <NDropdown trigger="click" placement="top-start" :options="trackActions" @select="handleAction">
+        <NButton quaternary circle aria-label="Track options" title="Track options"><template #icon><Ellipsis :size="19" /></template></NButton>
+      </NDropdown>
     </div>
 
-    <!-- Controls -->
     <div :class="$style.center">
       <div :class="$style.controls">
-        <NButton quaternary circle size="small" aria-label="Previous track" @click="player.playPrevious">
-          <template #icon><SkipBack :size="16" /></template>
-        </NButton>
+        <NButton quaternary circle aria-label="Previous track" @click="player.playPrevious"><template #icon><SkipBack :size="18" /></template></NButton>
         <NButton circle type="primary" :class="$style.playButton" :aria-label="player.isPlaying ? 'Pause' : 'Play'" @click="player.togglePlayPause">
-          <template #icon>
-            <Pause v-if="player.isPlaying" :size="20" />
-            <Play v-else :size="20" />
-          </template>
+          <template #icon><Pause v-if="player.isPlaying" :size="19" fill="currentColor" /><Play v-else :size="19" fill="currentColor" /></template>
         </NButton>
-        <NButton quaternary circle size="small" aria-label="Next track" @click="player.playNext">
-          <template #icon><SkipForward :size="16" /></template>
-        </NButton>
-        <NButton quaternary circle size="small" aria-label="Stop" @click="player.stop">
-          <template #icon><Square :size="14" /></template>
-        </NButton>
+        <NButton quaternary circle aria-label="Next track" @click="player.playNext"><template #icon><SkipForward :size="18" /></template></NButton>
       </div>
       <div :class="$style.progress">
         <span :class="$style.time">{{ formatDuration(player.currentTime) }}</span>
-        <NSlider
-          :value="player.progress"
-          :max="100"
-          :step="0.1"
-          :tooltip="false"
-          :class="$style.progressSlider"
-          @update:value="handleSeek"
-        />
+        <NSlider :value="player.progress" :max="100" :step="0.1" :tooltip="false" :class="$style.progressSlider" aria-label="Playback position" @update:value="handleSeek" />
         <span :class="$style.time">{{ formatDuration(player.duration) }}</span>
       </div>
     </div>
 
-    <!-- Volume -->
-    <div :class="$style.volume">
-      <Volume2 v-if="player.volume > 0" :size="16" />
-      <VolumeX v-else :size="16" />
-      <NSlider
-        :value="player.volume"
-        :max="1"
-        :step="0.01"
-        :tooltip="false"
-        :class="$style.volumeSlider"
-        @update:value="player.setVolume"
-      />
+    <div :class="$style.utilities">
+      <div :class="$style.volumeDesktop">
+        <Volume2 v-if="player.volume > 0" :size="17" /><VolumeX v-else :size="17" />
+        <NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" aria-label="Volume" @update:value="player.setVolume" />
+      </div>
+      <div :class="$style.volumeMobile">
+        <NPopover trigger="click" placement="top">
+          <template #trigger><NButton quaternary circle aria-label="Adjust volume"><template #icon><Volume2 v-if="player.volume > 0" :size="18" /><VolumeX v-else :size="18" /></template></NButton></template>
+          <div :class="$style.volumePopover"><span>Volume</span><NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" aria-label="Volume" @update:value="player.setVolume" /></div>
+        </NPopover>
+      </div>
+      <NButton quaternary circle :class="lyrics.sidebarVisible && $style.utilityActive" :aria-pressed="lyrics.sidebarVisible" :aria-label="lyrics.sidebarVisible ? 'Hide lyrics' : 'Show lyrics'" @click="lyrics.toggleSidebar"><template #icon><MessageSquareText :size="18" /></template></NButton>
+      <NButton id="queue-toggle-button" quaternary circle :class="queue.isVisible && $style.utilityActive" :aria-expanded="queue.isVisible" aria-controls="play-queue" :aria-label="queue.isVisible ? 'Hide play queue' : 'Show play queue'" @click="queue.toggleVisible"><template #icon><ListMusic :size="19" /></template></NButton>
     </div>
-
     <audio ref="audioRef" />
-  </div>
-
-  <!-- Lyrics Modal -->
+  </section>
   <LyricsModal v-model:show="showLyricsModal" :track="player.currentTrack" />
-  <!-- Edit Modal -->
   <EditTrackModal v-model:show="showEditModal" :track="player.currentTrack" />
 </template>
 
 <style module>
-.player {
-  min-height: 80px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  padding: 10px 20px;
-  gap: 18px;
-  background: var(--app-surface-raised);
-  color: var(--app-text);
-  z-index: 100;
-  border: 1px solid var(--app-border);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px var(--app-shadow);
+.player { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 12px 20px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: 16px; box-shadow: 0 8px 24px var(--app-shadow); }
+.info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.info > button { flex-shrink: 0; }
+.cover { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--app-placeholder-bg); color: var(--app-text-muted); }
+.cover img { width: 100%; height: 100%; object-fit: cover; }
+.trackInfo { flex: 1; min-width: 0; }
+.trackTitle { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trackArtist { margin-top: 4px; font-size: 12px; color: var(--app-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trackArtist a { color: inherit; text-decoration: none; }
+.trackArtist a:hover { color: var(--app-text); text-decoration: underline; }
+.separator { margin: 0 2px; opacity: 0.5; }
+.center { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
+.controls { display: flex; align-items: center; gap: 12px; }
+.playButton { width: 38px; height: 38px; }
+.progress { display: flex; align-items: center; gap: 10px; width: 100%; }
+.progressSlider { flex: 1; min-width: 0; }
+.time { font-size: 10px; color: var(--app-text-muted); font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; }
+.utilities { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
+.volumeDesktop { display: flex; align-items: center; gap: 10px; width: 110px; margin-right: 8px; color: var(--app-text-muted); }
+.volumeDesktop svg { flex-shrink: 0; }
+.volumeMobile { display: none; }
+.volumePopover { width: 160px; display: grid; gap: 10px; padding: 4px; font-size: 12px; }
+.utilityActive { color: var(--app-primary); background: var(--app-active-bg); }
+@media (max-width: 1100px) {
+  .player { grid-template-columns: minmax(0, 1fr) minmax(220px, 1fr) auto; gap: 16px; }
+  .volumeDesktop { display: none; }
+  .volumeMobile { display: block; }
 }
-
-.info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 270px;
-  min-width: 0;
-}
-
-.trackActions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-}
-
-.cover {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.coverImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.coverPlaceholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--app-placeholder-bg);
-  font-size: 20px;
-  color: var(--app-text-muted);
-}
-
-.trackInfo {
-  min-width: 0;
-  flex: 1;
-}
-
-.trackTitle {
-  font-weight: 600;
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.trackArtist {
-  font-size: 12px;
-  color: var(--app-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.trackLink {
-  cursor: pointer;
-}
-
-.trackLink:hover {
-  text-decoration: underline;
-  opacity: 1;
-}
-
-.trackSep {
-  opacity: 0.5;
-}
-
-.center {
-  flex: 2 1 360px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.playButton { width: 40px; height: 40px; }
-
-.progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  max-width: 600px;
-}
-
-.progressSlider {
-  flex: 1;
-  min-width: 0;
-}
-
-.time {
-  font-size: 11px;
-  color: var(--app-text-muted);
-  font-variant-numeric: tabular-nums;
-  width: 40px;
-  text-align: center;
-}
-
-.volume {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 150px;
-  flex-shrink: 0;
-  color: var(--app-text-muted);
-}
-
-.volumeSlider {
-  flex: 1;
-}
-
-@media (max-width: 900px) {
-  .player { flex-wrap: wrap; gap: 4px 16px; padding: 10px 14px; }
-  .info { flex: 1 1 calc(100% - 170px); }
-  .center { order: 2; flex: 1 1 100%; }
-  .volume { flex: 0 0 130px; }
-}
-
-@media (max-width: 520px) {
-  .player { gap: 6px 10px; }
-  .info { flex-basis: calc(100% - 125px); gap: 8px; }
-  .cover { width: 42px; height: 42px; }
-  .trackActions { gap: 0; }
-  .volume { width: 110px; flex-basis: 110px; }
-  .progress { gap: 4px; }
+@media (max-width: 700px) {
+  .player { grid-template-columns: 1fr auto; padding: 12px 14px; gap: 8px 16px; border-radius: 14px; }
+  .info { grid-column: 1 / -1; }
+  .cover { width: 44px; height: 44px; }
+  .center { display: contents; }
+  .controls { grid-column: 1; grid-row: 2; gap: 8px; justify-content: flex-start; }
+  .utilities { grid-column: 2; grid-row: 2; gap: 4px; }
+  .progress { grid-column: 1 / -1; grid-row: 3; }
+  .trackTitle { font-size: 14px; }
 }
 </style>
