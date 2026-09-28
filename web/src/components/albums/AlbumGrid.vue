@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated } from 'vue'
-import { NGrid, NGridItem } from 'naive-ui'
 import type { Album } from '@/types'
 import AlbumCard from './AlbumCard.vue'
 
@@ -62,11 +61,14 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div>
-    <NGrid :x-gap="16" :y-gap="16" cols="1 500:2 800:3 1100:4">
-      <NGridItem v-for="album in visibleAlbums" :key="album.name + album.artist">
-        <AlbumCard :album="album" />
-      </NGridItem>
-    </NGrid>
+    <div :class="$style.grid">
+      <AlbumCard v-for="album in visibleAlbums" :key="album.name + album.artist" :album="album" />
+    </div>
     <div v-if="hasMore" ref="sentinel" style="height: 1px" />
   </div>
 </template>
+
+<style module>
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr)); gap: 28px 24px; align-items: start; }
+@media (max-width: 600px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; } }
+</style>

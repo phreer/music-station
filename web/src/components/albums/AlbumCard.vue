@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { NCard } from 'naive-ui'
+import { ref, computed, watch } from 'vue'
 import type { Album, Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration, formatDurationLong } from '@/utils/format'
@@ -33,6 +32,7 @@ const tracks = computed<Track[]>(() => {
 })
 
 const coverTrack = computed(() => tracks.value.find((t) => t.has_cover))
+watch(coverTrack, () => { coverFailed.value = false })
 
 function playAlbum() {
   const ids = tracks.value.map((t) => t.id)
@@ -54,12 +54,13 @@ function playTrack(track: Track) {
 </script>
 
 <template>
-  <NCard :class="$style.card" hoverable>
+  <article :class="$style.card">
     <div :class="$style.coverWrapper">
       <button :class="$style.coverExpand" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name}`" :aria-expanded="expanded" @click="expanded = !expanded">
         <img
           v-if="coverTrack && !coverFailed"
           :src="coverUrl(coverTrack.id)"
+          alt=""
           :class="$style.coverImg"
           loading="lazy"
           @error="coverFailed = true"
@@ -75,6 +76,7 @@ function playTrack(track: Track) {
         </button>
       </div>
     </div>
+    <div :class="$style.details">
     <div :class="$style.info">
       <RouterLink
         :class="[$style.albumName, $style.albumNameLink]"
@@ -94,6 +96,7 @@ function playTrack(track: Track) {
     <button :class="$style.expandToggle" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name} tracks`" :aria-expanded="expanded" @click="expanded = !expanded">
       <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
     </button>
+    </div>
 
     <Transition name="expand">
       <div v-if="expanded" :class="$style.trackList">
@@ -116,20 +119,19 @@ function playTrack(track: Track) {
         </div>
       </div>
     </Transition>
-  </NCard>
+  </article>
 </template>
 
 <style module>
-.card { overflow: hidden; border-color: var(--app-border); transition: transform 0.18s ease, box-shadow 0.18s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--app-shadow); }
+.card { min-width: 0; position: relative; }
 
 .coverWrapper {
   position: relative;
   aspect-ratio: 1;
   overflow: hidden;
   cursor: pointer;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  border-radius: 12px;
+  margin-bottom: 14px; box-shadow: 0 5px 14px var(--app-shadow);
 }
 .coverExpand { display: block; width: 100%; height: 100%; border: 0; padding: 0; cursor: pointer; background: transparent; color: inherit; }
 .coverWrapper:focus-within { outline: 2px solid var(--app-focus-ring); outline-offset: 2px; }
@@ -143,7 +145,7 @@ function playTrack(track: Track) {
 }
 .overlay {
   position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+  display: flex; align-items: flex-end; justify-content: flex-end; gap: 8px; padding: 12px;
   background: linear-gradient(transparent, rgba(0,0,0,0.5));
   opacity: 0; transition: opacity 0.2s;
   pointer-events: none;
@@ -153,25 +155,26 @@ function playTrack(track: Track) {
 
 .iconBtn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 50%;
+  width: 44px; height: 44px; border-radius: 50%;
   border: none; cursor: pointer; padding: 0;
-  background: rgba(255,255,255,0.15); color: #fff;
+  background: rgba(20,24,32,0.5); color: #fff;
   transition: background 0.15s, transform 0.1s;
 }
 .iconBtn:hover { background: rgba(255,255,255,0.3); transform: scale(1.08); }
-.iconBtnPrimary { background: var(--app-primary); }
+.iconBtnPrimary { background: var(--app-primary); color: var(--app-on-primary); }
 .iconBtnPrimary:hover { background: var(--app-primary-hover); }
 
-.info { padding: 0 2px; }
-.albumName { font-weight: 600; font-size: 14px; line-height: 1.4; min-height: 2.8em; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.details { display: flex; align-items: flex-start; gap: 8px; }
+.info { flex: 1; min-width: 0; padding: 0 2px; }
+.albumName { font-weight: 600; font-size: 14px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .albumNameLink { cursor: pointer; color: inherit; text-decoration: none; }
 .albumNameLink:hover { text-decoration: underline; opacity: 0.8; }
-.albumMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.albumMeta { font-size: 12px; color: var(--app-text-muted); margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .albumMetaLink { cursor: pointer; display: block; text-decoration: none; }
 .albumMetaLink:hover { text-decoration: underline; opacity: 0.8; }
 
 .expandToggle {
-  display: flex; justify-content: center; width: 100%; padding: 6px 0 0;
+  flex-shrink: 0; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
   border: 0; background: transparent; color: inherit;
   cursor: pointer; opacity: 0.4;
 }
@@ -201,13 +204,6 @@ function playTrack(track: Track) {
 .trackAddBtn:hover { opacity: 1 !important; background: rgba(128,128,128,0.15); }
 @media (hover: none) {
   .coverWrapper .overlay { opacity: 1; }
-  .card:hover { transform: none; }
   .trackAddBtn { opacity: 0.7; }
 }
-</style>
-
-<style>
-.expand-enter-active, .expand-leave-active { transition: all 0.2s ease; overflow: hidden; }
-.expand-enter-from, .expand-leave-to { opacity: 0; max-height: 0; }
-.expand-enter-to, .expand-leave-from { opacity: 1; max-height: 800px; }
 </style>

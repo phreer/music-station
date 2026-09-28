@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
-import { computed, h, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, h, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -22,9 +22,10 @@ const router = useRouter()
 const showAddToPlaylist = ref(false)
 const addToPlaylistTrack = ref<Track | null>(null)
 const scrollbarProps = { trigger: 'none' as const }
-const fixedColumnWidth = 50 + 162
+const fixedColumnWidth = 60 + 162
 const tableWrapper = ref<HTMLElement | null>(null)
 const containerWidth = ref(0)
+const bodyHeight = ref(360)
 let resizeObserver: ResizeObserver | null = null
 const { getWidth, startResize } = useResizableTrackColumns(
   'track-list-column-widths',
@@ -32,7 +33,7 @@ const { getWidth, startResize } = useResizableTrackColumns(
     { key: 'title', defaultWidth: 320, minWidth: 180, maxWidth: 640 },
     { key: 'album', defaultWidth: 220, minWidth: 120, maxWidth: 480 },
     { key: 'duration', defaultWidth: 104, minWidth: 96, maxWidth: 180 },
-    { key: 'play_count', defaultWidth: 72, minWidth: 56, maxWidth: 140 },
+    { key: 'play_count', defaultWidth: 88, minWidth: 72, maxWidth: 140 },
   ],
 )
 
@@ -61,7 +62,7 @@ function fixedWidth(width: number): { width: number, minWidth: number, maxWidth:
 
 function resizableTitle(label: string, key: string, align: 'left' | 'right' = 'left') {
   return h('div', { class: ['track-resize-header', align === 'right' && 'track-resize-header-right'] }, [
-    h('span', { class: 'track-resize-header-label' }, label),
+    h('span', { class: 'track-resize-header-label', title: label }, label),
     h('span', {
       class: 'track-column-resize-handle',
       onMousedown: (event: MouseEvent) => {
@@ -100,15 +101,15 @@ const columns = computed<DataTableColumns<Track>>(() => [
   {
     key: 'cover',
     title: '',
-    ...fixedWidth(50),
+    ...fixedWidth(60),
     render(row) {
       if (row.has_cover) {
         return h('img', {
           src: coverUrl(row.id),
           style: {
-            width: '36px',
-            height: '36px',
-            borderRadius: '4px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '7px',
             objectFit: 'cover',
           },
           loading: 'lazy',
@@ -118,15 +119,15 @@ const columns = computed<DataTableColumns<Track>>(() => [
         'div',
         {
           style: {
-            width: '36px',
-            height: '36px',
-            borderRadius: '4px',
+            width: '40px',
+            height: '40px',
+            borderRadius: '7px',
             background: 'var(--app-placeholder-bg)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '14px',
-            opacity: 0.3,
+            color: 'var(--app-text-muted)',
           },
         },
         '\u266A',
@@ -251,15 +252,33 @@ const rowProps = (row: Track) => ({
   },
 })
 
-onMounted(() => {
-  const updateContainerWidth = () => {
-    containerWidth.value = tableWrapper.value?.clientWidth ?? 0
-  }
+function updateTableSize() {
+  const wrapper = tableWrapper.value
+  if (!wrapper) return
+  containerWidth.value = wrapper.clientWidth
+  const main = wrapper.closest('main')
+  if (!main) return
+  const page = wrapper.closest('.library-page')
+  const padding = page ? parseFloat(getComputedStyle(page).paddingBottom) : 24
+  // NDataTable applies max-height to its body; reserve the header and page padding.
+  bodyHeight.value = Math.max(120, Math.floor(main.getBoundingClientRect().bottom - wrapper.getBoundingClientRect().top - padding - 48))
+}
 
-  updateContainerWidth()
-  if (!tableWrapper.value) return
-  resizeObserver = new ResizeObserver(updateContainerWidth)
-  resizeObserver.observe(tableWrapper.value)
+onMounted(() => {
+  resizeObserver = new ResizeObserver(updateTableSize)
+  if (tableWrapper.value) {
+    resizeObserver.observe(tableWrapper.value)
+    const main = tableWrapper.value.closest('main')
+    if (main) resizeObserver.observe(main)
+    const page = tableWrapper.value.closest('.library-page')
+    if (page) resizeObserver.observe(page)
+  }
+  updateTableSize()
+})
+
+onActivated(async () => {
+  await nextTick()
+  updateTableSize()
 })
 
 onBeforeUnmount(() => {
@@ -283,7 +302,8 @@ onBeforeUnmount(() => {
       :scroll-x="tableScrollX"
       :scrollbar-props="scrollbarProps"
       table-layout="fixed"
-      :max-height="'calc(100vh - 250px)'"
+      :max-height="bodyHeight"
+      :bordered="false"
       virtual-scroll
       size="small"
     />
@@ -302,11 +322,15 @@ onBeforeUnmount(() => {
 .track-list-wrapper .n-data-table-th {
   background: var(--app-surface);
   color: var(--app-text-muted);
-  font-weight: 600;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
 }
 
 .track-list-wrapper .n-data-table-td {
   border-bottom-color: var(--app-border);
+  font-size: 13px;
 }
 
 .track-list-wrapper .n-data-table-tr:hover .n-data-table-td {
@@ -471,6 +495,8 @@ onBeforeUnmount(() => {
 }
 
 .track-action-btn:focus-visible { opacity: 1; }
+.track-title-text { font-weight: 500; line-height: 1.6; }
+.track-album-text { color: var(--app-text-muted); }
 
 @media (hover: none) {
   .track-action-btn { opacity: 1; }

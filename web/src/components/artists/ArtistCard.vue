@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { NCard, NTabs, NTab } from 'naive-ui'
+import { NTabs, NTab } from 'naive-ui'
 import type { Artist } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration, formatDurationLong } from '@/utils/format'
@@ -31,6 +31,8 @@ const coverTrack = computed(() =>
   artistTracks.value.find((t) => t.has_cover),
 )
 
+watch(coverTrack, () => { coverFailed.value = false })
+
 function playArtist() {
   const ids = artistTracks.value.map((t) => t.id)
   if (!ids.length) return
@@ -48,12 +50,13 @@ function playAlbum(albumName: string) {
 </script>
 
 <template>
-  <NCard :class="$style.card" hoverable>
+  <article :class="$style.card">
     <div :class="$style.header" @click="expanded = !expanded">
       <div :class="$style.avatar">
         <img
           v-if="coverTrack && !coverFailed"
           :src="coverUrl(coverTrack.id)"
+          alt=""
           :class="$style.avatarImg"
           loading="lazy"
           @error="coverFailed = true"
@@ -146,16 +149,16 @@ function playAlbum(albumName: string) {
         </div>
       </div>
     </Transition>
-  </NCard>
+  </article>
 </template>
 
 <style module>
-.card { overflow: hidden; border-color: var(--app-border); transition: transform 0.18s ease, box-shadow 0.18s ease; }
-.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--app-shadow); }
+.card { overflow: hidden; padding: 20px; border: 1px solid var(--app-border); border-radius: 14px; background: var(--app-surface); transition: border-color 160ms, box-shadow 160ms; }
+.card:hover { border-color: var(--app-primary); box-shadow: 0 4px 16px var(--app-shadow); }
 
-.header { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 4px 0; }
+.header { display: grid; grid-template-columns: 56px minmax(0, 1fr); align-items: center; gap: 8px 16px; cursor: pointer; }
 
-.avatar { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.avatar { grid-row: 1 / span 2; align-self: start; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
 .avatarImg { width: 100%; height: 100%; object-fit: cover; }
 .avatarPlaceholder {
   width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
@@ -163,12 +166,12 @@ function playAlbum(albumName: string) {
 }
 
 .info { flex: 1; min-width: 0; }
-.name { font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { font-weight: 600; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nameLink { cursor: pointer; color: inherit; text-decoration: none; display: block; }
 .nameLink:hover { text-decoration: underline; opacity: 0.8; }
 .meta { font-size: 12px; color: var(--app-text-muted); margin-top: 2px; }
 
-.actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.actions { grid-column: 2; display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .actionBtn {
   display: inline-flex; align-items: center; justify-content: center;
@@ -178,9 +181,9 @@ function playAlbum(albumName: string) {
   opacity: 0.6; transition: opacity 0.15s, background 0.15s;
 }
 .actionBtn:hover { opacity: 1; background: rgba(128,128,128,0.12); }
-@media (hover: none) { .card:hover { transform: none; } .actionBtn { opacity: 1; } }
+@media (hover: none) { .actionBtn { opacity: 1; width: 44px; height: 44px; } }
 
-.heartBtn { color: var(--n-text-color, inherit); }
+.heartBtn { color: var(--app-text-muted); }
 .heartBtn:hover { color: #e05c7a; }
 .heartActive { color: #e05c7a; opacity: 1; }
 

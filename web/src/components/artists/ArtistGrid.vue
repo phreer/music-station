@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount, onActivated, onDeactivated } from 'vue'
-import { NGrid, NGridItem } from 'naive-ui'
 import type { Artist } from '@/types'
 import ArtistCard from './ArtistCard.vue'
 
@@ -57,11 +56,13 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <div>
-    <NGrid :x-gap="16" :y-gap="16" cols="1 500:2 800:3 1100:4">
-      <NGridItem v-for="artist in visibleArtists" :key="artist.name">
-        <ArtistCard :artist="artist" />
-      </NGridItem>
-    </NGrid>
+    <div :class="$style.grid">
+      <ArtistCard v-for="artist in visibleArtists" :key="artist.name" :artist="artist" />
+    </div>
     <div v-if="hasMore" ref="sentinel" style="height: 1px" />
   </div>
 </template>
+
+<style module>
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 28px 24px; align-items: start; }
+</style>
