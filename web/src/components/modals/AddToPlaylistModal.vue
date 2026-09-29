@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed } from 'vue'
 import { NModal, NCard, NButton, NSpace, NSpin, NEmpty, NCheckbox } from 'naive-ui'
 import { Plus } from 'lucide-vue-next'
@@ -50,7 +51,7 @@ async function togglePlaylist(playlistId: string) {
   <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="true">
     <NCard
       style="width: 380px; max-width: 95vw"
-      title="Add to Playlist"
+      :title="tr('Add to Playlist')"
       :bordered="false"
       role="dialog"
       aria-modal="true"
@@ -58,7 +59,7 @@ async function togglePlaylist(playlistId: string) {
       <NSpin :show="playlists.isLoading">
         <NEmpty
           v-if="!playlists.isLoading && playlists.playlists.length === 0"
-          description="No playlists yet"
+          :description="tr('No playlists yet')"
           style="padding: 24px 0"
         />
         <div v-else :class="$style.list">
@@ -75,7 +76,7 @@ async function togglePlaylist(playlistId: string) {
               @click.stop
             />
             <span :class="$style.playlistName">{{ pl.name }}</span>
-            <span :class="$style.playlistCount">{{ pl.tracks.length }} tracks</span>
+            <span :class="$style.playlistCount">{{ tr('{count} tracks', { count: pl.tracks.length }) }}</span>
           </div>
         </div>
       </NSpin>
@@ -84,9 +85,9 @@ async function togglePlaylist(playlistId: string) {
         <NSpace justify="space-between" align="center">
           <NButton size="small" quaternary @click="showCreate = true">
             <template #icon><Plus :size="14" /></template>
-            New Playlist
+            {{ tr('New Playlist') }}
           </NButton>
-          <NButton @click="close">Done</NButton>
+          <NButton @click="close">{{ tr('Done') }}</NButton>
         </NSpace>
       </template>
     </NCard>

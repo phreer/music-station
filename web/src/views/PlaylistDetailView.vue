@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NButton, NEmpty, NSpin } from 'naive-ui'
@@ -123,13 +124,13 @@ onUnmounted(() => abortController?.abort())
     <div :class="$style.toolbar">
       <NButton quaternary @click="router.back()">
         <template #icon><ArrowLeft :size="16" /></template>
-        Playlists
+        {{ tr('Playlists') }}
       </NButton>
     </div>
 
     <NSpin :show="isLoading">
-      <NEmpty v-if="!isLoading && error" :description="error" style="padding: 60px 0" />
-      <NEmpty v-else-if="!isLoading && !playlist" description="Playlist not found" style="padding: 60px 0" />
+      <NEmpty v-if="!isLoading && error" :description="tr(error)" style="padding: 60px 0" />
+      <NEmpty v-else-if="!isLoading && !playlist" :description="tr('Playlist not found')" style="padding: 60px 0" />
 
       <div v-else-if="playlist" :class="$style.content">
         <div :class="$style.header">
@@ -150,28 +151,28 @@ onUnmounted(() => abortController?.abort())
           </div>
 
           <div :class="$style.playlistInfo">
-            <div :class="$style.playlistLabel">Playlist</div>
+            <div :class="$style.playlistLabel">{{ tr('Playlist') }}</div>
             <h1 :class="$style.playlistName">{{ playlist.name }}</h1>
             <div v-if="playlist.description" :class="$style.description">
               {{ playlist.description }}
             </div>
             <div :class="$style.playlistMeta">
-              <span>{{ playlist.tracks.length }} tracks</span>
+              <span>{{ tr('{count} tracks', { count: playlist.tracks.length }) }}</span>
               <span :class="$style.metaSep">·</span>
               <span>{{ formatDurationLong(totalDuration) }}</span>
               <span v-if="unresolvedTrackCount > 0" :class="$style.missingTracks">
-                {{ unresolvedTrackCount }} unavailable
+                {{ tr('{count} unavailable', { count: unresolvedTrackCount }) }}
               </span>
             </div>
 
             <div :class="$style.actions">
               <NButton type="primary" :disabled="tracks.length === 0" @click="playPlaylist">
                 <template #icon><Play :size="14" fill="currentColor" /></template>
-                Play All
+                {{ tr('Play All') }}
               </NButton>
               <NButton :disabled="tracks.length === 0" @click="addPlaylistToQueue">
                 <template #icon><ListPlus :size="14" /></template>
-                Add to Queue
+                {{ tr('Add to Queue') }}
               </NButton>
             </div>
           </div>
@@ -181,15 +182,15 @@ onUnmounted(() => abortController?.abort())
           <div :class="$style.trackListHeader">
             <span :class="$style.colNum">#</span>
             <div :class="[$style.headerCell, $style.colTitle]">
-              <span>Title</span>
+              <span>{{ tr('Title') }}</span>
               <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
             </div>
             <div :class="[$style.headerCell, $style.colAlbum]">
-              <span>Album</span>
+              <span>{{ tr('Album') }}</span>
               <span :class="$style.resizeHandle" @mousedown.prevent="startResize('album', $event)" />
             </div>
             <div :class="[$style.headerCell, $style.colDur]">
-              <span>Duration</span>
+              <span>{{ tr('Duration') }}</span>
               <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
             </div>
             <span />
@@ -197,7 +198,7 @@ onUnmounted(() => abortController?.abort())
 
           <NEmpty
             v-if="!isLoading && tracks.length === 0"
-            description="No tracks in this playlist"
+            :description="tr('No tracks in this playlist')"
             style="padding: 48px 0"
           />
 
@@ -209,7 +210,7 @@ onUnmounted(() => abortController?.abort())
           >
             <span :class="$style.colNum">{{ index + 1 }}</span>
             <div :class="$style.colTitle">
-              <span :class="$style.trackTitle">{{ track.title ?? 'Unknown Title' }}</span>
+              <span :class="$style.trackTitle">{{ track.title ?? tr('Unknown Title') }}</span>
               <span
                 v-if="track.artist"
                 :class="[$style.trackArtist, $style.navLink]"
@@ -226,14 +227,14 @@ onUnmounted(() => abortController?.abort())
               <TrackFavoriteButton :track-id="track.id" />
               <button
                 :class="$style.addBtn"
-                title="Add to queue"
+                :title="tr('Add to queue')"
                 @click.stop="queue.addToQueue(track.id)"
               >
                 <ListPlus :size="13" />
               </button>
               <button
                 :class="$style.removeBtn"
-                title="Remove from playlist"
+                :title="tr('Remove from playlist')"
                 @click.stop="removeTrack(track.id)"
               >
                 <Trash2 :size="13" />

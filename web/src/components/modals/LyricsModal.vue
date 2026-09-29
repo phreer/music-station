@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { tr } from '@/i18n'
+import { computed, ref, watch } from 'vue'
 import {
   NModal, NCard, NForm, NFormItem, NInput, NSelect, NButton, NSpace, NTabs, NTabPane,
 } from 'naive-ui'
@@ -27,11 +28,11 @@ const isDeleting = ref(false)
 const error = ref<string | null>(null)
 const showSearch = ref(false)
 
-const formatOptions = [
-  { label: 'LRC (line-synced)', value: 'lrc' },
-  { label: 'LRC Word (word-level)', value: 'lrc_word' },
-  { label: 'Plain text', value: 'plain' },
-]
+const formatOptions = computed(() => [
+  { label: tr('LRC (line-synced)'), value: 'lrc' },
+  { label: tr('LRC Word (word-level)'), value: 'lrc_word' },
+  { label: tr('Plain text'), value: 'plain' },
+])
 
 // Populate existing lyrics when opening
 watch(
@@ -111,32 +112,32 @@ function handleSearchResult(text: string, fmt: string) {
   <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="false">
     <NCard
       style="width: 680px; max-width: 98vw"
-      :title="`Lyrics — ${track?.title ?? ''}`"
+      :title="tr('Lyrics — {title}', { title: track?.title ?? '' })"
       :bordered="false"
       role="dialog"
       aria-modal="true"
     >
       <NTabs type="line" size="small" style="margin-bottom: 12px">
-        <NTabPane name="edit" tab="Edit">
+        <NTabPane name="edit" :tab="tr('Edit')">
           <NForm>
-            <NFormItem label="Content" :feedback="error ?? undefined" :validation-status="error ? 'error' : undefined">
+            <NFormItem :label="tr('Content')" :feedback="error ? tr(error) : undefined" :validation-status="error ? 'error' : undefined">
               <NInput
                 v-model:value="content"
                 type="textarea"
-                placeholder="Paste lyrics here..."
+                :placeholder="tr('Paste lyrics here...')"
                 :autosize="{ minRows: 14, maxRows: 22 }"
                 style="font-family: monospace; font-size: 13px"
               />
             </NFormItem>
             <NSpace>
-              <NFormItem label="Format" style="min-width: 200px">
+              <NFormItem :label="tr('Format')" style="min-width: 200px">
                 <NSelect v-model:value="format" :options="formatOptions" />
               </NFormItem>
-              <NFormItem label="Language">
-                <NInput v-model:value="language" placeholder="e.g. zh, en" style="width: 100px" />
+              <NFormItem :label="tr('Language')">
+                <NInput v-model:value="language" :placeholder="tr('e.g. zh, en')" style="width: 100px" />
               </NFormItem>
-              <NFormItem label="Source">
-                <NInput v-model:value="source" placeholder="e.g. netease" style="width: 130px" />
+              <NFormItem :label="tr('Source')">
+                <NInput v-model:value="source" :placeholder="tr('e.g. netease')" style="width: 130px" />
               </NFormItem>
             </NSpace>
           </NForm>
@@ -154,13 +155,13 @@ function handleSearchResult(text: string, fmt: string) {
               :loading="isDeleting"
               @click="handleDelete"
             >
-              Delete Lyrics
+              {{ tr('Delete Lyrics') }}
             </NButton>
-            <NButton size="small" @click="showSearch = true">Search Online</NButton>
+            <NButton size="small" @click="showSearch = true">{{ tr('Search Online') }}</NButton>
           </NSpace>
           <NSpace>
-            <NButton @click="close">Cancel</NButton>
-            <NButton type="primary" :loading="isSaving" @click="handleSave">Save</NButton>
+            <NButton @click="close">{{ tr('Cancel') }}</NButton>
+            <NButton type="primary" :loading="isSaving" @click="handleSave">{{ tr('Save') }}</NButton>
           </NSpace>
         </NSpace>
       </template>

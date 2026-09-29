@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, watch, nextTick } from 'vue'
 import { NButton, NEmpty, NSpin } from 'naive-ui'
 import { Minus, RotateCcw, Plus, X, Music2, PanelLeft, PanelRight } from 'lucide-vue-next'
@@ -29,14 +30,14 @@ watch(
     <div :class="$style.header">
       <span :class="$style.title">
         <Music2 :size="14" style="margin-right: 6px; vertical-align: middle" />
-        Lyrics
+        {{ tr('Lyrics') }}
       </span>
       <div :class="$style.actions">
         <NButton
           quaternary
           circle
           size="tiny"
-          :title="ui.lyricsPanelSide === 'left' ? 'Move lyrics to right' : 'Move lyrics to left'"
+          :title="ui.lyricsPanelSide === 'left' ? tr('Move lyrics to right') : tr('Move lyrics to left')"
           @click="ui.toggleLyricsPanelSide"
         >
           <template #icon>
@@ -48,7 +49,7 @@ watch(
           quaternary
           circle
           size="tiny"
-          title="Smaller lyrics"
+          :title="tr('Smaller lyrics')"
           :disabled="ui.lyricsFontSize <= ui.minLyricsFontSize"
           @click="ui.decreaseLyricsFontSize"
         >
@@ -58,7 +59,7 @@ watch(
           quaternary
           circle
           size="tiny"
-          title="Reset lyrics size"
+          :title="tr('Reset lyrics size')"
           :disabled="ui.lyricsFontSize === ui.defaultLyricsFontSize"
           @click="ui.resetLyricsFontSize"
         >
@@ -68,13 +69,13 @@ watch(
           quaternary
           circle
           size="tiny"
-          title="Larger lyrics"
+          :title="tr('Larger lyrics')"
           :disabled="ui.lyricsFontSize >= ui.maxLyricsFontSize"
           @click="ui.increaseLyricsFontSize"
         >
           <template #icon><Plus :size="14" /></template>
         </NButton>
-        <NButton quaternary circle size="tiny" title="Close lyrics" @click="lyrics.toggleSidebar">
+        <NButton quaternary circle size="tiny" :title="tr('Close lyrics')" @click="lyrics.toggleSidebar">
           <template #icon><X :size="14" /></template>
         </NButton>
       </div>
@@ -91,13 +92,13 @@ watch(
 
       <NEmpty
         v-else-if="!lyrics.hasLyrics && player.currentTrack"
-        description="No lyrics"
+        :description="tr('No lyrics')"
         :class="$style.empty"
       />
 
       <NEmpty
         v-else-if="!player.currentTrack"
-        description="Nothing playing"
+        :description="tr('Nothing playing')"
         :class="$style.empty"
       />
 

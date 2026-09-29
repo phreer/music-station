@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref } from 'vue'
 import { NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace } from 'naive-ui'
 import { usePlaylistStore } from '@/stores/playlists'
@@ -44,29 +45,29 @@ async function handleSubmit() {
   <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="true">
     <NCard
       style="width: 420px; max-width: 95vw"
-      title="New Playlist"
+      :title="tr('New Playlist')"
       :bordered="false"
       role="dialog"
       aria-modal="true"
     >
       <NForm @submit.prevent="handleSubmit">
         <NFormItem
-          label="Name"
-          :feedback="error ?? undefined"
+          :label="tr('Name')"
+          :feedback="error ? tr(error) : undefined"
           :validation-status="error ? 'error' : undefined"
         >
           <NInput
             v-model:value="name"
-            placeholder="Playlist name"
+            :placeholder="tr('Playlist name')"
             :autofocus="true"
             @keydown.enter="handleSubmit"
           />
         </NFormItem>
-        <NFormItem label="Description (optional)">
+        <NFormItem :label="tr('Description (optional)')">
           <NInput
             v-model:value="description"
             type="textarea"
-            placeholder="Optional description"
+            :placeholder="tr('Optional description')"
             :autosize="{ minRows: 2, maxRows: 4 }"
           />
         </NFormItem>
@@ -74,8 +75,8 @@ async function handleSubmit() {
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="close">Cancel</NButton>
-          <NButton type="primary" :loading="isSubmitting" @click="handleSubmit">Create</NButton>
+          <NButton @click="close">{{ tr('Cancel') }}</NButton>
+          <NButton type="primary" :loading="isSubmitting" @click="handleSubmit">{{ tr('Create') }}</NButton>
         </NSpace>
       </template>
     </NCard>

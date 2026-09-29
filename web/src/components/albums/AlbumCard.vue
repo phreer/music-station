@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed, watch } from 'vue'
 import type { Album, Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -56,7 +57,7 @@ function playTrack(track: Track) {
 <template>
   <article :class="$style.card">
     <div :class="$style.coverWrapper">
-      <button :class="$style.coverExpand" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name}`" :aria-expanded="expanded" @click="expanded = !expanded">
+      <button :class="$style.coverExpand" :aria-label="tr('{action} {name}', { action: expanded ? tr('Collapse') : tr('Expand'), name: album.name })" :aria-expanded="expanded" @click="expanded = !expanded">
         <img
           v-if="coverTrack && !coverFailed"
           :src="coverUrl(coverTrack.id)"
@@ -68,10 +69,10 @@ function playTrack(track: Track) {
         <div v-else :class="$style.coverPlaceholder">&#9834;</div>
       </button>
       <div :class="$style.overlay">
-        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playAlbum" title="Play album">
+        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playAlbum" :title="tr('Play album')">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
         </button>
-        <button :class="$style.iconBtn" @click.stop="addAlbumToQueue" title="Add to queue">
+        <button :class="$style.iconBtn" @click.stop="addAlbumToQueue" :title="tr('Add to queue')">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
         </button>
       </div>
@@ -89,11 +90,11 @@ function playTrack(track: Track) {
         :to="{ name: 'artist-detail', params: { name: album.artist } }"
       >{{ album.artist }}</RouterLink>
       <div :class="$style.albumMeta">
-        {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
+        {{ tr('{count} tracks', { count: album.track_count }) }} · {{ formatDurationLong(album.total_duration_secs) }}
       </div>
     </div>
 
-    <button :class="$style.expandToggle" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${album.name} tracks`" :aria-expanded="expanded" @click="expanded = !expanded">
+    <button :class="$style.expandToggle" :aria-label="tr('{action} {name} tracks', { action: expanded ? tr('Collapse') : tr('Expand'), name: album.name })" :aria-expanded="expanded" @click="expanded = !expanded">
       <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
     </button>
     </div>
@@ -111,7 +112,7 @@ function playTrack(track: Track) {
           <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
           <button
             :class="$style.trackAddBtn"
-            title="Add to queue"
+            :title="tr('Add to queue')"
             @click.stop="queue.addToQueue(track.id)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>

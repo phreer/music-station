@@ -1,16 +1,17 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { Music2, Disc3, Users, ListMusic, ChartNoAxesColumn } from 'lucide-vue-next'
 
 const route = useRoute()
-const items = [
-  { label: 'Tracks', key: 'tracks', icon: Music2 },
-  { label: 'Albums', key: 'albums', icon: Disc3 },
-  { label: 'Artists', key: 'artists', icon: Users },
-  { label: 'Playlists', key: 'playlists', icon: ListMusic },
-  { label: 'Stats', key: 'stats', icon: ChartNoAxesColumn },
-]
+const items = computed(() => [
+  { label: tr('Tracks'), key: 'tracks', icon: Music2 },
+  { label: tr('Albums'), key: 'albums', icon: Disc3 },
+  { label: tr('Artists'), key: 'artists', icon: Users },
+  { label: tr('Playlists'), key: 'playlists', icon: ListMusic },
+  { label: tr('Stats'), key: 'stats', icon: ChartNoAxesColumn },
+])
 const detailSections: Record<string, string> = {
   'album-detail': 'albums',
   'artist-detail': 'artists',
@@ -20,7 +21,7 @@ const activeKey = computed(() => detailSections[String(route.name)] ?? route.nam
 </script>
 
 <template>
-  <nav :class="$style.nav" aria-label="Library">
+  <nav :class="$style.nav" :aria-label="tr('Library')">
     <RouterLink
       v-for="item in items"
       :key="item.key"

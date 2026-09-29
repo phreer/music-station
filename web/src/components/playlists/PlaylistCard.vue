@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed } from 'vue'
 import type { Playlist } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -64,7 +65,7 @@ async function handleRemoveTrack(trackId: string) {
 <template>
   <article :class="$style.card">
     <div :class="$style.coverWrapper">
-      <button :class="$style.coverExpand" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name}`" :aria-expanded="expanded" @click="expanded = !expanded">
+      <button :class="$style.coverExpand" :aria-label="tr('{action} {name}', { action: expanded ? tr('Collapse') : tr('Expand'), name: playlist.name })" :aria-expanded="expanded" @click="expanded = !expanded">
       <!-- Cover grid (up to 4 images) -->
       <div v-if="coverTrackIds.length > 0" :class="$style.coverGrid">
         <img
@@ -79,10 +80,10 @@ async function handleRemoveTrack(trackId: string) {
       <div v-else :class="$style.coverPlaceholder">&#9835;</div>
       </button>
       <div :class="$style.overlay">
-        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playPlaylist" title="Play playlist">
+        <button :class="[$style.iconBtn, $style.iconBtnPrimary]" @click.stop="playPlaylist" :title="tr('Play playlist')">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
         </button>
-        <button :class="$style.iconBtn" @click.stop="queue.addMultiple(playlist.tracks)" title="Add to queue">
+        <button :class="$style.iconBtn" @click.stop="queue.addMultiple(playlist.tracks)" :title="tr('Add to queue')">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
         </button>
       </div>
@@ -96,7 +97,7 @@ async function handleRemoveTrack(trackId: string) {
       >{{ playlist.name }}</RouterLink>
       <div :class="$style.playlistMeta" v-if="playlist.description">{{ playlist.description }}</div>
       <div :class="$style.playlistMeta">
-        {{ playlist.tracks.length }} tracks · {{ formatDuration(totalDuration) }}
+        {{ tr('{count} tracks', { count: playlist.tracks.length }) }} · {{ formatDuration(totalDuration) }}
       </div>
     </div>
 
@@ -106,16 +107,16 @@ async function handleRemoveTrack(trackId: string) {
         @click="emit('request-delete', playlist.id, playlist.name)"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-        Delete
+        {{ tr('Delete') }}
       </button>
-      <button :class="$style.expandToggle" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${playlist.name} tracks`" :aria-expanded="expanded" @click="expanded = !expanded">
+      <button :class="$style.expandToggle" :aria-label="tr('{action} {name} tracks', { action: expanded ? tr('Collapse') : tr('Expand'), name: playlist.name })" :aria-expanded="expanded" @click="expanded = !expanded">
         <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
       </button>
     </div>
 
     <Transition name="expand">
       <div v-if="expanded" :class="$style.trackList">
-        <div v-if="tracks.length === 0" :class="$style.emptyTracks">No tracks</div>
+        <div v-if="tracks.length === 0" :class="$style.emptyTracks">{{ tr('No tracks') }}</div>
         <div
           v-for="track in tracks"
           :key="track.id"
@@ -128,7 +129,7 @@ async function handleRemoveTrack(trackId: string) {
           <TrackFavoriteButton :track-id="track.id" :size="22" :icon-size="12" />
           <button
             :class="$style.trackRemoveBtn"
-            title="Remove from playlist"
+            :title="tr('Remove from playlist')"
             @click.stop="handleRemoveTrack(track.id)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>

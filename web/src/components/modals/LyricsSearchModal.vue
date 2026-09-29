@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, watch } from 'vue'
 import { NModal, NCard, NInput, NButton, NSpace, NSpin, NEmpty } from 'naive-ui'
 import { Search } from 'lucide-vue-next'
@@ -78,7 +79,7 @@ async function handleSelect(result: SearchResultWithProvider) {
   <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="true">
     <NCard
       style="width: 540px; max-width: 96vw"
-      title="Search Lyrics Online"
+      :title="tr('Search Lyrics Online')"
       :bordered="false"
       role="dialog"
       aria-modal="true"
@@ -86,7 +87,7 @@ async function handleSelect(result: SearchResultWithProvider) {
       <NSpace vertical :size="12">
         <NInput
           v-model:value="query"
-          placeholder="Track title + artist…"
+          :placeholder="tr('Track title + artist…')"
           clearable
           @keydown.enter="handleSearch"
         >
@@ -98,8 +99,8 @@ async function handleSelect(result: SearchResultWithProvider) {
         </NInput>
 
         <NSpin :show="isSearching" style="min-height: 80px">
-          <NEmpty v-if="!isSearching && results.length === 0 && error" :description="error" style="padding: 20px 0" />
-          <NEmpty v-else-if="!isSearching && results.length === 0 && !error" description="Search to find lyrics" style="padding: 20px 0" />
+          <NEmpty v-if="!isSearching && results.length === 0 && error" :description="tr(error)" style="padding: 20px 0" />
+          <NEmpty v-else-if="!isSearching && results.length === 0 && !error" :description="tr('Search to find lyrics')" style="padding: 20px 0" />
 
           <div v-else :class="$style.results">
             <div
@@ -128,7 +129,7 @@ async function handleSelect(result: SearchResultWithProvider) {
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="emit('update:show', false)">Cancel</NButton>
+          <NButton @click="emit('update:show', false)">{{ tr('Cancel') }}</NButton>
         </NSpace>
       </template>
     </NCard>

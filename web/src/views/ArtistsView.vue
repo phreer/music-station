@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NEmpty, NButton, NInput } from 'naive-ui'
@@ -26,10 +27,10 @@ onMounted(() => store.loadArtists())
 
 <template>
   <div class="library-page">
-    <LibraryPageHeader title="Artists" :description="`${filteredArtists.length.toLocaleString()} artists in your library`">
+    <LibraryPageHeader :title="tr('Artists')" :description="tr('{count} artists in your library', { count: filteredArtists.length.toLocaleString() })">
       <NInput
         v-model:value="searchQuery"
-        placeholder="Search artists"
+        :placeholder="tr('Search artists')"
         clearable
         class="library-search"
       >
@@ -42,17 +43,17 @@ onMounted(() => store.loadArtists())
         :secondary="!showFavoritesOnly"
         :class="$style.favBtn"
         @click="showFavoritesOnly = !showFavoritesOnly"
-        :title="showFavoritesOnly ? 'Show all artists' : 'Show favorites only'"
+        :title="showFavoritesOnly ? tr('Show all artists') : tr('Show favorites only')"
       >
         <template #icon><Heart :size="14" /></template>
         {{ favoriteCount }}
       </NButton>
-      <NButton quaternary circle aria-label="Refresh artists" @click="store.refresh" :loading="store.isLoading">
+      <NButton quaternary circle :aria-label="tr('Refresh artists')" @click="store.refresh" :loading="store.isLoading">
         <template #icon><RefreshCw :size="16" /></template>
       </NButton>
     </LibraryPageHeader>
     <NSpin :show="store.isLoading">
-      <NEmpty v-if="!store.isLoading && filteredArtists.length === 0" description="No artists found" style="padding: 60px 0" />
+      <NEmpty v-if="!store.isLoading && filteredArtists.length === 0" :description="tr('No artists found')" style="padding: 60px 0" />
       <ArtistGrid v-else :artists="filteredArtists" />
     </NSpin>
   </div>

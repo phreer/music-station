@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { computed } from 'vue'
 import { Heart } from 'lucide-vue-next'
 import { usePlaylistStore } from '@/stores/playlists'
@@ -17,7 +18,7 @@ const playlists = usePlaylistStore()
 const isFavorite = computed(() => playlists.isTrackFavorited(props.trackId))
 const isPending = computed(() => playlists.isTrackFavoritePending(props.trackId))
 const buttonTitle = computed(() =>
-  isFavorite.value ? 'Remove from Favorite playlist' : 'Add to Favorite playlist',
+  isFavorite.value ? tr('Remove from Favorite playlist') : tr('Add to Favorite playlist'),
 )
 
 async function toggleFavorite(event: MouseEvent) {

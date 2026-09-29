@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, onMounted } from 'vue'
 import { NButton, NEmpty, NSpin, NModal } from 'naive-ui'
@@ -36,17 +37,17 @@ onMounted(() => {
 
 <template>
   <div class="library-page">
-    <LibraryPageHeader title="Playlists" :description="`${playlistStore.playlists.length} collections, made by you`">
+    <LibraryPageHeader :title="tr('Playlists')" :description="tr('{count} collections, made by you', { count: playlistStore.playlists.length })">
       <NButton type="primary" @click="showCreate = true">
         <template #icon><Plus :size="16" /></template>
-        New Playlist
+        {{ tr('New Playlist') }}
       </NButton>
     </LibraryPageHeader>
 
     <NSpin :show="playlistStore.isLoading">
       <NEmpty
         v-if="!playlistStore.isLoading && playlistStore.playlists.length === 0"
-        description="No playlists yet"
+        :description="tr('No playlists yet')"
         style="padding: 60px 0"
       />
       <div v-else :class="$style.grid">
@@ -61,10 +62,10 @@ onMounted(() => {
       :show="deleteTarget !== null"
       preset="dialog"
       type="warning"
-      title="Delete Playlist"
-      :content="`Delete playlist &quot;${deleteTarget?.name ?? ''}&quot;? This cannot be undone.`"
-      positive-text="Delete"
-      negative-text="Cancel"
+      :title="tr('Delete Playlist')"
+      :content="tr('Delete playlist &quot;{name}&quot;? This cannot be undone.', { name: deleteTarget?.name ?? '' })"
+      :positive-text="tr('Delete')"
+      :negative-text="tr('Cancel')"
       @positive-click="confirmDelete"
       @negative-click="cancelDelete"
       @mask-click="cancelDelete"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, watch } from 'vue'
 import {
   NModal, NCard, NForm, NFormItem, NInput, NButton, NSpace, NGi, NGrid,
@@ -84,7 +85,7 @@ async function handleSave() {
   <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="false">
     <NCard
       style="width: 600px; max-width: 98vw"
-      title="Edit Track Metadata"
+      :title="tr('Edit Track Metadata')"
       :bordered="false"
       role="dialog"
       aria-modal="true"
@@ -92,59 +93,59 @@ async function handleSave() {
       <NForm label-placement="top" label-width="auto">
         <NGrid :x-gap="14" :cols="2">
           <NGi :span="2">
-            <NFormItem label="Title">
-              <NInput v-model:value="title" placeholder="Title" />
+            <NFormItem :label="tr('Title')">
+              <NInput v-model:value="title" :placeholder="tr('Title')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Artist">
-              <NInput v-model:value="artist" placeholder="Artist" />
+            <NFormItem :label="tr('Artist')">
+              <NInput v-model:value="artist" :placeholder="tr('Artist')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Album Artist">
-              <NInput v-model:value="albumArtist" placeholder="Album Artist" />
+            <NFormItem :label="tr('Album Artist')">
+              <NInput v-model:value="albumArtist" :placeholder="tr('Album Artist')" />
             </NFormItem>
           </NGi>
           <NGi :span="2">
-            <NFormItem label="Album">
-              <NInput v-model:value="album" placeholder="Album" />
+            <NFormItem :label="tr('Album')">
+              <NInput v-model:value="album" :placeholder="tr('Album')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Genre">
-              <NInput v-model:value="genre" placeholder="Genre" />
+            <NFormItem :label="tr('Genre')">
+              <NInput v-model:value="genre" :placeholder="tr('Genre')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Year">
-              <NInput v-model:value="year" placeholder="Year" />
+            <NFormItem :label="tr('Year')">
+              <NInput v-model:value="year" :placeholder="tr('Year')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Track #">
-              <NInput v-model:value="trackNumber" placeholder="Track number" />
+            <NFormItem :label="tr('Track #')">
+              <NInput v-model:value="trackNumber" :placeholder="tr('Track number')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Disc #">
-              <NInput v-model:value="discNumber" placeholder="Disc number" />
+            <NFormItem :label="tr('Disc #')">
+              <NInput v-model:value="discNumber" :placeholder="tr('Disc number')" />
             </NFormItem>
           </NGi>
           <NGi>
-            <NFormItem label="Composer">
-              <NInput v-model:value="composer" placeholder="Composer" />
+            <NFormItem :label="tr('Composer')">
+              <NInput v-model:value="composer" :placeholder="tr('Composer')" />
             </NFormItem>
           </NGi>
           <NGi>
             <!-- spacer -->
           </NGi>
           <NGi :span="2">
-            <NFormItem label="Comment">
+            <NFormItem :label="tr('Comment')">
               <NInput
                 v-model:value="comment"
                 type="textarea"
-                placeholder="Comment"
+                :placeholder="tr('Comment')"
                 :autosize="{ minRows: 2, maxRows: 4 }"
               />
             </NFormItem>
@@ -153,13 +154,13 @@ async function handleSave() {
       </NForm>
 
       <div v-if="error" style="color: var(--n-error-color, #d03050); font-size: 13px; margin-top: 4px">
-        {{ error }}
+        {{ tr(error) }}
       </div>
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="close">Cancel</NButton>
-          <NButton type="primary" :loading="isSaving" @click="handleSave">Save</NButton>
+          <NButton @click="close">{{ tr('Cancel') }}</NButton>
+          <NButton type="primary" :loading="isSaving" @click="handleSave">{{ tr('Save') }}</NButton>
         </NSpace>
       </template>
     </NCard>

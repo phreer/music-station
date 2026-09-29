@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { computed } from 'vue'
 import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
@@ -28,7 +29,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
   <div
     :class="[$style.item, isActive && $style.itemActive]"
     tabindex="0"
-    :aria-label="`Play ${track?.title || 'Unknown'}`"
+    :aria-label="tr('Play {title}', { title: track?.title || tr('Unknown') })"
     @click="emit('play')"
     @keydown.enter.self="emit('play')"
     @keydown.space.self.prevent="emit('play')"
@@ -42,8 +43,8 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
       <div v-else :class="$style.coverPlaceholder">&#9834;</div>
     </div>
     <div :class="$style.itemInfo">
-      <div :class="$style.itemTitle">{{ track?.title || 'Unknown' }}</div>
-      <div :class="$style.itemArtist">{{ track?.artist || 'Unknown' }}</div>
+      <div :class="$style.itemTitle">{{ track?.title || tr('Unknown') }}</div>
+      <div :class="$style.itemArtist">{{ track?.artist || tr('Unknown') }}</div>
     </div>
     <div :class="$style.itemDuration">
       {{ formatDuration(track?.duration_secs) }}
@@ -51,7 +52,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
     <TrackFavoriteButton v-if="track" :track-id="track.id" :size="22" :icon-size="12" />
     <button
       :class="$style.removeBtn"
-      title="Remove from queue"
+      :title="tr('Remove from queue')"
       @click.stop="emit('remove')"
       v-html="removeIconSvg"
     />

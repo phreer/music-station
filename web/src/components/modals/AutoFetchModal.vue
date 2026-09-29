@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 /**
  * AutoFetchModal: Bulk-fetch lyrics for tracks that don't have them yet.
  * Runs sequentially per track, shows live progress.
@@ -24,6 +25,7 @@ interface TaskResult {
   track: Track
   status: TaskStatus
   message: string
+  provider?: string
 }
 
 const tasks = ref<TaskResult[]>([])
@@ -66,12 +68,13 @@ async function start() {
         continue
       }
       const top = results[0]!
-      task.message = `Fetching from ${provider}…`
+      task.provider = provider
+      task.message = 'Fetching from {provider}…'
       const lyrics = await fetchLyricsFromProvider(provider, top.id)
       await uploadLyrics(task.track.id, lyrics.content, lyrics.format, lyrics.language ?? '', provider)
       library.updateTrackLocally(task.track.id, { has_lyrics: true })
       task.status = 'done'
-      task.message = `OK (${provider})`
+      task.message = 'OK ({provider})'
     } catch (e) {
       task.status = 'failed'
       task.message = e instanceof Error ? e.message : 'Error'
@@ -90,18 +93,18 @@ function close() {
   <NModal :show="show" @update:show="handleShow" :mask-closable="!isRunning">
     <NCard
       style="width: 500px; max-width: 96vw"
-      title="Auto-Fetch Lyrics"
+      :title="tr('Auto-Fetch Lyrics')"
       :bordered="false"
       role="dialog"
       aria-modal="true"
     >
       <NSpace vertical :size="14">
         <div v-if="tasks.length === 0" style="opacity: 0.6; font-size: 14px">
-          No tracks selected (all already have lyrics, or none provided).
+          {{ tr('No tracks selected (all already have lyrics, or none provided).') }}
         </div>
         <template v-else>
           <div style="font-size: 14px; opacity: 0.7">
-            {{ tasks.length }} tracks to process
+            {{ tr('{count} tracks to process', { count: tasks.length }) }}
           </div>
           <NProgress
             type="line"
@@ -117,7 +120,7 @@ function close() {
               <div v-else :class="$style.iconPending" />
               <span :class="$style.taskTitle">{{ task.track.title }}</span>
               <NTag v-if="task.status !== 'pending'" size="tiny" :type="task.status === 'done' ? 'success' : task.status === 'running' ? 'info' : 'warning'">
-                {{ task.message }}
+                {{ tr(task.message, { provider: task.provider ?? '' }) }}
               </NTag>
             </div>
           </NScrollbar>
@@ -127,7 +130,7 @@ function close() {
       <template #footer>
         <NSpace justify="end">
           <NButton @click="close" :disabled="isRunning">
-            {{ isFinished ? 'Close' : 'Cancel' }}
+            {{ isFinished ? tr('Close') : tr('Cancel') }}
           </NButton>
           <NButton
             type="primary"
@@ -135,7 +138,7 @@ function close() {
             :disabled="tasks.length === 0 || isFinished"
             @click="start"
           >
-            {{ isFinished ? 'Done' : 'Start' }}
+            {{ isFinished ? tr('Done') : tr('Start') }}
           </NButton>
         </NSpace>
       </template>

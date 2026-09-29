@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { NDataTable, type DataTableColumns, type DataTableRowKey } from 'naive-ui'
 import { computed, h, nextTick, onActivated, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -136,7 +137,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
   },
   {
     key: 'title',
-    title: () => resizableTitle('Title', 'title'),
+    title: () => resizableTitle(tr('Title'), 'title'),
     ...lockedWidth('title'),
     render(row) {
       const artistEl = row.artist
@@ -147,16 +148,16 @@ const columns = computed<DataTableColumns<Track>>(() => [
               router.push({ name: 'artist-detail', params: { name: row.artist } })
             },
           }, row.artist)
-        : h('span', { class: 'track-artist-text' }, 'Unknown Artist')
+        : h('span', { class: 'track-artist-text' }, tr('Unknown Artist'))
       return h('div', { class: 'track-title-cell' }, [
-        h('div', { class: 'track-title-text' }, row.title || 'Unknown Title'),
+        h('div', { class: 'track-title-text' }, row.title || tr('Unknown Title')),
         artistEl,
       ])
     },
   },
   {
     key: 'album',
-    title: () => resizableTitle('Album', 'album'),
+    title: () => resizableTitle(tr('Album'), 'album'),
     ...lockedWidth('album'),
     render(row) {
       if (!row.album) return h('span', { class: 'track-album-text' }, '-')
@@ -171,7 +172,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
   },
   {
     key: 'duration',
-    title: () => resizableTitle('Duration', 'duration', 'right'),
+    title: () => resizableTitle(tr('Duration'), 'duration', 'right'),
     ...lockedWidth('duration'),
     align: 'right',
     render(row) {
@@ -180,7 +181,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
   },
   {
     key: 'play_count',
-    title: () => resizableTitle('Plays', 'play_count', 'right'),
+    title: () => resizableTitle(tr('Plays'), 'play_count', 'right'),
     ...lockedWidth('play_count'),
     align: 'right',
   },
@@ -202,7 +203,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
         }),
         h('button', {
           class: 'track-action-btn',
-          title: 'Play',
+          title: tr('Play'),
           innerHTML: playIcon,
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -211,7 +212,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
         }),
         h('button', {
           class: 'track-action-btn',
-          title: 'Add to queue',
+          title: tr('Add to queue'),
           innerHTML: addQueueIcon,
           onClick: (e: Event) => {
             e.stopPropagation()
@@ -220,7 +221,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
         }),
         h('button', {
           class: 'track-action-btn',
-          title: 'Add to playlist',
+          title: tr('Add to playlist'),
           innerHTML: playlistIcon,
           onClick: (e: Event) => {
             e.stopPropagation()

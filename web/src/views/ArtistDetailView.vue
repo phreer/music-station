@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NSpin, NEmpty, NButton } from 'naive-ui'
@@ -136,13 +137,13 @@ onUnmounted(() => abortController?.abort())
     <div :class="$style.toolbar">
       <NButton quaternary @click="router.back()">
         <template #icon><ArrowLeft :size="16" /></template>
-        Artists
+        {{ tr('Artists') }}
       </NButton>
     </div>
 
     <NSpin :show="isLoading">
-      <NEmpty v-if="!isLoading && error" :description="error" style="padding: 60px 0" />
-      <NEmpty v-else-if="!isLoading && !artist" description="Artist not found" style="padding: 60px 0" />
+      <NEmpty v-if="!isLoading && error" :description="tr(error)" style="padding: 60px 0" />
+      <NEmpty v-else-if="!isLoading && !artist" :description="tr('Artist not found')" style="padding: 60px 0" />
 
       <div v-else-if="artist" :class="$style.content">
         <!-- Header: avatar + info side by side -->
@@ -160,33 +161,33 @@ onUnmounted(() => abortController?.abort())
           </div>
 
           <div :class="$style.artistInfo">
-            <div :class="$style.artistLabel">Artist</div>
+            <div :class="$style.artistLabel">{{ tr('Artist') }}</div>
             <h1 :class="$style.artistName">{{ artist.name }}</h1>
             <div :class="$style.artistMeta">
-              <span>{{ artist.album_count }} albums</span>
+              <span>{{ tr('{count} albums', { count: artist.album_count }) }}</span>
               <span :class="$style.metaSep">·</span>
-              <span>{{ artist.track_count }} tracks</span>
+              <span>{{ tr('{count} tracks', { count: artist.track_count }) }}</span>
             </div>
             <div :class="$style.actions">
               <NButton type="primary" @click="playAll">
                 <template #icon>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
                 </template>
-                Play All
+                {{ tr('Play All') }}
               </NButton>
               <NButton @click="addAllToQueue">
                 <template #icon>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
                 </template>
-                Add to Queue
+                {{ tr('Add to Queue') }}
               </NButton>
               <NButton
                 :class="[isFavorite && $style.favBtnActive]"
-                :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                :title="isFavorite ? tr('Remove from favorites') : tr('Add to favorites')"
                 @click="toggleFavorite"
               >
                 <template #icon><Heart :size="14" :fill="isFavorite ? 'currentColor' : 'none'" /></template>
-                {{ isFavorite ? 'Unfavorite' : 'Favorite' }}
+                {{ isFavorite ? tr('Unfavorite') : tr('Favorite') }}
               </NButton>
             </div>
           </div>
@@ -215,10 +216,10 @@ onUnmounted(() => abortController?.abort())
                   @click="router.push({ name: 'album-detail', params: { name: album.name } })"
                 >{{ album.name }}</div>
                 <div :class="$style.albumMeta">
-                  {{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}
+                  {{ tr('{count} tracks', { count: album.track_count }) }} · {{ formatDurationLong(album.total_duration_secs) }}
                 </div>
               </div>
-              <button :class="$style.albumPlayBtn" title="Play album" @click="playAlbum(album.name)">
+              <button :class="$style.albumPlayBtn" :title="tr('Play album')" @click="playAlbum(album.name)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
               </button>
             </div>
@@ -227,11 +228,11 @@ onUnmounted(() => abortController?.abort())
               <div :class="$style.trackListHeader">
                 <span :class="$style.colNum">#</span>
                 <div :class="[$style.headerCell, $style.colTitle]">
-                  <span>Title</span>
+                  <span>{{ tr('Title') }}</span>
                   <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
                 </div>
                 <div :class="[$style.headerCell, $style.trackDur]">
-                  <span>Duration</span>
+                  <span>{{ tr('Duration') }}</span>
                   <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
                 </div>
                 <span />
@@ -244,14 +245,14 @@ onUnmounted(() => abortController?.abort())
                 @click="playTrack(track, album.name)"
               >
                 <span :class="$style.colNum">{{ track.track_number ?? '—' }}</span>
-                <span :class="$style.trackTitle">{{ track.title ?? 'Unknown Title' }}</span>
+                <span :class="$style.trackTitle">{{ track.title ?? tr('Unknown Title') }}</span>
                 <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
                 <span />
                 <div :class="$style.rowActions">
                   <TrackFavoriteButton :track-id="track.id" />
                   <button
                     :class="$style.addBtn"
-                    title="Add to queue"
+                    :title="tr('Add to queue')"
                     @click.stop="queue.addToQueue(track.id)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>

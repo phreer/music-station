@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { tr } from '@/i18n'
+import { computed, ref, onMounted, watch } from 'vue'
 import { NSlider, NButton, NDropdown, NPopover } from 'naive-ui'
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2 } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
@@ -50,12 +51,12 @@ watch(
 function handleSeek(value: number) {
   player.seek(value)
 }
-const trackActions = [
-  { label: 'Edit track details', key: 'edit' },
-  { label: 'Manage lyrics', key: 'lyrics' },
+const trackActions = computed(() => [
+  { label: tr('Edit track details'), key: 'edit' },
+  { label: tr('Manage lyrics'), key: 'lyrics' },
   { type: 'divider', key: 'divider' },
-  { label: 'Stop playback', key: 'stop' },
-]
+  { label: tr('Stop playback'), key: 'stop' },
+])
 
 function handleAction(key: string) {
   if (key === 'edit') showEditModal.value = true
@@ -66,17 +67,17 @@ function handleAction(key: string) {
 
 
 <template>
-  <section v-show="player.currentTrack" :class="$style.player" aria-label="Music player">
+  <section v-show="player.currentTrack" :class="$style.player" :aria-label="tr('Music player')">
     <div :class="$style.info">
       <div :class="$style.cover">
         <img v-if="player.currentTrack?.has_cover" :src="coverUrl(player.currentTrack.id)" alt="" />
         <Music2 v-else :size="22" />
       </div>
       <div :class="$style.trackInfo">
-        <div :class="$style.trackTitle" :title="player.currentTrack?.title ?? ''">{{ player.currentTrack?.title || 'Unknown Title' }}</div>
+        <div :class="$style.trackTitle" :title="player.currentTrack?.title ?? ''">{{ player.currentTrack?.title || tr('Unknown Title') }}</div>
         <div :class="$style.trackArtist">
           <RouterLink v-if="player.currentTrack?.artist" :to="{ name: 'artist-detail', params: { name: player.currentTrack.artist } }">{{ player.currentTrack.artist }}</RouterLink>
-          <span v-else>Unknown Artist</span>
+          <span v-else>{{ tr('Unknown Artist') }}</span>
           <template v-if="player.currentTrack?.album">
             <span :class="$style.separator"> / </span>
             <RouterLink :to="{ name: 'album-detail', params: { name: player.currentTrack.album } }">{{ player.currentTrack.album }}</RouterLink>
@@ -85,21 +86,21 @@ function handleAction(key: string) {
       </div>
       <TrackFavoriteButton v-if="player.currentTrack" :track-id="player.currentTrack.id" :size="32" :icon-size="17" />
       <NDropdown trigger="click" placement="top-start" :options="trackActions" @select="handleAction">
-        <NButton quaternary circle aria-label="Track options" title="Track options"><template #icon><Ellipsis :size="19" /></template></NButton>
+        <NButton quaternary circle :aria-label="tr('Track options')" :title="tr('Track options')"><template #icon><Ellipsis :size="19" /></template></NButton>
       </NDropdown>
     </div>
 
     <div :class="$style.center">
       <div :class="$style.controls">
-        <NButton quaternary circle aria-label="Previous track" @click="player.playPrevious"><template #icon><SkipBack :size="18" /></template></NButton>
-        <NButton circle type="primary" :class="$style.playButton" :aria-label="player.isPlaying ? 'Pause' : 'Play'" @click="player.togglePlayPause">
+        <NButton quaternary circle :aria-label="tr('Previous track')" @click="player.playPrevious"><template #icon><SkipBack :size="18" /></template></NButton>
+        <NButton circle type="primary" :class="$style.playButton" :aria-label="player.isPlaying ? tr('Pause') : tr('Play')" @click="player.togglePlayPause">
           <template #icon><Pause v-if="player.isPlaying" :size="19" fill="currentColor" /><Play v-else :size="19" fill="currentColor" /></template>
         </NButton>
-        <NButton quaternary circle aria-label="Next track" @click="player.playNext"><template #icon><SkipForward :size="18" /></template></NButton>
+        <NButton quaternary circle :aria-label="tr('Next track')" @click="player.playNext"><template #icon><SkipForward :size="18" /></template></NButton>
       </div>
       <div :class="$style.progress">
         <span :class="$style.time">{{ formatDuration(player.currentTime) }}</span>
-        <NSlider :value="player.progress" :max="100" :step="0.1" :tooltip="false" :class="$style.progressSlider" aria-label="Playback position" @update:value="handleSeek" />
+        <NSlider :value="player.progress" :max="100" :step="0.1" :tooltip="false" :class="$style.progressSlider" :aria-label="tr('Playback position')" @update:value="handleSeek" />
         <span :class="$style.time">{{ formatDuration(player.duration) }}</span>
       </div>
     </div>
@@ -107,16 +108,16 @@ function handleAction(key: string) {
     <div :class="$style.utilities">
       <div :class="$style.volumeDesktop">
         <Volume2 v-if="player.volume > 0" :size="17" /><VolumeX v-else :size="17" />
-        <NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" aria-label="Volume" @update:value="player.setVolume" />
+        <NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" :aria-label="tr('Volume')" @update:value="player.setVolume" />
       </div>
       <div :class="$style.volumeMobile">
         <NPopover trigger="click" placement="top">
-          <template #trigger><NButton quaternary circle aria-label="Adjust volume"><template #icon><Volume2 v-if="player.volume > 0" :size="18" /><VolumeX v-else :size="18" /></template></NButton></template>
-          <div :class="$style.volumePopover"><span>Volume</span><NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" aria-label="Volume" @update:value="player.setVolume" /></div>
+          <template #trigger><NButton quaternary circle :aria-label="tr('Adjust volume')"><template #icon><Volume2 v-if="player.volume > 0" :size="18" /><VolumeX v-else :size="18" /></template></NButton></template>
+          <div :class="$style.volumePopover"><span>{{ tr('Volume') }}</span><NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" :aria-label="tr('Volume')" @update:value="player.setVolume" /></div>
         </NPopover>
       </div>
-      <NButton quaternary circle :class="lyrics.sidebarVisible && $style.utilityActive" :aria-pressed="lyrics.sidebarVisible" :aria-label="lyrics.sidebarVisible ? 'Hide lyrics' : 'Show lyrics'" @click="lyrics.toggleSidebar"><template #icon><MessageSquareText :size="18" /></template></NButton>
-      <NButton id="queue-toggle-button" quaternary circle :class="queue.isVisible && $style.utilityActive" :aria-expanded="queue.isVisible" aria-controls="play-queue" :aria-label="queue.isVisible ? 'Hide play queue' : 'Show play queue'" @click="queue.toggleVisible"><template #icon><ListMusic :size="19" /></template></NButton>
+      <NButton quaternary circle :class="lyrics.sidebarVisible && $style.utilityActive" :aria-pressed="lyrics.sidebarVisible" :aria-label="lyrics.sidebarVisible ? tr('Hide lyrics') : tr('Show lyrics')" @click="lyrics.toggleSidebar"><template #icon><MessageSquareText :size="18" /></template></NButton>
+      <NButton id="queue-toggle-button" quaternary circle :class="queue.isVisible && $style.utilityActive" :aria-expanded="queue.isVisible" aria-controls="play-queue" :aria-label="queue.isVisible ? tr('Hide play queue') : tr('Show play queue')" @click="queue.toggleVisible"><template #icon><ListMusic :size="19" /></template></NButton>
     </div>
     <audio ref="audioRef" />
   </section>

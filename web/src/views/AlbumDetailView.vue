@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NSpin, NEmpty, NButton } from 'naive-ui'
@@ -114,13 +115,13 @@ onUnmounted(() => abortController?.abort())
     <div :class="$style.toolbar">
       <NButton quaternary @click="router.back()">
         <template #icon><ArrowLeft :size="16" /></template>
-        Albums
+        {{ tr('Albums') }}
       </NButton>
     </div>
 
     <NSpin :show="isLoading">
-      <NEmpty v-if="!isLoading && error" :description="error" style="padding: 60px 0" />
-      <NEmpty v-else-if="!isLoading && !album" description="Album not found" style="padding: 60px 0" />
+      <NEmpty v-if="!isLoading && error" :description="tr(error)" style="padding: 60px 0" />
+      <NEmpty v-else-if="!isLoading && !album" :description="tr('Album not found')" style="padding: 60px 0" />
 
       <div v-else-if="album" :class="$style.content">
         <!-- Album header: cover + info side by side -->
@@ -136,7 +137,7 @@ onUnmounted(() => abortController?.abort())
           </div>
 
           <div :class="$style.albumInfo">
-            <div :class="$style.albumLabel">Album</div>
+            <div :class="$style.albumLabel">{{ tr('Album') }}</div>
             <h1 :class="$style.albumName">{{ album.name }}</h1>
             <div :class="$style.albumMeta">
               <span
@@ -147,7 +148,7 @@ onUnmounted(() => abortController?.abort())
               <span v-if="albumYear" :class="$style.metaSep">·</span>
               <span v-if="albumYear">{{ albumYear }}</span>
               <span :class="$style.metaSep">·</span>
-              <span>{{ album.track_count }} tracks</span>
+              <span>{{ tr('{count} tracks', { count: album.track_count }) }}</span>
               <span :class="$style.metaSep">·</span>
               <span>{{ formatDurationLong(album.total_duration_secs) }}</span>
             </div>
@@ -157,13 +158,13 @@ onUnmounted(() => abortController?.abort())
                 <template #icon>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
                 </template>
-                Play All
+                {{ tr('Play All') }}
               </NButton>
               <NButton @click="addAlbumToQueue">
                 <template #icon>
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
                 </template>
-                Add to Queue
+                {{ tr('Add to Queue') }}
               </NButton>
             </div>
           </div>
@@ -174,11 +175,11 @@ onUnmounted(() => abortController?.abort())
           <div :class="$style.trackListHeader">
             <span :class="$style.colNum">#</span>
             <div :class="[$style.headerCell, $style.colTitle]">
-              <span>Title</span>
+              <span>{{ tr('Title') }}</span>
               <span :class="$style.resizeHandle" @mousedown.prevent="startResize('title', $event)" />
             </div>
             <div :class="[$style.headerCell, $style.colDur]">
-              <span>Duration</span>
+              <span>{{ tr('Duration') }}</span>
               <span :class="$style.resizeHandle" @mousedown.prevent="startResize('duration', $event)" />
             </div>
             <span />
@@ -191,7 +192,7 @@ onUnmounted(() => abortController?.abort())
           >
             <span :class="$style.colNum">{{ track.track_number ?? '—' }}</span>
             <div :class="$style.colTitle">
-              <span :class="$style.trackTitle">{{ track.title ?? 'Unknown Title' }}</span>
+              <span :class="$style.trackTitle">{{ track.title ?? tr('Unknown Title') }}</span>
               <span v-if="track.artist" :class="$style.trackArtist">{{ track.artist }}</span>
             </div>
             <span :class="$style.colDur">{{ formatDuration(track.duration_secs) }}</span>
@@ -200,7 +201,7 @@ onUnmounted(() => abortController?.abort())
               <TrackFavoriteButton :track-id="track.id" />
               <button
                 :class="$style.addBtn"
-                title="Add to queue"
+                :title="tr('Add to queue')"
                 @click.stop="queue.addToQueue(track.id)"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>

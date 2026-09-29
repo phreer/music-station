@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, watch } from 'vue'
 import { NInput, NSpin, NAlert, NButton } from 'naive-ui'
@@ -27,10 +28,10 @@ function refresh() {
 
 <template>
   <div class="library-page">
-    <LibraryPageHeader title="Tracks" :description="`${library.filteredTracks.length.toLocaleString()}${localSearchQuery ? ` of ${library.totalTracks.toLocaleString()}` : ''} tracks in your library`">
+    <LibraryPageHeader :title="tr('Tracks')" :description="localSearchQuery ? tr('{count} of {total} tracks in your library', { count: library.filteredTracks.length.toLocaleString(), total: library.totalTracks.toLocaleString() }) : tr('{count} tracks in your library', { count: library.totalTracks.toLocaleString() })">
       <NInput
         v-model:value="localSearchQuery"
-        placeholder="Search your music"
+        :placeholder="tr('Search your music')"
         clearable
         class="library-search"
       >
@@ -38,7 +39,7 @@ function refresh() {
           <Search :size="16" />
         </template>
       </NInput>
-      <NButton quaternary circle aria-label="Refresh tracks" @click="refresh" :loading="library.isLoading">
+      <NButton quaternary circle :aria-label="tr('Refresh tracks')" @click="refresh" :loading="library.isLoading">
         <template #icon>
           <RefreshCw :size="16" />
         </template>
@@ -46,7 +47,7 @@ function refresh() {
     </LibraryPageHeader>
 
     <NAlert v-if="library.error" type="error" :class="$style.error">
-      {{ library.error }}
+      {{ tr(library.error) }}
     </NAlert>
 
     <NSpin :show="library.isLoading && library.allTracks.length === 0">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NTabs, NTab } from 'naive-ui'
@@ -72,24 +73,24 @@ function playAlbum(albumName: string) {
             @click.stop
           >{{ artist.name }}</RouterLink>
         <div :class="$style.meta">
-          {{ artist.album_count }} albums · {{ artist.track_count }} tracks
+          {{ tr('{count} albums', { count: artist.album_count }) }} · {{ tr('{count} tracks', { count: artist.track_count }) }}
         </div>
       </div>
       <div :class="$style.actions">
-        <button :class="$style.actionBtn" title="Play all" @click.stop="playArtist">
+        <button :class="$style.actionBtn" :title="tr('Play all')" @click.stop="playArtist">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
         </button>
-        <button :class="$style.actionBtn" title="Add all to queue" @click.stop="queue.addMultiple(artistTracks.map(t => t.id))">
+        <button :class="$style.actionBtn" :title="tr('Add all to queue')" @click.stop="queue.addMultiple(artistTracks.map(t => t.id))">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>
         </button>
         <button
           :class="[$style.actionBtn, $style.heartBtn, artist.is_favorite && $style.heartActive]"
-          :title="artist.is_favorite ? 'Remove from favorites' : 'Add to favorites'"
+          :title="artist.is_favorite ? tr('Remove from favorites') : tr('Add to favorites')"
           @click.stop="favorites.toggleArtist(artist.name)"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" :fill="artist.is_favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
         </button>
-        <button :class="$style.actionBtn" :aria-label="`${expanded ? 'Collapse' : 'Expand'} ${artist.name}`" :aria-expanded="expanded" @click.stop="expanded = !expanded">
+        <button :class="$style.actionBtn" :aria-label="tr('{action} {name}', { action: expanded ? tr('Collapse') : tr('Expand'), name: artist.name })" :aria-expanded="expanded" @click.stop="expanded = !expanded">
           <svg :class="[$style.chevron, expanded && $style.chevronOpen]" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
         </button>
       </div>
@@ -101,14 +102,14 @@ function playAlbum(albumName: string) {
           <NTab name="albums">
             <template #default>
               <span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="12" x2="12" y1="2" y2="22"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><circle cx="12" cy="12" r="10"></circle></svg>Albums
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><line x1="12" x2="12" y1="2" y2="22"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><circle cx="12" cy="12" r="10"></circle></svg>{{ tr('Albums') }}
               </span>
             </template>
           </NTab>
           <NTab name="tracks">
             <template #default>
               <span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>Tracks
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;vertical-align:middle"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>{{ tr('Tracks') }}
               </span>
             </template>
           </NTab>
@@ -125,9 +126,9 @@ function playAlbum(albumName: string) {
                 :class="[$style.albumName, $style.albumNameLink]"
                 @click.stop="router.push({ name: 'album-detail', params: { name: album.name } })"
               >{{ album.name }}</div>
-              <div :class="$style.albumMeta">{{ album.track_count }} tracks · {{ formatDurationLong(album.total_duration_secs) }}</div>
+              <div :class="$style.albumMeta">{{ tr('{count} tracks', { count: album.track_count }) }} · {{ formatDurationLong(album.total_duration_secs) }}</div>
             </div>
-            <button :class="$style.albumPlayBtn" title="Play album" @click="playAlbum(album.name)">
+            <button :class="$style.albumPlayBtn" :title="tr('Play album')" @click="playAlbum(album.name)">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
             </button>
           </div>

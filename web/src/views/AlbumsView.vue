@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { NSpin, NEmpty, NButton, NInput } from 'naive-ui'
@@ -24,10 +25,10 @@ onMounted(() => store.loadAlbums())
 
 <template>
   <div class="library-page">
-    <LibraryPageHeader title="Albums" :description="`${filteredAlbums.length.toLocaleString()} albums in your collection`">
+    <LibraryPageHeader :title="tr('Albums')" :description="tr('{count} albums in your collection', { count: filteredAlbums.length.toLocaleString() })">
       <NInput
         v-model:value="searchQuery"
-        placeholder="Search albums"
+        :placeholder="tr('Search albums')"
         clearable
         class="library-search"
       >
@@ -35,12 +36,12 @@ onMounted(() => store.loadAlbums())
           <Search :size="16" />
         </template>
       </NInput>
-      <NButton quaternary circle aria-label="Refresh albums" @click="store.refresh" :loading="store.isLoading">
+      <NButton quaternary circle :aria-label="tr('Refresh albums')" @click="store.refresh" :loading="store.isLoading">
         <template #icon><RefreshCw :size="16" /></template>
       </NButton>
     </LibraryPageHeader>
     <NSpin :show="store.isLoading">
-      <NEmpty v-if="!store.isLoading && filteredAlbums.length === 0" description="No albums found" style="padding: 60px 0" />
+      <NEmpty v-if="!store.isLoading && filteredAlbums.length === 0" :description="tr('No albums found')" style="padding: 60px 0" />
       <AlbumGrid v-else :albums="filteredAlbums" />
     </NSpin>
   </div>

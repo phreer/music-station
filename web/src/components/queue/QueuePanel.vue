@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import { NEmpty, NScrollbar } from 'naive-ui'
 import { useQueueStore } from '@/stores/queue'
 import { usePlayerStore } from '@/stores/player'
@@ -42,23 +43,23 @@ function remove(index: number) {
 
 <template>
   <Transition name="slide">
-    <section v-if="queue.isVisible" id="play-queue" role="region" aria-label="Play queue" :class="$style.panel">
+    <section v-if="queue.isVisible" id="play-queue" role="region" :aria-label="tr('Play queue')" :class="$style.panel">
       <div :class="$style.header">
-        <h3 :class="$style.title">Play Queue</h3>
+        <h3 :class="$style.title">{{ tr('Play Queue') }}</h3>
         <div :class="$style.headerActions">
           <button
             :class="$style.headerBtn"
             :disabled="queue.isEmpty"
-            title="Clear queue"
+            :title="tr('Clear queue')"
             @click="queue.clear"
           >
             <span v-html="trashIconSvg" />
-            Clear
+            {{ tr('Clear') }}
           </button>
           <button
             id="close-play-queue"
             :class="$style.headerBtnCircle"
-            title="Close"
+            :title="tr('Close')"
             @click="queue.toggleVisible"
             v-html="closeIconSvg"
           />
@@ -66,12 +67,12 @@ function remove(index: number) {
       </div>
 
       <div v-if="!queue.isEmpty" :class="$style.info">
-        <span>{{ queue.queue.length }} tracks</span>
+        <span>{{ tr('{count} tracks', { count: queue.queue.length }) }}</span>
         <span>{{ formatDuration(totalDuration) }}</span>
       </div>
 
       <NScrollbar :class="$style.list">
-        <NEmpty v-if="queue.isEmpty" description="Queue is empty" :class="$style.empty" />
+        <NEmpty v-if="queue.isEmpty" :description="tr('Queue is empty')" :class="$style.empty" />
         <QueueItem
           v-for="(trackId, index) in queue.queue"
           :key="trackId + '-' + index"

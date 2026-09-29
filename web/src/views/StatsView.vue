@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { tr } from '@/i18n'
 import LibraryPageHeader from '@/components/layout/LibraryPageHeader.vue'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { NSpin, NGrid, NGridItem, NCard } from 'naive-ui'
 import { Music, Disc3, Users, Clock, HardDrive, PlayCircle } from 'lucide-vue-next'
 import type { LibraryStats } from '@/types'
@@ -19,19 +20,19 @@ onMounted(async () => {
   }
 })
 
-const statCards = [
-  { key: 'total_tracks' as const, label: 'Tracks', icon: Music, format: (v: number) => v.toLocaleString() },
-  { key: 'total_albums' as const, label: 'Albums', icon: Disc3, format: (v: number) => v.toLocaleString() },
-  { key: 'total_artists' as const, label: 'Artists', icon: Users, format: (v: number) => v.toLocaleString() },
-  { key: 'total_duration_secs' as const, label: 'Total Duration', icon: Clock, format: formatDurationLong },
-  { key: 'total_size_bytes' as const, label: 'Library Size', icon: HardDrive, format: formatFileSize },
-  { key: 'total_plays' as const, label: 'Total Plays', icon: PlayCircle, format: (v: number) => v.toLocaleString() },
-]
+const statCards = computed(() => [
+  { key: 'total_tracks' as const, label: tr('Tracks'), icon: Music, format: (v: number) => v.toLocaleString() },
+  { key: 'total_albums' as const, label: tr('Albums'), icon: Disc3, format: (v: number) => v.toLocaleString() },
+  { key: 'total_artists' as const, label: tr('Artists'), icon: Users, format: (v: number) => v.toLocaleString() },
+  { key: 'total_duration_secs' as const, label: tr('Total Duration'), icon: Clock, format: formatDurationLong },
+  { key: 'total_size_bytes' as const, label: tr('Library Size'), icon: HardDrive, format: formatFileSize },
+  { key: 'total_plays' as const, label: tr('Total Plays'), icon: PlayCircle, format: (v: number) => v.toLocaleString() },
+])
 </script>
 
 <template>
   <div class="library-page">
-    <LibraryPageHeader title="Your library, in numbers" description="A closer look at your music collection." />
+    <LibraryPageHeader :title="tr('Your library, in numbers')" :description="tr('A closer look at your music collection.')" />
     <NSpin :show="isLoading">
       <NGrid v-if="stats" :x-gap="16" :y-gap="16" cols="2 900:3">
         <NGridItem v-for="card in statCards" :key="card.key">

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { language } from '@/i18n'
 import { onMounted, computed, watch } from 'vue'
 import {
   NConfigProvider,
   NMessageProvider,
   NNotificationProvider,
   darkTheme,
+  enUS, zhCN, dateEnUS, dateZhCN,
 } from 'naive-ui'
 import { applyTheme, themeOverrides } from '@/styles/theme'
 import '@/styles/tokens.css'
@@ -18,6 +20,10 @@ const library = useLibraryStore()
 const playlistStore = usePlaylistStore()
 
 const theme = computed(() => (ui.isDarkMode ? darkTheme : null))
+
+watch(language, (value) => {
+  document.documentElement.lang = value === 'zh' ? 'zh-CN' : 'en'
+}, { immediate: true })
 
 const overrides = computed(() => themeOverrides[ui.isDarkMode ? 'dark' : 'light'])
 
@@ -35,7 +41,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <NConfigProvider :theme="theme" :theme-overrides="overrides">
+  <NConfigProvider :locale="language === 'zh' ? zhCN : enUS" :date-locale="language === 'zh' ? dateZhCN : dateEnUS" :theme="theme" :theme-overrides="overrides">
     <NMessageProvider>
       <NNotificationProvider>
         <AppLayout />

@@ -1,3 +1,5 @@
+import { tr } from '@/i18n'
+
 export function formatDuration(seconds: number | null | undefined): string {
   if (seconds == null || isNaN(seconds)) return '0:00'
   const mins = Math.floor(seconds / 60)
@@ -9,9 +11,9 @@ export function formatDurationLong(seconds: number): string {
   const hours = Math.floor(seconds / 3600)
   const mins = Math.floor((seconds % 3600) / 60)
   if (hours > 0) {
-    return `${hours}h ${mins}m`
+    return tr('{hours}h {minutes}m', { hours, minutes: mins })
   }
-  return `${mins}m`
+  return tr('{minutes}m', { minutes: mins })
 }
 
 export function formatFileSize(bytes: number): string {

@@ -66,9 +66,10 @@ See [music-station-client-gtk](https://github.com/phreer/music-station-client-gt
 
 1. Start the server (see above)
 2. Open your browser to `http://localhost:3000/web/`
-3. Browse tracks, albums, artists, and playlists
-4. Click any track to play it; use the queue panel to manage playback order
-5. Edit track metadata (title, artist, album, genre, year, etc.) via the edit button
+3. Use the settings button in the header to choose English or 简体中文. The interface updates immediately and remembers your choice in this browser (English by default).
+4. Browse tracks, albums, artists, and playlists
+5. Click any track to play it; use the queue panel to manage playback order
+6. Edit track metadata (title, artist, album, genre, year, etc.) via the edit button
 6. Manage lyrics — view, upload, or search online via NetEase / QQ Music
 
 The web client is a Vue 3 single-page application (TypeScript, Pinia, Naive UI) located in `web/`. It is built to `static/` and served at `/web` by the server.
