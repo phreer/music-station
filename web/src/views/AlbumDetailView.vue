@@ -11,6 +11,7 @@ import { formatDuration, formatDurationLong } from '@/utils/format'
 import { useAlbumsStore } from '@/stores/albums'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
+import AddToPlaylistButton from '@/components/tracks/AddToPlaylistButton.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
@@ -57,7 +58,7 @@ const sortedTracks = computed<Track[]>(() => {
 const trackListStyle = computed(() => ({
   '--album-title-col-width': `${columnWidths.value.title}px`,
   '--album-duration-col-width': `${columnWidths.value.duration}px`,
-  '--album-track-min-width': `${36 + getWidth('title') + getWidth('duration') + 68}px`,
+  '--album-track-min-width': `${36 + getWidth('title') + getWidth('duration') + 100}px`,
 }))
 
 async function load() {
@@ -199,6 +200,7 @@ onUnmounted(() => abortController?.abort())
             <span />
             <div :class="$style.rowActions">
               <TrackFavoriteButton :track-id="track.id" />
+              <AddToPlaylistButton :track="track" />
               <button
                 :class="$style.addBtn"
                 :title="tr('Add to queue')"
@@ -332,7 +334,7 @@ onUnmounted(() => abortController?.abort())
 
 .trackListHeader {
   display: grid;
-  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 68px;
+  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 100px;
   min-width: var(--album-track-min-width);
   padding: 8px 12px;
   font-size: 11px;
@@ -346,7 +348,7 @@ onUnmounted(() => abortController?.abort())
 
 .trackRow {
   display: grid;
-  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 68px;
+  grid-template-columns: 36px var(--album-title-col-width) var(--album-duration-col-width) minmax(0, 1fr) 100px;
   min-width: var(--album-track-min-width);
   align-items: center;
   padding: 8px 12px;
@@ -471,6 +473,8 @@ onUnmounted(() => abortController?.abort())
   gap: 4px;
 }
 
+.trackRow:focus-within .addBtn,
+.trackRow:focus-within .rowActions :global(.track-favorite-button),
 .trackRow:hover .addBtn,
 .trackRow:hover .rowActions :global(.track-favorite-button) {
   opacity: 0.5;
@@ -483,6 +487,7 @@ onUnmounted(() => abortController?.abort())
 
 /* Responsive: stack vertically on narrow screens */
 @media (max-width: 600px) {
+  .trackRow > span:empty, .trackListHeader > span:empty { display: none; }
   .container {
     padding: 16px 20px;
   }
@@ -503,7 +508,7 @@ onUnmounted(() => abortController?.abort())
 
   .trackListHeader,
   .trackRow {
-    grid-template-columns: 36px minmax(0, 1fr) 64px 68px;
+    grid-template-columns: 36px minmax(0, 1fr) 64px 100px;
     min-width: 0;
   }
 
@@ -511,4 +516,7 @@ onUnmounted(() => abortController?.abort())
     padding-bottom: 0;
   }
 }
+
+@media (hover: none) { .trackRow .addBtn, .trackRow :global(.track-favorite-button) { opacity: 0.7; } }
+@media (max-width: 400px) { .trackRow, .trackListHeader { grid-template-columns: 24px minmax(0, 1fr) 100px; gap: 6px; } .colDur { display: none; } }
 </style>

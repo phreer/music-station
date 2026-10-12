@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useAddToPlaylistStore } from '@/stores/addToPlaylist'
 import { tr } from '@/i18n'
 import { computed, ref, onMounted, watch } from 'vue'
 import { NSlider, NButton, NDropdown, NPopover } from 'naive-ui'
@@ -12,6 +13,7 @@ import LyricsModal from '@/components/modals/LyricsModal.vue'
 import EditTrackModal from '@/components/modals/EditTrackModal.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
+const dialog = useAddToPlaylistStore()
 const player = usePlayerStore()
 const lyrics = useLyricsStore()
 const queue = useQueueStore()
@@ -52,6 +54,7 @@ function handleSeek(value: number) {
   player.seek(value)
 }
 const trackActions = computed(() => [
+  ...(player.currentTrack ? [{ label: tr('Add to playlist'), key: 'playlist' }] : []),
   { label: tr('Edit track details'), key: 'edit' },
   { label: tr('Manage lyrics'), key: 'lyrics' },
   { type: 'divider', key: 'divider' },
@@ -59,6 +62,7 @@ const trackActions = computed(() => [
 ])
 
 function handleAction(key: string) {
+  if (key === 'playlist') dialog.open(player.currentTrack)
   if (key === 'edit') showEditModal.value = true
   if (key === 'lyrics') showLyricsModal.value = true
   if (key === 'stop') player.stop()

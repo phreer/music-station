@@ -7,6 +7,7 @@ import { usePlaylistStore } from '@/stores/playlists'
 defineProps<{ show: boolean }>()
 const emit = defineEmits<{
   'update:show': [value: boolean]
+  created: []
 }>()
 
 const playlists = usePlaylistStore()
@@ -17,6 +18,7 @@ const isSubmitting = ref(false)
 const error = ref<string | null>(null)
 
 function close() {
+  if (isSubmitting.value) return
   name.value = ''
   description.value = ''
   error.value = null
@@ -24,6 +26,7 @@ function close() {
 }
 
 async function handleSubmit() {
+  if (isSubmitting.value) return
   if (!name.value.trim()) {
     error.value = 'Name is required'
     return
@@ -32,6 +35,8 @@ async function handleSubmit() {
   error.value = null
   try {
     await playlists.createPlaylist(name.value.trim(), description.value.trim() || undefined)
+    isSubmitting.value = false
+    emit('created')
     close()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to create playlist'
@@ -42,7 +47,7 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="true">
+  <NModal :show="show" @update:show="(show) => { if (!show) close() }" :mask-closable="!isSubmitting" :close-on-esc="!isSubmitting">
     <NCard
       style="width: 420px; max-width: 95vw"
       :title="tr('New Playlist')"
@@ -75,7 +80,7 @@ async function handleSubmit() {
 
       <template #footer>
         <NSpace justify="end">
-          <NButton @click="close">{{ tr('Cancel') }}</NButton>
+          <NButton :disabled="isSubmitting" @click="close">{{ tr('Cancel') }}</NButton>
           <NButton type="primary" :loading="isSubmitting" @click="handleSubmit">{{ tr('Create') }}</NButton>
         </NSpace>
       </template>

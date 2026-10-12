@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AddToPlaylistButton from '@/components/tracks/AddToPlaylistButton.vue'
 import { tr } from '@/i18n'
 import { ref, computed, watch } from 'vue'
 import type { Album, Track } from '@/types'
@@ -110,6 +111,7 @@ function playTrack(track: Track) {
           <span :class="$style.trackNum">{{ track.track_number ?? '—' }}</span>
           <span :class="$style.trackTitle">{{ track.title }}</span>
           <span :class="$style.trackDur">{{ formatDuration(track.duration_secs) }}</span>
+          <AddToPlaylistButton :track="track" :size="22" :icon-size="12" />
           <button
             :class="$style.trackAddBtn"
             :title="tr('Add to queue')"
@@ -192,7 +194,7 @@ function playTrack(track: Track) {
 .trackRow:hover { background: var(--app-hover); }
 .trackRowActive { color: var(--app-primary); font-weight: 600; }
 .trackNum { width: 20px; text-align: right; opacity: 0.4; font-size: 11px; flex-shrink: 0; }
-.trackTitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trackTitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trackDur { opacity: 0.5; font-size: 11px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
 .trackAddBtn {

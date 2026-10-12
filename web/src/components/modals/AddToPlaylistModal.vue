@@ -1,135 +1,88 @@
 <script setup lang="ts">
 import { tr } from '@/i18n'
-import { ref, computed } from 'vue'
-import { NModal, NCard, NButton, NSpace, NSpin, NEmpty, NCheckbox } from 'naive-ui'
+import { ref, watch } from 'vue'
+import { NModal, NCard, NButton, NSpace, NSpin, NEmpty, NAlert, useMessage } from 'naive-ui'
 import { Plus } from 'lucide-vue-next'
-import type { Track } from '@/types'
 import { usePlaylistStore } from '@/stores/playlists'
+import { useAddToPlaylistStore } from '@/stores/addToPlaylist'
 import CreatePlaylistModal from './CreatePlaylistModal.vue'
 
-const props = defineProps<{
-  show: boolean
-  track: Track | null
-}>()
-const emit = defineEmits<{
-  'update:show': [value: boolean]
-}>()
-
 const playlists = usePlaylistStore()
+const dialog = useAddToPlaylistStore()
+const message = useMessage()
 const showCreate = ref(false)
-const addingIds = ref<Set<string>>(new Set())
+watch(() => dialog.show, () => { showCreate.value = false })
 
-const alreadyInPlaylist = computed(() => {
-  if (!props.track) return new Set<string>()
-  const s = new Set<string>()
-  for (const pl of playlists.playlists) {
-    if (pl.tracks.includes(props.track.id)) s.add(pl.id)
-  }
-  return s
-})
-
-function close() {
-  emit('update:show', false)
-}
-
-async function togglePlaylist(playlistId: string) {
-  if (!props.track) return
-  addingIds.value.add(playlistId)
-  try {
-    if (alreadyInPlaylist.value.has(playlistId)) {
-      await playlists.removeTrack(playlistId, props.track.id)
-    } else {
-      await playlists.addTrack(playlistId, props.track.id)
-    }
-  } finally {
-    addingIds.value.delete(playlistId)
-  }
+async function add(playlistId: string) {
+  if (await dialog.add(playlistId)) message.success(tr('Added to playlist'))
 }
 </script>
 
 <template>
-  <NModal :show="show" @update:show="emit('update:show', $event)" :mask-closable="true">
-    <NCard
-      style="width: 380px; max-width: 95vw"
-      :title="tr('Add to Playlist')"
-      :bordered="false"
-      role="dialog"
-      aria-modal="true"
-    >
+  <NModal
+    :show="dialog.show && !showCreate"
+    :mask-closable="!dialog.submittingId"
+    :close-on-esc="!dialog.submittingId"
+    @update:show="(show) => { if (!show) dialog.close() }"
+  >
+    <NCard style="width: 420px; max-width: 95vw" :title="tr('Add to playlist')" :bordered="false" role="dialog" aria-modal="true" :aria-label="tr('Add to playlist')" :aria-busy="!!dialog.submittingId || playlists.isLoading">
+      <div :class="$style.target">
+        <div>{{ dialog.track?.title || tr('Unknown Title') }}</div>
+        <small>{{ dialog.track?.artist || tr('Unknown Artist') }}</small>
+      </div>
+      <NAlert v-if="playlists.loadError" type="error" role="alert" :title="tr('Failed to load playlists')">
+        {{ tr(playlists.loadError) }}
+        <NButton size="small" :disabled="playlists.isLoading" @click="playlists.loadPlaylists()">{{ tr('Retry') }}</NButton>
+      </NAlert>
+      <NAlert v-if="dialog.error" type="error" role="alert" :title="tr('Failed to add to playlist')" style="margin-bottom: 12px">
+        {{ tr(dialog.error) }}
+      </NAlert>
       <NSpin :show="playlists.isLoading">
-        <NEmpty
-          v-if="!playlists.isLoading && playlists.playlists.length === 0"
-          :description="tr('No playlists yet')"
-          style="padding: 24px 0"
-        />
-        <div v-else :class="$style.list">
-          <div
-            v-for="pl in playlists.playlists"
-            :key="pl.id"
-            :class="$style.item"
-            @click="togglePlaylist(pl.id)"
-          >
-            <NCheckbox
-              :checked="alreadyInPlaylist.has(pl.id)"
-              :disabled="addingIds.has(pl.id)"
-              @update:checked="togglePlaylist(pl.id)"
-              @click.stop
-            />
-            <span :class="$style.playlistName">{{ pl.name }}</span>
-            <span :class="$style.playlistCount">{{ tr('{count} tracks', { count: pl.tracks.length }) }}</span>
+        <div v-if="playlists.isLoading" role="status" style="padding: 24px">{{ tr('Loading playlists') }}</div>
+        <template v-else-if="!playlists.loadError">
+          <NEmpty v-if="playlists.playlists.length === 0" :description="tr('No playlists yet')" style="padding: 24px 0" />
+          <div v-else :class="$style.list">
+            <button
+              v-for="pl in playlists.playlists"
+              :key="pl.id"
+              type="button"
+              :class="$style.item"
+              :title="pl.name"
+              :aria-label="pl.name"
+              :disabled="!!dialog.submittingId || !dialog.track || pl.tracks.includes(dialog.track.id)"
+              @click="add(pl.id)"
+            >
+              <span :class="$style.playlistName">{{ pl.name }}</span>
+              <span :class="$style.playlistCount">
+                <NSpin v-if="dialog.submittingId === pl.id" :size="16" />
+                <template v-else-if="dialog.track && pl.tracks.includes(dialog.track.id)">{{ tr('Already added') }}</template>
+                <template v-else>{{ tr('{count} tracks', { count: pl.tracks.length }) }}</template>
+              </span>
+            </button>
           </div>
-        </div>
+        </template>
       </NSpin>
-
       <template #footer>
         <NSpace justify="space-between" align="center">
-          <NButton size="small" quaternary @click="showCreate = true">
-            <template #icon><Plus :size="14" /></template>
-            {{ tr('New Playlist') }}
+          <NButton size="small" quaternary :disabled="!!dialog.submittingId || playlists.isLoading" @click="showCreate = true">
+            <template #icon><Plus :size="14" /></template>{{ tr('New Playlist') }}
           </NButton>
-          <NButton @click="close">{{ tr('Done') }}</NButton>
+          <NButton :disabled="!!dialog.submittingId" @click="dialog.close">{{ tr('Cancel') }}</NButton>
         </NSpace>
       </template>
     </NCard>
   </NModal>
-
-  <CreatePlaylistModal v-model:show="showCreate" />
+  <CreatePlaylistModal v-model:show="showCreate" @created="playlists.loadError && playlists.loadPlaylists()" />
 </template>
 
 <style module>
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.item:hover {
-  background: var(--app-hover);
-}
-
-.playlistName {
-  flex: 1;
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.playlistCount {
-  font-size: 12px;
-  opacity: 0.5;
-  flex-shrink: 0;
-}
+.target { margin-bottom: 16px; overflow-wrap: anywhere; }
+.target small { color: var(--app-text-muted); }
+.list { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; padding: 3px; }
+.item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.item:hover:enabled { background: var(--app-hover); }
+.item:disabled { opacity: 0.55; cursor: default; }
+.item:focus-visible { outline: 2px solid var(--app-focus-ring); }
+.playlistName { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
+.playlistCount { font-size: 12px; color: var(--app-text-muted); flex-shrink: 0; }
 </style>

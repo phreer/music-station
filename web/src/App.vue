@@ -10,6 +10,7 @@ import {
 } from 'naive-ui'
 import { applyTheme, themeOverrides } from '@/styles/theme'
 import '@/styles/tokens.css'
+import AddToPlaylistModal from '@/components/modals/AddToPlaylistModal.vue'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { useUiStore } from '@/stores/ui'
 import { useLibraryStore } from '@/stores/library'
@@ -45,6 +46,7 @@ onMounted(() => {
     <NMessageProvider>
       <NNotificationProvider>
         <AppLayout />
+        <AddToPlaylistModal />
       </NNotificationProvider>
     </NMessageProvider>
   </NConfigProvider>

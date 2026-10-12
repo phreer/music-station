@@ -5,6 +5,7 @@ import type { Track } from '@/types'
 import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
 import { useLibraryStore } from '@/stores/library'
+import AddToPlaylistButton from '@/components/tracks/AddToPlaylistButton.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 
 const props = defineProps<{
@@ -50,6 +51,7 @@ const removeIconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="12" height
       {{ formatDuration(track?.duration_secs) }}
     </div>
     <TrackFavoriteButton v-if="track" :track-id="track.id" :size="22" :icon-size="12" />
+    <AddToPlaylistButton :track="track" :size="22" :icon-size="12" />
     <button
       :class="$style.removeBtn"
       :title="tr('Remove from queue')"

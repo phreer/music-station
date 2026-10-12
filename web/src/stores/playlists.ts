@@ -9,6 +9,7 @@ export const usePlaylistStore = defineStore('playlists', () => {
   const playlists = ref<Playlist[]>([])
   const isLoading = ref(false)
   const hasLoaded = ref(false)
+  const loadError = ref<string | null>(null)
   const favoritePendingTrackIds = ref<Set<string>>(new Set())
   let loadController: AbortController | null = null
 
@@ -18,16 +19,23 @@ export const usePlaylistStore = defineStore('playlists', () => {
 
   async function loadPlaylists() {
     loadController?.abort()
-    loadController = new AbortController()
+    const controller = new AbortController()
+    loadController = controller
     isLoading.value = true
+    loadError.value = null
     try {
-      playlists.value = await api.fetchPlaylists(loadController.signal)
+      const loaded = await api.fetchPlaylists(controller.signal)
+      if (loadController !== controller) return
+      playlists.value = loaded.map((playlist) => {
+        const existing = findPlaylist(playlist.id)
+        return existing ? Object.assign(existing, playlist) : playlist
+      })
       hasLoaded.value = true
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      hasLoaded.value = true
+      if (loadController !== controller || controller.signal.aborted) return
+      loadError.value = e instanceof Error ? e.message : 'Failed to load playlists'
     } finally {
-      isLoading.value = false
+      if (loadController === controller) isLoading.value = false
     }
   }
 
@@ -66,6 +74,8 @@ export const usePlaylistStore = defineStore('playlists', () => {
     if (!hasLoaded.value) {
       await loadPlaylists()
     }
+
+    if (loadError.value) throw new Error(loadError.value)
 
     const existing = favoritePlaylist.value
     if (existing) return existing
@@ -110,6 +120,7 @@ export const usePlaylistStore = defineStore('playlists', () => {
   return {
     playlists,
     isLoading,
+    loadError,
     favoritePlaylist,
     loadPlaylists,
     createPlaylist,

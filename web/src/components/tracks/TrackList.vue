@@ -8,7 +8,7 @@ import { coverUrl } from '@/api/client'
 import { formatDuration } from '@/utils/format'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
-import AddToPlaylistModal from '@/components/modals/AddToPlaylistModal.vue'
+import AddToPlaylistButton from '@/components/tracks/AddToPlaylistButton.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
 import { useResizableTrackColumns } from '@/composables/useResizableTrackColumns'
 
@@ -20,8 +20,6 @@ const player = usePlayerStore()
 const queue = useQueueStore()
 const router = useRouter()
 
-const showAddToPlaylist = ref(false)
-const addToPlaylistTrack = ref<Track | null>(null)
 const scrollbarProps = { trigger: 'none' as const }
 const fixedColumnWidth = 60 + 162
 const tableWrapper = ref<HTMLElement | null>(null)
@@ -86,15 +84,9 @@ function handleAddToQueue(track: Track) {
   queue.addToQueue(track.id)
 }
 
-function handleAddToPlaylist(track: Track) {
-  addToPlaylistTrack.value = track
-  showAddToPlaylist.value = true
-}
-
-// Inline SVG strings — avoids 6 component instances (3 NButton + 3 Lucide) per visible row
+// Inline SVGs keep play and queue actions lightweight in the virtual table.
 const playIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>'
 const addQueueIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 12H3"></path><path d="M16 6H3"></path><path d="M16 18H3"></path><path d="M18 9v6"></path><path d="M21 12h-6"></path></svg>'
-const playlistIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"></path><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"></path><path d="M12 12H3"></path><path d="M16 6H3"></path><path d="M12 18H3"></path></svg>'
 
 // Column definitions — NO reactive dependency on player state.
 // Current track highlighting is handled via row-class-name instead.
@@ -220,15 +212,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
             handleAddToQueue(row)
           },
         }),
-        h('button', {
-          class: 'track-action-btn',
-          title: tr('Add to playlist'),
-          innerHTML: playlistIcon,
-          onClick: (e: Event) => {
-            e.stopPropagation()
-            handleAddToPlaylist(row)
-          },
-        }),
+        h(AddToPlaylistButton, { track: row }),
       ])
     },
   },
@@ -309,7 +293,6 @@ onBeforeUnmount(() => {
       virtual-scroll
       size="small"
     />
-    <AddToPlaylistModal v-model:show="showAddToPlaylist" :track="addToPlaylistTrack" />
   </div>
 </template>
 

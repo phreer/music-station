@@ -1,5 +1,11 @@
 // English source messages are the catalog keys. Keep placeholders in sync.
 export const zh = {
+  "Added to playlist": "已加入歌单",
+  "Already added": "已添加",
+  "Failed to load playlists": "加载歌单失败",
+  "Failed to add to playlist": "加入歌单失败",
+  "Loading playlists": "正在加载歌单",
+  "Retry": "重试",
   "A closer look at your music collection.": "了解你的音乐收藏。",
   "Add all to queue": "全部加入播放队列",
   "Add to Favorite playlist": "加入收藏歌单",
