@@ -2,7 +2,8 @@
 import { tr } from '@/i18n'
 import { ref, watch } from 'vue'
 import { NModal, NCard, NButton, NSpace, NSpin, NEmpty, NAlert, useMessage } from 'naive-ui'
-import { Plus } from 'lucide-vue-next'
+import { Check, ListMusic, Music2, Plus } from 'lucide-vue-next'
+import { coverUrl } from '@/api/client'
 import { usePlaylistStore } from '@/stores/playlists'
 import { useAddToPlaylistStore } from '@/stores/addToPlaylist'
 import CreatePlaylistModal from './CreatePlaylistModal.vue'
@@ -27,8 +28,13 @@ async function add(playlistId: string) {
   >
     <NCard style="width: 420px; max-width: 95vw" :title="tr('Add to playlist')" :bordered="false" role="dialog" aria-modal="true" :aria-label="tr('Add to playlist')" :aria-busy="!!dialog.submittingId || playlists.isLoading">
       <div :class="$style.target">
-        <div>{{ dialog.track?.title || tr('Unknown Title') }}</div>
-        <small>{{ dialog.track?.artist || tr('Unknown Artist') }}</small>
+        <div :class="$style.trackCover">
+          <img v-if="dialog.track?.has_cover" :src="coverUrl(dialog.track.id)" alt="" />
+          <Music2 v-else :size="15" aria-hidden="true" />
+        </div>
+        <span :class="$style.trackTitle" :title="dialog.track?.title || tr('Unknown Title')">{{ dialog.track?.title || tr('Unknown Title') }}</span>
+        <span :class="$style.trackSeparator" aria-hidden="true">·</span>
+        <span :class="$style.trackArtist" :title="dialog.track?.artist || tr('Unknown Artist')">{{ dialog.track?.artist || tr('Unknown Artist') }}</span>
       </div>
       <NAlert v-if="playlists.loadError" type="error" role="alert" :title="tr('Failed to load playlists')">
         {{ tr(playlists.loadError) }}
@@ -52,11 +58,15 @@ async function add(playlistId: string) {
               :disabled="!!dialog.submittingId || !dialog.track || pl.tracks.includes(dialog.track.id)"
               @click="add(pl.id)"
             >
-              <span :class="$style.playlistName">{{ pl.name }}</span>
-              <span :class="$style.playlistCount">
+              <span :class="$style.playlistIcon"><ListMusic :size="20" aria-hidden="true" /></span>
+              <span :class="$style.playlistInfo">
+                <span :class="$style.playlistName">{{ pl.name }}</span>
+                <span :class="$style.playlistCount">{{ tr('{count} tracks', { count: pl.tracks.length }) }}</span>
+              </span>
+              <span :class="$style.playlistAction">
                 <NSpin v-if="dialog.submittingId === pl.id" :size="16" />
-                <template v-else-if="dialog.track && pl.tracks.includes(dialog.track.id)">{{ tr('Already added') }}</template>
-                <template v-else>{{ tr('{count} tracks', { count: pl.tracks.length }) }}</template>
+                <template v-else-if="dialog.track && pl.tracks.includes(dialog.track.id)"><Check :size="16" aria-hidden="true" />{{ tr('Already added') }}</template>
+                <Plus v-else :size="18" aria-hidden="true" />
               </span>
             </button>
           </div>
@@ -76,13 +86,23 @@ async function add(playlistId: string) {
 </template>
 
 <style module>
-.target { margin-bottom: 16px; overflow-wrap: anywhere; }
-.target small { color: var(--app-text-muted); }
-.list { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; padding: 3px; }
-.item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; border: 0; border-radius: 6px; background: transparent; color: inherit; text-align: left; cursor: pointer; }
-.item:hover:enabled { background: var(--app-hover); }
-.item:disabled { opacity: 0.55; cursor: default; }
-.item:focus-visible { outline: 2px solid var(--app-focus-ring); }
-.playlistName { flex: 1; min-width: 0; font-size: 14px; overflow-wrap: anywhere; }
-.playlistCount { font-size: 12px; color: var(--app-text-muted); flex-shrink: 0; }
+.target { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 16px; font-size: 12px; }
+.trackCover { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; overflow: hidden; border-radius: 6px; background: var(--app-placeholder-bg); color: var(--app-text-muted); }
+.trackCover img { width: 100%; height: 100%; object-fit: cover; }
+.trackTitle, .trackArtist { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trackTitle { font-weight: 500; }
+.trackArtist { flex: 0 1 40%; color: var(--app-text-muted); }
+.trackSeparator { flex-shrink: 0; color: var(--app-text-muted); }
+.list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; padding: 3px; }
+.item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px; border: 1px solid var(--app-border); border-radius: 10px; background: var(--app-surface); color: inherit; text-align: left; font: inherit; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.item:hover:enabled { border-color: var(--app-primary); background: var(--app-active-bg); }
+.item:disabled { color: var(--app-text-muted); cursor: default; }
+.item:disabled .playlistIcon { background: var(--app-placeholder-bg); color: var(--app-text-muted); }
+.item:focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 1px; }
+.playlistIcon { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 8px; background: var(--app-active-bg); color: var(--app-primary); }
+.playlistInfo { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 4px; }
+.playlistName { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.playlistCount { font-size: 12px; color: var(--app-text-muted); }
+.playlistAction { display: flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 12px; color: var(--app-primary); }
+.item:disabled .playlistAction { color: var(--app-text-muted); }
 </style>
