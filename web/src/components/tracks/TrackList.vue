@@ -163,6 +163,7 @@ const columns = computed<DataTableColumns<Track>>(() => [
       if (!row.album) return h('span', { class: 'track-album-text' }, '-')
       return h('span', {
         class: 'track-album-text track-nav-link',
+        title: row.album,
         onClick: (e: Event) => {
           e.stopPropagation()
           router.push({ name: 'album-detail', params: { name: row.album } })
@@ -442,6 +443,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.track-album-text {
+  display: block;
+  max-width: 100%;
 }
 
 .track-artist-text {
