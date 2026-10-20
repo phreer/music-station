@@ -72,6 +72,8 @@ See [music-station-client-gtk](https://github.com/phreer/music-station-client-gt
 6. Edit track metadata (title, artist, album, genre, year, etc.) via the edit button
 6. Manage lyrics — view, upload, or search online via NetEase / QQ Music
 
+Use “Add to playlist” on a track row or in the player’s track options to choose a destination playlist. Playlists that already contain the track are disabled. “New Playlist” returns to the selection list after creation; choose the new playlist to add the track.
+
 The web client is a Vue 3 single-page application (TypeScript, Pinia, Naive UI) located in `web/`. It is built to `static/` and served at `/web` by the server.
 
 ```bash

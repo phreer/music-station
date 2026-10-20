@@ -3,18 +3,19 @@ import { tr } from '@/i18n'
 import { ref } from 'vue'
 import SettingsModal from '@/components/modals/SettingsModal.vue'
 import { NButton } from 'naive-ui'
-import { Sun, Moon, AudioLines, Settings } from 'lucide-vue-next'
+import { Sun, Moon, Settings } from 'lucide-vue-next'
 import { useUiStore } from '@/stores/ui'
 import AppNav from './AppNav.vue'
 
 const ui = useUiStore()
 const showSettings = ref(false)
+const brandIconUrl = `${import.meta.env.BASE_URL}favicon.png`
 </script>
 
 <template>
   <header :class="$style.header">
     <RouterLink :to="{ name: 'tracks' }" :class="$style.brand" :aria-label="tr('FL Music library')">
-      <span :class="$style.mark"><AudioLines :size="21" :stroke-width="1.8" /></span>
+      <img :class="$style.mark" :src="brandIconUrl" width="33" height="33" alt="" />
       <span>FL Music<span :class="$style.brandDot">.</span></span>
     </RouterLink>
     <div :class="$style.navigation"><AppNav /></div>
@@ -36,7 +37,7 @@ const showSettings = ref(false)
 <style module>
 .header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; padding: 18px 36px; border-bottom: 1px solid var(--app-border); background: var(--app-surface); flex-shrink: 0; }
 .brand { display: inline-flex; align-items: center; gap: 10px; width: fit-content; font-size: 19px; font-weight: 700; letter-spacing: -0.6px; color: var(--app-text); text-decoration: none; white-space: nowrap; }
-.mark { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 10px; color: var(--app-on-primary); background: var(--app-primary); }
+.mark { display: block; flex-shrink: 0; width: 33px; height: 33px; border-radius: 10px; object-fit: contain; }
 .brandDot { color: var(--app-primary); }
 .headerActions { display: flex; gap: 8px; justify-self: end; }
 @media (max-width: 1000px) {
