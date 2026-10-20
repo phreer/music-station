@@ -154,7 +154,17 @@ function handleAction(key: string) {
     <PlaybackControls :class="$style.playback" />
 
     <div :class="$style.utilities">
-      <NButton quaternary circle :class="ui.visualizerEnabled && $style.utilityActive" :aria-pressed="ui.visualizerEnabled" :aria-label="tr('Visualizer')" :title="tr('Visualizer')" @click="toggleVisualizer"><template #icon><AudioLines :size="18" /></template></NButton>
+      <NButton
+        quaternary
+        circle
+        :class="ui.visualizerEnabled && $style.utilityActive"
+        :aria-pressed="ui.visualizerEnabled"
+        :aria-label="ui.visualizerEnabled ? tr('Hide visualizer') : tr('Show visualizer')"
+        :title="ui.visualizerEnabled ? tr('Hide visualizer') : tr('Show visualizer')"
+        @click="toggleVisualizer"
+      >
+        <template #icon><AudioLines :size="18" /></template>
+      </NButton>
       <div :class="$style.volumeDesktop">
         <Volume2 v-if="player.volume > 0" :size="17" /><VolumeX v-else :size="17" />
         <NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" :aria-label="tr('Volume')" @update:value="player.setVolume" />

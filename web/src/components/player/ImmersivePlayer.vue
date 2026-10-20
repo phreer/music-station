@@ -49,7 +49,9 @@ function close() { ui.immersiveVisible = false }
           <PlaybackControls />
           <div :class="$style.utilities">
             <div :class="$style.volume"><Volume2 :size="18" /><NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" :aria-label="tr('Volume')" @update:value="player.setVolume" /></div>
-            <NButton quaternary :type="ui.visualizerEnabled ? 'primary' : 'default'" :aria-pressed="ui.visualizerEnabled" @click="emit('toggleVisualizer')">
+            <NButton quaternary :type="ui.visualizerEnabled ? 'primary' : 'default'" :aria-pressed="ui.visualizerEnabled"
+              :aria-label="ui.visualizerEnabled ? tr('Hide visualizer') : tr('Show visualizer')"
+              :title="ui.visualizerEnabled ? tr('Hide visualizer') : tr('Show visualizer')" @click="emit('toggleVisualizer')">
               <template #icon><AudioLines :size="18" /></template>{{ tr('Visualizer') }}
             </NButton>
           </div>

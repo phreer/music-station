@@ -1,6 +1,8 @@
 // English source messages are the catalog keys. Keep placeholders in sync.
 export const zh = {
   "Visualizer": "律动",
+  "Show visualizer": "开启律动",
+  "Hide visualizer": "关闭律动",
   "Visualizer unavailable. Try playing again to resume audio.": "律动暂不可用。如无声音，请再次点击播放。",
   "Immersive player": "沉浸播放",
   "Open immersive player": "打开沉浸播放",
