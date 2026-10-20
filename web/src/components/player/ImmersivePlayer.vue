@@ -39,7 +39,7 @@ function close() { ui.immersiveVisible = false }
             <RouterLink v-if="player.currentTrack?.album" :to="{ name: 'album-detail', params: { name: player.currentTrack.album } }" @click="close">{{ player.currentTrack.album }}</RouterLink>
           </div>
         </div>
-        <div :class="$style.lyrics"><LyricsContent v-if="ui.immersiveVisible" /></div>
+        <div :class="$style.lyrics"><LyricsContent v-if="ui.immersiveVisible" immersive /></div>
       </div>
       <footer :class="$style.footer">
         <div v-if="ui.visualizerEnabled && ui.immersiveVisible" :class="$style.spectrum">
@@ -70,7 +70,7 @@ function close() { ui.immersiveVisible = false }
 .metadata h1 { font-size: clamp(20px, 2.5vw, 30px); line-height: 1.3; }
 .metadata a, .metadata span { color: var(--app-text-muted); font-size: 14px; text-decoration: none; }
 .metadata a:hover { color: var(--app-primary); text-decoration: underline; }
-.lyrics { min-height: 0; min-width: 0; display: flex; flex-direction: column; border-radius: 20px; background: var(--app-surface); }
+.lyrics { min-height: 0; min-width: 0; display: flex; flex-direction: column; }
 .footer { flex-shrink: 0; width: min(1000px, 100%); margin: 0 auto; padding: 0 32px calc(24px + env(safe-area-inset-bottom)); }
 .spectrum { height: 112px; margin-bottom: 16px; }
 .controls { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: center; }

@@ -6,6 +6,8 @@ import { useLyricsStore } from '@/stores/lyrics'
 import { usePlayerStore } from '@/stores/player'
 import { useUiStore } from '@/stores/ui'
 
+defineProps<{ immersive?: boolean }>()
+
 const lyrics = useLyricsStore()
 const player = usePlayerStore()
 const ui = useUiStore()
@@ -44,7 +46,7 @@ watch(() => ui.lyricsFontSize, () => { void follow(true) })
 </script>
 
 <template>
-  <div :class="$style.content" :style="{ '--lyrics-font-size': `${ui.lyricsFontSize}px` }">
+  <div :class="[$style.content, immersive && $style.immersive]" :style="{ '--lyrics-font-size': `${ui.lyricsFontSize}px` }">
     <div ref="scroller" :class="$style.scroller" tabindex="0" :aria-label="tr('Lyrics')"
       :aria-busy="lyrics.isLoading" @wheel.passive="manualScroll" @touchstart.passive="manualScroll"
       @pointerdown="manualScroll" @keydown="handleKey">
@@ -79,4 +81,38 @@ watch(() => ui.lyricsFontSize, () => { void follow(true) })
 .active { color: var(--app-primary); font-weight: 600; background: var(--app-active-bg); box-shadow: inset 2px 0 var(--app-primary); }
 .wordActive { color: var(--app-primary); font-weight: 800; }
 .follow { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 16px var(--app-shadow); }
+
+.immersive .scroller {
+  padding: 48px 24px;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-color: transparent transparent;
+  mask-image: linear-gradient(to bottom, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+}
+.immersive .scroller:hover,
+.immersive .scroller:focus-visible { scrollbar-color: var(--app-scrollbar-thumb) transparent; }
+.immersive .scroller::-webkit-scrollbar { width: 6px; }
+.immersive .scroller::-webkit-scrollbar-track { background: transparent; }
+.immersive .scroller::-webkit-scrollbar-thumb { border-radius: 999px; background: transparent; }
+.immersive .scroller:hover::-webkit-scrollbar-thumb,
+.immersive .scroller:focus-visible::-webkit-scrollbar-thumb { background: var(--app-scrollbar-thumb); }
+.immersive .scroller::-webkit-scrollbar-thumb:hover { background: var(--app-scrollbar-thumb-hover); }
+.immersive .scroller:focus-visible { outline-offset: -3px; border-radius: 12px; }
+.immersive .lines { gap: 18px; }
+.immersive .line {
+  font-size: calc(var(--lyrics-font-size) + 3px);
+  line-height: 1.8;
+  padding-block: 12px;
+}
+.immersive .active { color: var(--app-text); background: transparent; box-shadow: none; }
+.immersive .plain { font-size: calc(var(--lyrics-font-size) + 3px); line-height: 2; }
+.immersive .follow { background: var(--app-surface); border-color: var(--app-border); box-shadow: 0 4px 16px var(--app-shadow); }
+@media (hover: none) {
+  .immersive .scroller { scrollbar-color: var(--app-scrollbar-thumb) transparent; }
+  .immersive .scroller::-webkit-scrollbar-thumb { background: var(--app-scrollbar-thumb); }
+}
+@media (max-width: 700px) {
+  .immersive .scroller { padding: 32px 12px; }
+  .immersive .lines { gap: 12px; }
+  .immersive .line, .immersive .plain { font-size: calc(var(--lyrics-font-size) + 1px); }
+}
 </style>
