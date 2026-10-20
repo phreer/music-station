@@ -39,9 +39,21 @@ const showRightSidebar = computed(
 )
 
 let activePointerId: number | null = null
+const isResizing = ref(false)
+let resizeStartX = 0
+let resizeStartWidth = 0
+let resizeDirection = 1
 
 function startResize(event: PointerEvent) {
+  if (event.button !== 0 || activePointerId !== null) return
+  event.preventDefault()
+  const handle = event.currentTarget as HTMLElement
   activePointerId = event.pointerId
+  isResizing.value = true
+  resizeStartX = event.clientX
+  resizeStartWidth = ui.sidebarWidth
+  resizeDirection = ui.lyricsPanelSide === 'left' ? 1 : -1
+  handle.setPointerCapture(event.pointerId)
   window.addEventListener('pointermove', handleResize)
   window.addEventListener('pointerup', stopResize)
   window.addEventListener('pointercancel', stopResize)
@@ -50,17 +62,13 @@ function startResize(event: PointerEvent) {
 function handleResize(event: PointerEvent) {
   if (activePointerId !== event.pointerId) return
 
-  if (ui.lyricsPanelSide === 'left') {
-    ui.setSidebarWidth(event.clientX)
-    return
-  }
-
-  ui.setSidebarWidth(window.innerWidth - event.clientX)
+  ui.setSidebarWidth(resizeStartWidth + (event.clientX - resizeStartX) * resizeDirection)
 }
 
 function stopResize(event?: PointerEvent) {
   if (event && activePointerId !== event.pointerId) return
   activePointerId = null
+  isResizing.value = false
   window.removeEventListener('pointermove', handleResize)
   window.removeEventListener('pointerup', stopResize)
   window.removeEventListener('pointercancel', stopResize)
@@ -73,7 +81,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div :inert="ui.immersiveVisible || undefined" :class="$style.layout" :style="{ '--app-player-height': `${playerHeight}px` }">
+  <div :inert="ui.immersiveVisible || undefined" :class="[$style.layout, isResizing && $style.resizing]" :style="{ '--app-player-height': `${playerHeight}px` }">
     <AppHeader />
     <div :class="$style.body">
       <Transition name="sidebar">
@@ -166,49 +174,58 @@ onBeforeUnmount(() => {
 }
 
 .lyricsSidebarLeft {
-  padding: 24px 0 24px 20px;
+  padding: 24px 16px 24px 20px;
   order: -1;
 }
 
 .lyricsSidebarRight {
-  padding: 24px 20px 24px 0;
+  padding: 24px 20px 24px 16px;
   order: 1;
 }
 
 .resizeHandle {
-  width: 10px;
-  flex-shrink: 0;
-  align-self: stretch;
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  z-index: 1;
+  width: 16px;
   cursor: col-resize;
-  position: relative;
   touch-action: none;
 }
 
 .resizeHandle::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 0;
+  top: 50%;
   left: 50%;
-  width: 2px;
-  transform: translateX(-50%);
+  width: 3px;
+  height: 40px;
+  transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: var(--app-border);
-  opacity: 0.55;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  background: var(--app-text-muted);
+  opacity: 0.4;
+  transition: height 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
 }
 
-.resizeHandle:hover::before {
+.resizeHandle:hover::before,
+.resizing .resizeHandle::before {
+  height: 56px;
   opacity: 1;
   background: var(--app-primary);
 }
 
 .resizeHandleLeft {
-  order: 1;
+  right: 8px;
 }
 
 .resizeHandleRight {
-  order: -1;
+  left: 8px;
+}
+
+.resizing,
+.resizing * {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 @media (max-width: 700px) {
