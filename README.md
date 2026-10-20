@@ -76,6 +76,8 @@ Use “Add to playlist” on a track row or in the player’s track options to c
 
 The web client is a Vue 3 single-page application (TypeScript, Pinia, Naive UI) located in `web/`. It is built to `static/` and served at `/web` by the server.
 
+The Stats page shows library totals, cumulative plays, and how many tracks have been played. Its most-played ranking includes only tracks in the current library with at least one recorded play, with Top 10/25/50 views. Play the displayed ranking or start from a specific entry; refresh to pick up plays from other clients.
+
 ```bash
 # Development server with hot reload (proxies API to localhost:3000)
 cd web && npm install && npm run dev
