@@ -84,6 +84,13 @@ cd web && npm install && npm run dev
 cd web && npm run build
 ```
 
+## Music Library Audit
+
+Use the standalone [music audit script](scripts/MUSIC_AUDIT.md) to find suspected
+duplicate songs with simplified/traditional Chinese normalization and files missing
+title, artist, or album tags. It reads the library without modifying music files
+and exports CSV and JSON reports.
+
 ## API Documentation
 
 Music Station provides a comprehensive REST API for client development.
