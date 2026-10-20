@@ -1,5 +1,8 @@
 /target
 /static
+.venv-music-audit/
+music-audit-reports/
+scripts/__pycache__/
 web/node_modules
 web/dist
 .DS_Store
