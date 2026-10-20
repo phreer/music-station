@@ -1,5 +1,14 @@
 // English source messages are the catalog keys. Keep placeholders in sync.
 export const zh = {
+  "Visualizer": "律动",
+  "Visualizer unavailable. Try playing again to resume audio.": "律动暂不可用。如无声音，请再次点击播放。",
+  "Immersive player": "沉浸播放",
+  "Open immersive player": "打开沉浸播放",
+  "Close immersive player": "关闭沉浸播放",
+  "Now playing": "正在播放",
+  "Loading lyrics": "正在加载歌词",
+  "Failed to load lyrics": "歌词加载失败",
+  "Back to current lyric": "回到当前歌词",
   "Added to playlist": "已加入歌单",
   "Already added": "已添加",
   "Failed to load playlists": "加载歌单失败",

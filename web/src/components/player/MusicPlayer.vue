@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { useAddToPlaylistStore } from '@/stores/addToPlaylist'
 import { tr } from '@/i18n'
-import { computed, ref, onMounted, watch } from 'vue'
-import { NSlider, NButton, NDropdown, NPopover } from 'naive-ui'
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2 } from 'lucide-vue-next'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { NSlider, NButton, NDropdown, NPopover, useMessage } from 'naive-ui'
+import { Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2, AudioLines, Maximize2 } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import { useLyricsStore } from '@/stores/lyrics'
 import { coverUrl } from '@/api/client'
-import { formatDuration } from '@/utils/format'
+import { useUiStore } from '@/stores/ui'
+import { AudioAnalysis } from '@/audio/analysis'
+import AudioVisualizer from './AudioVisualizer.vue'
+import PlaybackControls from './PlaybackControls.vue'
+import ImmersivePlayer from './ImmersivePlayer.vue'
 import LyricsModal from '@/components/modals/LyricsModal.vue'
 import EditTrackModal from '@/components/modals/EditTrackModal.vue'
 import TrackFavoriteButton from '@/components/tracks/TrackFavoriteButton.vue'
@@ -17,6 +21,47 @@ const dialog = useAddToPlaylistStore()
 const player = usePlayerStore()
 const lyrics = useLyricsStore()
 const queue = useQueueStore()
+const ui = useUiStore()
+const message = useMessage()
+const analysisReady = ref(false)
+const pageVisible = ref(document.visibilityState !== 'hidden')
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+const analysis = new AudioAnalysis(
+  () => { analysisReady.value = analysis.ready },
+  () => { message.warning(tr('Visualizer unavailable. Try playing again to resume audio.')) },
+)
+const suspended = computed(() => !pageVisible.value || player.isWaiting || !analysisReady.value)
+const coverRef = ref<HTMLButtonElement | null>(null)
+let immersiveOpener: HTMLElement | null = null
+
+function openImmersive(event: MouseEvent) {
+  immersiveOpener = event.currentTarget as HTMLElement
+  ui.immersiveVisible = true
+}
+
+function restoreFocus() {
+  if (!ui.immersiveVisible) (immersiveOpener?.isConnected ? immersiveOpener : coverRef.value)?.focus()
+}
+
+function prepareAudio() {
+  if (audioRef.value) void analysis.prepare(audioRef.value, ui.visualizerEnabled)
+}
+
+function toggleVisualizer() {
+  ui.setVisualizerEnabled(!ui.visualizerEnabled)
+}
+
+function visibilityChanged() { pageVisible.value = document.visibilityState !== 'hidden' }
+function motionChanged() {
+  if (reducedMotion.matches) ui.setVisualizerEnabled(false, false)
+}
+
+watch(() => ui.visualizerEnabled, (enabled) => {
+  if (enabled) {
+    analysis.budget.reset()
+    prepareAudio()
+  }
+}, { flush: 'sync' })
 const audioRef = ref<HTMLAudioElement | null>(null)
 
 const showLyricsModal = ref(false)
@@ -24,14 +69,25 @@ const showEditModal = ref(false)
 
 onMounted(() => {
   if (audioRef.value) {
-    player.initAudio(audioRef.value)
+    player.initAudio(audioRef.value, prepareAudio)
   }
+  document.addEventListener('visibilitychange', visibilityChanged)
+  reducedMotion.addEventListener('change', motionChanged)
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', visibilityChanged)
+  reducedMotion.removeEventListener('change', motionChanged)
+  player.destroyAudio()
+  analysis.destroy()
+  ui.immersiveVisible = false
 })
 
 // Load lyrics when track changes
 watch(
   () => player.currentTrackId,
   (trackId) => {
+    if (!trackId) ui.immersiveVisible = false
     if (trackId && player.currentTrack?.has_lyrics) {
       lyrics.loadForTrack(trackId)
     } else {
@@ -42,17 +98,14 @@ watch(
 
 // Sync lyrics time
 watch(
-  () => player.currentTime,
-  (time) => {
+  () => [player.currentTime, lyrics.parsedLines] as const,
+  ([time]) => {
     if (lyrics.hasParsedLines) {
       lyrics.updateCurrentTime(time)
     }
   },
 )
 
-function handleSeek(value: number) {
-  player.seek(value)
-}
 const trackActions = computed(() => [
   ...(player.currentTrack ? [{ label: tr('Add to playlist'), key: 'playlist' }] : []),
   { label: tr('Edit track details'), key: 'edit' },
@@ -71,12 +124,16 @@ function handleAction(key: string) {
 
 
 <template>
+  <div v-if="ui.visualizerEnabled && player.currentTrack && !ui.immersiveVisible" :class="$style.miniSpectrum">
+    <AudioVisualizer :analysis="analysis" :playing="player.isActuallyPlaying" :suspended="suspended" :dark="ui.isDarkMode" />
+    <NButton :class="$style.expand" quaternary circle :aria-label="tr('Open immersive player')" :title="tr('Open immersive player')" @click="openImmersive"><template #icon><Maximize2 :size="17" /></template></NButton>
+  </div>
   <section v-show="player.currentTrack" :class="$style.player" :aria-label="tr('Music player')">
     <div :class="$style.info">
-      <div :class="$style.cover">
+      <button ref="coverRef" type="button" :class="$style.cover" :aria-label="tr('Open immersive player')" @click="openImmersive">
         <img v-if="player.currentTrack?.has_cover" :src="coverUrl(player.currentTrack.id)" alt="" />
         <Music2 v-else :size="22" />
-      </div>
+      </button>
       <div :class="$style.trackInfo">
         <div :class="$style.trackTitle" :title="player.currentTrack?.title ?? ''">{{ player.currentTrack?.title || tr('Unknown Title') }}</div>
         <div :class="$style.trackArtist">
@@ -94,22 +151,10 @@ function handleAction(key: string) {
       </NDropdown>
     </div>
 
-    <div :class="$style.center">
-      <div :class="$style.controls">
-        <NButton quaternary circle :aria-label="tr('Previous track')" @click="player.playPrevious"><template #icon><SkipBack :size="18" /></template></NButton>
-        <NButton circle type="primary" :class="$style.playButton" :aria-label="player.isPlaying ? tr('Pause') : tr('Play')" @click="player.togglePlayPause">
-          <template #icon><Pause v-if="player.isPlaying" :size="19" fill="currentColor" /><Play v-else :size="19" fill="currentColor" /></template>
-        </NButton>
-        <NButton quaternary circle :aria-label="tr('Next track')" @click="player.playNext"><template #icon><SkipForward :size="18" /></template></NButton>
-      </div>
-      <div :class="$style.progress">
-        <span :class="$style.time">{{ formatDuration(player.currentTime) }}</span>
-        <NSlider :value="player.progress" :max="100" :step="0.1" :tooltip="false" :class="$style.progressSlider" :aria-label="tr('Playback position')" @update:value="handleSeek" />
-        <span :class="$style.time">{{ formatDuration(player.duration) }}</span>
-      </div>
-    </div>
+    <PlaybackControls :class="$style.playback" />
 
     <div :class="$style.utilities">
+      <NButton quaternary circle :class="ui.visualizerEnabled && $style.utilityActive" :aria-pressed="ui.visualizerEnabled" :aria-label="tr('Visualizer')" :title="tr('Visualizer')" @click="toggleVisualizer"><template #icon><AudioLines :size="18" /></template></NButton>
       <div :class="$style.volumeDesktop">
         <Volume2 v-if="player.volume > 0" :size="17" /><VolumeX v-else :size="17" />
         <NSlider :value="player.volume" :max="1" :step="0.01" :tooltip="false" :aria-label="tr('Volume')" @update:value="player.setVolume" />
@@ -125,15 +170,18 @@ function handleAction(key: string) {
     </div>
     <audio ref="audioRef" />
   </section>
+  <ImmersivePlayer :analysis="analysis" :suspended="suspended" @toggle-visualizer="toggleVisualizer" @closed="restoreFocus" />
   <LyricsModal v-model:show="showLyricsModal" :track="player.currentTrack" />
   <EditTrackModal v-model:show="showEditModal" :track="player.currentTrack" />
 </template>
 
 <style module>
+.miniSpectrum { height: 80px; position: relative; margin: 0 12px 8px; padding-right: 36px; }
+.expand { position: absolute; right: 0; top: 0; }
 .player { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 12px 20px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: 16px; box-shadow: 0 8px 24px var(--app-shadow); }
 .info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .info > button { flex-shrink: 0; }
-.cover { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--app-placeholder-bg); color: var(--app-text-muted); }
+.cover { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--app-placeholder-bg); color: var(--app-text-muted); border: 0; cursor: pointer; }
 .cover img { width: 100%; height: 100%; object-fit: cover; }
 .trackInfo { flex: 1; min-width: 0; }
 .trackTitle { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -141,12 +189,6 @@ function handleAction(key: string) {
 .trackArtist a { color: inherit; text-decoration: none; }
 .trackArtist a:hover { color: var(--app-text); text-decoration: underline; }
 .separator { margin: 0 2px; opacity: 0.5; }
-.center { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; }
-.controls { display: flex; align-items: center; gap: 12px; }
-.playButton { width: 38px; height: 38px; }
-.progress { display: flex; align-items: center; gap: 10px; width: 100%; }
-.progressSlider { flex: 1; min-width: 0; }
-.time { font-size: 10px; color: var(--app-text-muted); font-variant-numeric: tabular-nums; min-width: 28px; text-align: center; }
 .utilities { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-width: 0; }
 .volumeDesktop { display: flex; align-items: center; gap: 10px; width: 110px; margin-right: 8px; color: var(--app-text-muted); }
 .volumeDesktop svg { flex-shrink: 0; }
@@ -162,10 +204,9 @@ function handleAction(key: string) {
   .player { grid-template-columns: 1fr auto; padding: 12px 14px; gap: 8px 16px; border-radius: 14px; }
   .info { grid-column: 1 / -1; }
   .cover { width: 44px; height: 44px; }
-  .center { display: contents; }
-  .controls { grid-column: 1; grid-row: 2; gap: 8px; justify-content: flex-start; }
-  .utilities { grid-column: 2; grid-row: 2; gap: 4px; }
-  .progress { grid-column: 1 / -1; grid-row: 3; }
+  .playback { grid-column: 1 / -1; grid-row: 2; }
+  .utilities { grid-column: 1 / -1; grid-row: 3; gap: 4px; justify-content: center; }
+  .miniSpectrum { height: 56px; }
   .trackTitle { font-size: 14px; }
 }
 </style>

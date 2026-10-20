@@ -2,11 +2,13 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Lyrics, ParsedLyricsLine } from '@/types'
 import { fetchLyrics } from '@/api/lyrics'
+import { ApiError } from '@/api/client'
 import { useLrcParser } from '@/composables/useLrcParser'
 
 export const useLyricsStore = defineStore('lyrics', () => {
   const currentLyrics = ref<Lyrics | null>(null)
   const isLoading = ref(false)
+  const loadError = ref(false)
   const parsedLines = ref<ParsedLyricsLine[]>([])
   const currentLineIndex = ref(-1)
   // Index of the last active word within the current line (for word-level highlighting)
@@ -14,29 +16,32 @@ export const useLyricsStore = defineStore('lyrics', () => {
   const sidebarVisible = ref(true)
   const hasLyrics = ref(false)
   let loadController: AbortController | null = null
+  let requestId = 0
 
   const { parseLrc, parseWordLevel } = useLrcParser()
 
   const hasParsedLines = computed(() => parsedLines.value.length > 0)
 
   async function loadForTrack(trackId: string) {
-    loadController?.abort()
-    loadController = new AbortController()
+    reset()
+    const id = requestId
+    const controller = new AbortController()
+    loadController = controller
     isLoading.value = true
-    currentLyrics.value = null
-    parsedLines.value = []
-    currentLineIndex.value = -1
     try {
-      const lyrics = await fetchLyrics(trackId, loadController.signal)
+      const lyrics = await fetchLyrics(trackId, controller.signal)
+      if (id !== requestId) return
       currentLyrics.value = lyrics
       hasLyrics.value = true
       parseContent(lyrics)
     } catch (e) {
-      if (e instanceof DOMException && e.name === 'AbortError') return
-      hasLyrics.value = false
-      currentLyrics.value = null
+      if (id !== requestId || controller.signal.aborted) return
+      loadError.value = !(e instanceof ApiError && e.status === 404)
     } finally {
-      isLoading.value = false
+      if (id === requestId) {
+        isLoading.value = false
+        loadController = null
+      }
     }
   }
 
@@ -113,6 +118,11 @@ export const useLyricsStore = defineStore('lyrics', () => {
   }
 
   function reset() {
+    requestId++
+    loadController?.abort()
+    loadController = null
+    isLoading.value = false
+    loadError.value = false
     currentLyrics.value = null
     parsedLines.value = []
     currentLineIndex.value = -1
@@ -127,6 +137,7 @@ export const useLyricsStore = defineStore('lyrics', () => {
   return {
     currentLyrics,
     isLoading,
+    loadError,
     parsedLines,
     currentLineIndex,
     currentWordIndex,

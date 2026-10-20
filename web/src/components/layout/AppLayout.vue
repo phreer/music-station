@@ -32,10 +32,10 @@ watch(() => player.currentTrack, async () => {
 })
 
 const showLeftSidebar = computed(
-  () => ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack,
+  () => ui.lyricsPanelSide === 'left' && lyrics.sidebarVisible && player.currentTrack && !ui.immersiveVisible,
 )
 const showRightSidebar = computed(
-  () => ui.lyricsPanelSide === 'right' && lyrics.sidebarVisible && player.currentTrack,
+  () => ui.lyricsPanelSide === 'right' && lyrics.sidebarVisible && player.currentTrack && !ui.immersiveVisible,
 )
 
 let activePointerId: number | null = null
@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div :class="$style.layout" :style="{ '--app-player-height': `${playerHeight}px` }">
+  <div :inert="ui.immersiveVisible || undefined" :class="$style.layout" :style="{ '--app-player-height': `${playerHeight}px` }">
     <AppHeader />
     <div :class="$style.body">
       <Transition name="sidebar">
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
         >
           <div :class="[$style.resizeHandle, $style.resizeHandleLeft]" @pointerdown="startResize" />
           <div :class="$style.lyricsSidebar">
-            <LyricsSidebar />
+            <LyricsSidebar v-if="!ui.immersiveVisible" />
           </div>
         </div>
       </Transition>
@@ -102,7 +102,7 @@ onBeforeUnmount(() => {
           :style="{ width: ui.sidebarWidth + 'px' }"
         >
           <div :class="$style.lyricsSidebar">
-            <LyricsSidebar />
+            <LyricsSidebar v-if="!ui.immersiveVisible" />
           </div>
           <div :class="[$style.resizeHandle, $style.resizeHandleRight]" @pointerdown="startResize" />
         </div>

@@ -13,6 +13,16 @@ const MIN_LYRICS_PANEL_WIDTH = 280
 const MAX_LYRICS_PANEL_WIDTH = 560
 
 export const useUiStore = defineStore('ui', () => {
+  const immersiveVisible = ref(false)
+  const visualizerEnabled = ref(readVisualizerPreference() && !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+
+  function setVisualizerEnabled(enabled: boolean, persist = true) {
+    visualizerEnabled.value = enabled
+    if (persist) {
+      try { localStorage.setItem('player-visualizer', String(enabled)) } catch { /* Session preference still works. */ }
+    }
+  }
+
   const isDarkMode = ref(localStorage.getItem('theme') === 'dark')
   const sidebarWidth = ref(
     clampLyricsPanelWidth(
@@ -62,6 +72,9 @@ export const useUiStore = defineStore('ui', () => {
 
   return {
     isDarkMode,
+    immersiveVisible,
+    visualizerEnabled,
+    setVisualizerEnabled,
     sidebarWidth,
     lyricsPanelSide,
     lyricsFontSize,
@@ -95,4 +108,8 @@ function clampLyricsPanelWidth(width: number) {
 
 function parseLyricsPanelSide(side: string | null): LyricsPanelSide {
   return side === 'left' || side === 'right' ? side : DEFAULT_LYRICS_PANEL_SIDE
+}
+
+function readVisualizerPreference() {
+  try { return localStorage.getItem('player-visualizer') === 'true' } catch { return false }
 }
