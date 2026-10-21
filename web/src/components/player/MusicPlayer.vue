@@ -3,7 +3,7 @@ import { useAddToPlaylistStore } from '@/stores/addToPlaylist'
 import { tr } from '@/i18n'
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { NSlider, NButton, NDropdown, NPopover, useMessage } from 'naive-ui'
-import { Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2, AudioLines, Maximize2 } from 'lucide-vue-next'
+import { Volume2, VolumeX, MessageSquareText, Ellipsis, ListMusic, Music2, AudioLines } from 'lucide-vue-next'
 import { usePlayerStore } from '@/stores/player'
 import { useQueueStore } from '@/stores/queue'
 import { useLyricsStore } from '@/stores/lyrics'
@@ -31,6 +31,20 @@ const analysis = new AudioAnalysis(
   () => { message.warning(tr('Visualizer unavailable. Try playing again to resume audio.')) },
 )
 const suspended = computed(() => !pageVisible.value || player.isWaiting || !analysisReady.value)
+const ambientSuspended = computed(() => suspended.value || ui.immersiveVisible || !ui.visualizerEnabled || !player.currentTrack)
+const ambientVisible = computed(() => !ambientSuspended.value && player.isActuallyPlaying)
+const ambientMounted = ref(false)
+
+// Keep props live during the leave transition so pausing stops sampling immediately.
+watch([ambientVisible, ambientSuspended], ([visible, stopped]) => {
+  if (visible) ambientMounted.value = true
+  else if (stopped) ambientMounted.value = false
+}, { immediate: true })
+
+function finishAmbientLeave() {
+  if (!ambientVisible.value) ambientMounted.value = false
+}
+
 const coverRef = ref<HTMLButtonElement | null>(null)
 let immersiveOpener: HTMLElement | null = null
 
@@ -124,11 +138,19 @@ function handleAction(key: string) {
 
 
 <template>
-  <div v-if="ui.visualizerEnabled && player.currentTrack && !ui.immersiveVisible" :class="$style.miniSpectrum">
-    <AudioVisualizer :analysis="analysis" :playing="player.isActuallyPlaying" :suspended="suspended" :dark="ui.isDarkMode" />
-    <NButton :class="$style.expand" quaternary circle :aria-label="tr('Open immersive player')" :title="tr('Open immersive player')" @click="openImmersive"><template #icon><Maximize2 :size="17" /></template></NButton>
-  </div>
   <section v-show="player.currentTrack" :class="$style.player" :aria-label="tr('Music player')">
+    <Transition
+      :enter-active-class="$style.ambientEnter"
+      :leave-active-class="$style.ambientLeave"
+      :enter-from-class="$style.ambientHidden"
+      :leave-to-class="$style.ambientHidden"
+      @after-leave="finishAmbientLeave"
+    >
+      <div v-show="ambientVisible" :class="[$style.ambient, ui.isDarkMode && $style.ambientDark]" aria-hidden="true">
+        <AudioVisualizer v-if="ambientMounted" :class="$style.ambientCanvas" variant="ambient"
+          :analysis="analysis" :playing="ambientVisible" :suspended="ambientSuspended" :dark="ui.isDarkMode" />
+      </div>
+    </Transition>
     <div :class="$style.info">
       <button ref="coverRef" type="button" :class="$style.cover" :aria-label="tr('Open immersive player')" @click="openImmersive">
         <img v-if="player.currentTrack?.has_cover" :src="coverUrl(player.currentTrack.id)" alt="" />
@@ -186,9 +208,14 @@ function handleAction(key: string) {
 </template>
 
 <style module>
-.miniSpectrum { height: 80px; position: relative; margin: 0 12px 8px; padding-right: 36px; }
-.expand { position: absolute; right: 0; top: 0; }
-.player { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 12px 20px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: 16px; box-shadow: 0 8px 24px var(--app-shadow); }
+.player { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 12px 20px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: 16px; box-shadow: 0 8px 24px var(--app-shadow); }
+.ambient { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0.12; }
+.ambientDark { opacity: 0.2; }
+.ambient .ambientCanvas { position: absolute; inset: auto 0 0; height: min(50%, 44px); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+.ambientEnter { transition: opacity 300ms ease-out; }
+.ambientLeave { transition: opacity 250ms ease-in; }
+.ambientHidden { opacity: 0; }
+.info, .playback, .utilities { position: relative; z-index: 1; }
 .info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .info > button { flex-shrink: 0; }
 .cover { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 9px; overflow: hidden; flex-shrink: 0; background: var(--app-placeholder-bg); color: var(--app-text-muted); border: 0; cursor: pointer; }
@@ -216,7 +243,10 @@ function handleAction(key: string) {
   .cover { width: 44px; height: 44px; }
   .playback { grid-column: 1 / -1; grid-row: 2; }
   .utilities { grid-column: 1 / -1; grid-row: 3; gap: 4px; justify-content: center; }
-  .miniSpectrum { height: 56px; }
+  .ambient .ambientCanvas { height: min(50%, 36px); }
   .trackTitle { font-size: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambientEnter, .ambientLeave { transition: none; }
 }
 </style>

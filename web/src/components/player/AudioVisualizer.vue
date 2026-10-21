@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { AudioAnalysis } from '@/audio/analysis'
-import { SpectrumRenderer } from '@/audio/renderer'
+import { SpectrumRenderer, type SpectrumVariant } from '@/audio/renderer'
 
 const props = defineProps<{
   analysis: AudioAnalysis
   playing: boolean
   suspended: boolean
   dark: boolean
+  variant?: SpectrumVariant
 }>()
 const canvas = ref<HTMLCanvasElement | null>(null)
 let renderer: SpectrumRenderer | null = null
@@ -45,7 +46,7 @@ watch(() => props.dark, resize, { flush: 'post' })
 onMounted(() => {
   if (!canvas.value) return
   try {
-    renderer = new SpectrumRenderer(canvas.value, props.analysis)
+    renderer = new SpectrumRenderer(canvas.value, props.analysis, props.variant)
     resizeObserver = new ResizeObserver(([entry]) => {
       if (!entry) return
       width = entry.contentRect.width

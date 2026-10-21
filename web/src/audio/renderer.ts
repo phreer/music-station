@@ -1,6 +1,8 @@
 import type { AudioAnalysis } from './analysis'
 import { bandAmplitude, canvasScale, frequencyBands } from './spectrum'
 
+export type SpectrumVariant = 'spectrum' | 'ambient'
+
 /** No reactive writes or layout reads in the animation loop. */
 export class SpectrumRenderer {
   private context: CanvasRenderingContext2D
@@ -19,7 +21,11 @@ export class SpectrumRenderer {
   private primary = ''
   private secondary = ''
 
-  constructor(private canvas: HTMLCanvasElement, private analysis: AudioAnalysis) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    private analysis: AudioAnalysis,
+    private readonly variant: SpectrumVariant = 'spectrum',
+  ) {
     const context = canvas.getContext('2d')
     if (!context) throw new Error('Canvas unavailable')
     this.context = context
@@ -38,7 +44,7 @@ export class SpectrumRenderer {
     this.context.setTransform(scale, 0, 0, scale, 0, 0)
     this.gradient = this.context.createLinearGradient(0, height, 0, 0)
     this.gradient.addColorStop(0, primary)
-    this.gradient.addColorStop(1, secondary)
+    this.gradient.addColorStop(1, this.variant === 'ambient' ? 'transparent' : secondary)
   }
 
   update(visible: boolean, playing: boolean, immediate = false) {
@@ -86,21 +92,32 @@ export class SpectrumRenderer {
       const data = sampling ? this.analysis.read(this) : null
       if (sampling && !data) { this.stop(); return }
       const ctx = this.context
+      const ambient = this.variant === 'ambient'
       ctx.clearRect(0, 0, this.width, this.height)
       ctx.fillStyle = this.gradient
       const stride = this.width / this.count
       const barWidth = Math.max(1, stride * 0.65)
       const bass = data ? bandAmplitude(data, this.bands, 0) : 0
-      ctx.globalAlpha = 0.78 + bass * 0.16
+      ctx.globalAlpha = ambient ? 1 : 0.78 + bass * 0.16
       for (let i = 0; i < this.count; i++) {
         const target = data ? bandAmplitude(data, this.bands, i) : 0
-        const level = this.levels[i]! + (target - this.levels[i]!) * (1 - Math.exp(-dt * (target > this.levels[i]! ? 32 : 8)))
+        const response = target > this.levels[i]! ? (ambient ? 20 : 32) : (ambient ? 5 : 8)
+        const level = this.levels[i]! + (target - this.levels[i]!) * (1 - Math.exp(-dt * response))
         this.levels[i] = level
         this.peaks[i] = Math.max(level, this.peaks[i]! - dt * 0.35)
         const x = i * stride + (stride - barWidth) / 2
         const h = level * Math.max(0, this.height - 4)
-        if (h > 0.2) ctx.fillRect(x, this.height - h, barWidth, h)
-        if (this.peaks[i]! > 0.01) ctx.fillRect(x, this.height - this.peaks[i]! * (this.height - 4) - 3, barWidth, 2)
+        if (h > 0.2) {
+          if (ambient) {
+            const radius = Math.min(barWidth / 2, h / 2)
+            ctx.beginPath()
+            ctx.roundRect(x, this.height - h, barWidth, h, [radius, radius, 0, 0])
+            ctx.fill()
+          } else {
+            ctx.fillRect(x, this.height - h, barWidth, h)
+          }
+        }
+        if (!ambient && this.peaks[i]! > 0.01) ctx.fillRect(x, this.height - this.peaks[i]! * (this.height - 4) - 3, barWidth, 2)
       }
       ctx.globalAlpha = 1
       if (this.analysis.budget.record(performance.now() - started)) {
