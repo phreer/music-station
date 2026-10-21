@@ -213,7 +213,7 @@ function handleAction(key: string) {
 .ambientDark { opacity: 0.38; }
 .ambient .ambientCanvas { position: absolute; inset: auto 0 0; height: min(75%, 64px); mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); }
 .ambientEnter { transition: opacity 300ms ease-out; }
-.ambientLeave { transition: opacity 250ms ease-in; }
+.ambientLeave { transition: opacity 120ms ease-out; }
 .ambientHidden { opacity: 0; }
 .info, .playback, .utilities { position: relative; z-index: 1; }
 .info { display: flex; align-items: center; gap: 10px; min-width: 0; }

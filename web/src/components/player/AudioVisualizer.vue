@@ -74,9 +74,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <canvas ref="canvas" :class="$style.canvas" aria-hidden="true" />
+  <canvas ref="canvas" :class="[$style.canvas, !playing && variant !== 'ambient' && $style.paused]" aria-hidden="true" />
 </template>
 
 <style module>
-.canvas { display: block; width: 100%; height: 100%; }
+.canvas { display: block; width: 100%; height: 100%; transition: opacity 120ms ease-out; }
+.paused { opacity: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .canvas { transition: none; }
+}
 </style>

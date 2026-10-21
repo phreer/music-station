@@ -9,7 +9,6 @@ export class SpectrumRenderer {
   private raf: number | null = null
   private lastFrame = -Infinity
   private lastMotion = 0
-  private decayUntil = 0
   private playing = false
   private width = 0
   private height = 0
@@ -52,16 +51,17 @@ export class SpectrumRenderer {
     if (playing) {
       if (!this.analysis.start(this)) { this.stop(); return }
       this.playing = true
-      this.decayUntil = 0
       if (this.raf === null) {
         this.lastFrame = -Infinity
         this.lastMotion = performance.now()
         this.raf = requestAnimationFrame(this.frame)
       }
     } else if (this.playing) {
+      // Freeze the last frame; CSS handles the short fade without a second motion.
+      if (this.raf !== null) cancelAnimationFrame(this.raf)
+      this.raf = null
       this.playing = false
       this.analysis.stop(this)
-      this.decayUntil = performance.now() + 200
     }
   }
 
@@ -69,7 +69,6 @@ export class SpectrumRenderer {
     if (this.raf !== null) cancelAnimationFrame(this.raf)
     this.raf = null
     this.playing = false
-    this.decayUntil = 0
     this.analysis.stop(this)
     this.levels.fill(0)
     this.peaks.fill(0)
@@ -78,7 +77,7 @@ export class SpectrumRenderer {
 
   private frame = (now: number) => {
     this.raf = null
-    if (!this.playing && now >= this.decayUntil) { this.stop(); return }
+    if (!this.playing) return
     if (now - this.lastFrame + 0.1 < 1000 / this.analysis.budget.fps) {
       this.raf = requestAnimationFrame(this.frame)
       return
@@ -88,19 +87,18 @@ export class SpectrumRenderer {
     this.lastMotion = now
     this.lastFrame = now
     try {
-      const sampling = this.playing
-      const data = sampling ? this.analysis.read(this) : null
-      if (sampling && !data) { this.stop(); return }
+      const data = this.analysis.read(this)
+      if (!data) { this.stop(); return }
       const ctx = this.context
       const ambient = this.variant === 'ambient'
       ctx.clearRect(0, 0, this.width, this.height)
       ctx.fillStyle = this.gradient
       const stride = this.width / this.count
       const barWidth = Math.max(1, stride * 0.65)
-      const bass = data ? bandAmplitude(data, this.bands, 0) : 0
+      const bass = bandAmplitude(data, this.bands, 0)
       ctx.globalAlpha = ambient ? 1 : 0.78 + bass * 0.16
       for (let i = 0; i < this.count; i++) {
-        const target = data ? bandAmplitude(data, this.bands, i) : 0
+        const target = bandAmplitude(data, this.bands, i)
         const response = target > this.levels[i]! ? (ambient ? 20 : 32) : (ambient ? 5 : 8)
         const level = this.levels[i]! + (target - this.levels[i]!) * (1 - Math.exp(-dt * response))
         this.levels[i] = level

@@ -186,7 +186,7 @@ try {
     }
   })
 
-  await test('one loop, 30 FPS limit, stable silence, pause decay and immediate hidden/buffering stop', async () => {
+  await test('one loop, 30 FPS limit, stable silence and immediate pause/hidden/buffering stop', async () => {
     pending.clear()
     const { graph, analysis } = setup()
     await analysis.prepare({}, true)
@@ -201,6 +201,7 @@ try {
     assert.ok(graph.reads >= 29 && graph.reads <= 31, `reads: ${graph.reads}`)
     assert.equal(bars, 0)
     renderer.update(true, false)
+    assert.equal(pending.size, 0)
     assert.deepEqual([...graph.connections], [graph.destination])
     const reads = graph.reads
     for (let time = 1020; time <= 1240; time += 20) step(time)
@@ -213,6 +214,46 @@ try {
     renderer.update(true, true, true)
     assert.equal(pending.size, 0)
     analysis.destroy()
+  })
+
+  await test('pause freezes the last frame in both variants and rapid resume restarts exactly one loop', async () => {
+    for (const variant of ['ambient', 'spectrum']) {
+      pending.clear()
+      clock = 0
+      const { graph, analysis } = setup()
+      await analysis.prepare({}, true)
+      graph.analyser.getByteFrequencyData = data => { graph.reads++; data.fill(180) }
+      const canvas = makeCanvas()
+      let clears = 0
+      let draws = 0
+      canvas.ctx.clearRect = () => clears++
+      canvas.ctx.fillRect = () => draws++
+      canvas.ctx.beginPath = () => {}
+      canvas.ctx.roundRect = () => {}
+      canvas.ctx.fill = () => draws++
+      const renderer = new SpectrumRenderer(canvas, analysis, variant)
+      renderer.resize(800, 80, '#4062d8', '#fff')
+      renderer.update(true, true)
+      step(40)
+      assert.ok(draws > 0)
+      const frame = { clears, draws, reads: graph.reads }
+      renderer.update(true, false)
+      assert.equal(pending.size, 0)
+      assert.deepEqual([...graph.connections], [graph.destination])
+      step(80)
+      assert.deepEqual({ clears, draws, reads: graph.reads }, frame)
+      renderer.update(true, true)
+      renderer.update(true, true)
+      assert.equal(pending.size, 1)
+      step(120)
+      assert.ok(draws > frame.draws)
+      assert.equal(graph.reads, frame.reads + 1)
+      renderer.update(true, false)
+      renderer.stop()
+      assert.equal(pending.size, 0)
+      assert.equal(clears, frame.clears + 2)
+      analysis.destroy()
+    }
   })
 
   await test('switching renderers revokes old loops and interruption cancels drawing without disconnecting sound', async () => {
