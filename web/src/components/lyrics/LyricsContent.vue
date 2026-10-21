@@ -97,14 +97,14 @@ watch(() => ui.lyricsFontSize, () => { void follow(true) })
 .immersive .scroller:focus-visible::-webkit-scrollbar-thumb { background: var(--app-scrollbar-thumb); }
 .immersive .scroller::-webkit-scrollbar-thumb:hover { background: var(--app-scrollbar-thumb-hover); }
 .immersive .scroller:focus-visible { outline-offset: -3px; border-radius: 12px; }
-.immersive .lines { gap: 10px; }
+.immersive .lines { gap: 6px; }
 .immersive .line {
   font-size: calc(var(--lyrics-font-size) + 3px);
   line-height: 1.6;
-  padding-block: 8px;
+  padding-block: 5px;
 }
 .immersive .active { color: var(--app-text); background: transparent; box-shadow: none; }
-.immersive .plain { font-size: calc(var(--lyrics-font-size) + 3px); line-height: 1.7; }
+.immersive .plain { font-size: calc(var(--lyrics-font-size) + 3px); line-height: 1.6; }
 .immersive .follow { background: var(--app-surface); border-color: var(--app-border); box-shadow: 0 4px 16px var(--app-shadow); }
 @media (hover: none) {
   .immersive .scroller { scrollbar-color: var(--app-scrollbar-thumb) transparent; }
@@ -112,7 +112,7 @@ watch(() => ui.lyricsFontSize, () => { void follow(true) })
 }
 @media (max-width: 700px) {
   .immersive .scroller { padding: 32px 12px; }
-  .immersive .lines { gap: 8px; }
+  .immersive .lines { gap: 4px; }
   .immersive .line, .immersive .plain { font-size: calc(var(--lyrics-font-size) + 1px); }
 }
 </style>
