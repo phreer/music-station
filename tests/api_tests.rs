@@ -107,6 +107,25 @@ async fn stats_empty_library() {
     assert_eq!(json["total_artists"], 0);
 }
 
+#[tokio::test]
+async fn monthly_top_tracks_accepts_month_and_rejects_invalid_month() {
+    let (app, _dir) = setup().await;
+    let req = Request::get("/stats/monthly-top-tracks?month=2026-10&limit=5")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let (status, json) = send_json(app.clone(), req).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(json["month"], "2026-10");
+    assert_eq!(json["tracks"], Value::Array(vec![]));
+
+    let req = Request::get("/stats/monthly-top-tracks?month=2026-13")
+        .body(axum::body::Body::empty())
+        .unwrap();
+    let (status, _) = send(app, req).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
 // ---- Albums & Artists ----
 
 #[tokio::test]

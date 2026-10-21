@@ -1,7 +1,7 @@
 use axum::{
     Json, Router,
     body::Body,
-    extract::{DefaultBodyLimit, Multipart, Path, State},
+    extract::{DefaultBodyLimit, Multipart, Path, Query, State},
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
     routing::get,
@@ -108,6 +108,7 @@ pub fn create_router(
         .route("/artists", get(list_artists))
         .route("/artists/:name", get(get_artist))
         .route("/stats", get(get_stats))
+        .route("/stats/monthly-top-tracks", get(get_monthly_top_tracks))
         .route(
             "/favorites/artists",
             get(list_favorite_artists),
@@ -467,6 +468,46 @@ async fn get_stats(State(state): State<AppState>) -> Json<LibraryStats> {
         stats.total_artists
     );
     Json(stats)
+}
+
+#[derive(serde::Deserialize)]
+struct MonthlyTopTracksQuery {
+    month: Option<String>,
+    limit: Option<i64>,
+}
+
+#[derive(serde::Serialize)]
+struct MonthlyTopTracksResponse {
+    month: String,
+    tracks: Vec<crate::stats::MonthlyTrackPlays>,
+}
+
+/// Get the most played tracks for a month. Defaults to the current UTC month.
+async fn get_monthly_top_tracks(
+    State(state): State<AppState>,
+    Query(query): Query<MonthlyTopTracksQuery>,
+) -> Result<Json<MonthlyTopTracksResponse>, StatusCode> {
+    let month = query
+        .month
+        .unwrap_or_else(|| chrono::Utc::now().format("%Y-%m").to_string());
+    if chrono::NaiveDate::parse_from_str(&format!("{month}-01"), "%Y-%m-%d").is_err() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let limit = query.limit.unwrap_or(20);
+    if !(1..=100).contains(&limit) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let tracks = state
+        .stats_db
+        .get_monthly_top_tracks(&month, limit)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to fetch monthly top tracks: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(MonthlyTopTracksResponse { month, tracks }))
 }
 
 /// Get cover art for a track
