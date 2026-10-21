@@ -209,9 +209,9 @@ function handleAction(key: string) {
 
 <style module>
 .player { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 1.2fr) minmax(0, 1fr); align-items: center; gap: 24px; padding: 12px 20px; background: var(--app-surface-raised); border: 1px solid var(--app-border); border-radius: 16px; box-shadow: 0 8px 24px var(--app-shadow); }
-.ambient { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0.12; }
-.ambientDark { opacity: 0.2; }
-.ambient .ambientCanvas { position: absolute; inset: auto 0 0; height: min(50%, 44px); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+.ambient { position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit; pointer-events: none; opacity: 0.28; }
+.ambientDark { opacity: 0.38; }
+.ambient .ambientCanvas { position: absolute; inset: auto 0 0; height: min(75%, 64px); mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent); }
 .ambientEnter { transition: opacity 300ms ease-out; }
 .ambientLeave { transition: opacity 250ms ease-in; }
 .ambientHidden { opacity: 0; }
@@ -243,7 +243,7 @@ function handleAction(key: string) {
   .cover { width: 44px; height: 44px; }
   .playback { grid-column: 1 / -1; grid-row: 2; }
   .utilities { grid-column: 1 / -1; grid-row: 3; gap: 4px; justify-content: center; }
-  .ambient .ambientCanvas { height: min(50%, 36px); }
+  .ambient .ambientCanvas { height: min(75%, 56px); }
   .trackTitle { font-size: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
